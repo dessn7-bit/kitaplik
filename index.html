@@ -569,7 +569,7 @@ async function canliAra(q){
   let agSorunu = false;
   // 1) Google Books — Türkçe baskılarda güçlü, yayınevi bilgisi var
   try{
-    const r = await fetch('https://www.googleapis.com/books/v1/volumes?maxResults=6&printType=books&q='
+    const r = await fetch('https://www.googleapis.com/books/v1/volumes?key=AIzaSyCjjwU2NcpAgTVVSop0YNhIaQPmWWpHc04&maxResults=6&printType=books&q='
       + encodeURIComponent(q), { signal: araCtl.signal });
     const j = await r.json();
     adaylar = (j.items || []).map(it => {
