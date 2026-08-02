@@ -402,7 +402,8 @@ function kitapNormalize(k){
     guncelSayfa: parseInt(k.guncelSayfa) || 0,
     baslamaTarihi: k.baslamaTarihi || null, bitisTarihi: k.bitisTarihi || null,
     etiketler: Array.isArray(k.etiketler) ? k.etiketler.map(e => String(e).trim()).filter(Boolean) : [],
-    kapak: k.kapak || null,
+    kapak: k.kapak || null, g: parseInt(k.g) || 0,
+    raf: String(k.raf || ''), isbn: String(k.isbn || ''),
     seanslar: Array.isArray(k.seanslar) ? k.seanslar.filter(s => s && s.t) : [],
     oturumlar: Array.isArray(k.oturumlar) ? k.oturumlar.filter(o => o && o.b) : [],
     odunc: Array.isArray(k.odunc) ? k.odunc.filter(o => o && o.kisi) : [],
@@ -487,7 +488,7 @@ function listeCiz(){
       : durum.filtre === 'odunc' ? !!aktifOdunc(k)
       : k.durum === durum.filtre;
     const etiketUy = !durum.etiket || (k.etiketler||[]).includes(durum.etiket);
-    const metin = (k.ad + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.etiketler||[]).join(' ')).toLocaleLowerCase('tr');
+    const metin = (k.ad + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.raf||'') + ' ' + (k.etiketler||[]).join(' ')).toLocaleLowerCase('tr');
     return durumUy && etiketUy && (!q || metin.includes(q));
   });
   const cmp = {
@@ -1367,5 +1368,6 @@ hepsiniCiz();
 <script src="./barkod.js"></script>
 <script src="./oturum.js"></script>
 <script src="./fikir.js"></script>
+<script src="./katalog.js"></script>
 </body>
 </html>
