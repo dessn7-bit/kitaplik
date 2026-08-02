@@ -260,7 +260,8 @@ test.describe('G15 M5 — sahiplik ve istek listesi', () => {
     // rozet detayda
     await page.click('#liste .kart[data-id="' + await page.evaluate(() =>
       veri.kitaplar.find(k => k.sahiplik === 'istek').id) + '"]');
-    await expect(page.locator('.vm-rozet')).toContainText('İstek listesi');
+    // Rozet D1'den beri liste kartında da var; burada DETAY'dakini hedefle.
+    await expect(page.locator('#detayIcerik .vm-rozet')).toContainText('İstek listesi');
   });
 
   test('seri taramadan gelen kitap "sahip" işaretlenir', async ({ page }) => {

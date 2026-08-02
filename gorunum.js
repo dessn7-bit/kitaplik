@@ -41,6 +41,8 @@
       #liste.izgara .iz-yedek{width:100%;aspect-ratio:2/3;border-radius:8px;display:flex;align-items:flex-end;
         padding:8px;font-family:var(--serif);font-size:.8rem;color:#FFFDF7;line-height:1.2;
         box-shadow:0 2px 6px rgba(90,75,50,.14);overflow:hidden}
+      .vm-iz-istek{position:absolute;top:6px;right:6px;background:var(--mavi);color:#FFFDF7;
+        font-size:.6rem;padding:2px 6px;border-radius:999px;z-index:2;letter-spacing:.02em}
       .raf-basligi{grid-column:1/-1;font-size:.8rem;color:var(--muted);margin:6px 0 -4px;letter-spacing:.03em}
       .kart.secili{outline:2px solid var(--brass);outline-offset:2px;border-radius:12px}
       .secim-isaret{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
@@ -150,8 +152,12 @@
     const rozet = k.durum === 'okunuyor'
       ? '<div style="position:absolute;top:6px;left:6px;background:var(--brass);color:#FFFDF7;' +
         'font-size:.62rem;padding:2px 6px;border-radius:999px">okunuyor</div>' : '';
+    // Izgarada yer dar: sol üst "okunuyor" rozetine ayrılmış, seçim işareti geçici;
+    // istek işareti sağ üstte küçük bir pil olarak duruyor (kapak üstünde okunur kalsın diye dolu zemin).
+    const istek = k.sahiplik === 'istek'
+      ? '<div class="vm-iz-istek">İstek</div>' : '';
     return '<button class="kart" data-act="detay" data-id="' + k.id + '" style="position:relative">' +
-      gorsel + rozet +
+      gorsel + rozet + istek +
       '<div class="kart-ic"><div class="kart-baslik">' + kacir(k.ad) + '</div>' +
       (k.yazar ? '<div class="kart-yazar">' + kacir(k.yazar) + '</div>' : '') +
       '</div></button>';

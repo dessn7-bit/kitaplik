@@ -693,6 +693,7 @@ function listeCiz(){
         <div class="kart-alt">
           <span class="rozet ${rSinif}">${DURUM_AD[k.durum]}</span>
           ${od ? `<span class="rozet r-odunc">Ödünçte: ${esc(od.kisi)}</span>` : ''}
+          ${k.sahiplik === 'istek' ? `<span class="vm-rozet">İstek listesi</span>` : ''}
           ${(k.durum === 'bitti' && k.puan) ? `<span class="puan-mini">★ ${k.puan}/10</span>` : ''}
           ${notSayi ? `<span class="etiket-mini">✎ ${notSayi}</span>` : ''}
           ${(k.etiketler||[]).slice(0,3).map(e => `<span class="etiket-mini">#${esc(e)}</span>`).join('')}
@@ -1007,10 +1008,12 @@ function detayAc(id){
     const seridekiler = veri.kitaplar.filter(x => x.seri === k.seri)
       .sort((a,b) => (a.ciltNo||999) - (b.ciltNo||999) || a.ad.localeCompare(b.ad,'tr'));
     const ciltler = seridekiler.map(x => x.ciltNo).filter(n => n > 0);
+    // Yalnız SAHİP OLUNAN en küçük ve en büyük cilt arasındaki boşlukları bildir:
+    // seriye 3. ciltten başlamak eksiklik değildir, 3,4,6 → yalnız 5 eksiktir.
     const eksikler = [];
     if(ciltler.length > 1){
-      const enB = Math.max(...ciltler);
-      for(let i = 1; i <= enB; i++) if(!ciltler.includes(i)) eksikler.push(i);
+      const enK = Math.min(...ciltler), enB = Math.max(...ciltler);
+      for(let i = enK + 1; i < enB; i++) if(!ciltler.includes(i)) eksikler.push(i);
     }
     seriHtml = `<div class="detay-satir"><label>Seri</label>
       <div class="vm-seri-kutu"><b>${esc(k.seri)}</b>${k.ciltNo ? ' · ' + k.ciltNo + '. cilt' : ''}
@@ -1742,7 +1745,13 @@ document.addEventListener('click', e => {
       if(!veri.kitaplar.length){ toast('Kütüphane zaten boş'); break; }
       if(confirm(`${veri.kitaplar.length} kitap kalıcı olarak silinecek. Emin misin?`) &&
          confirm('Son kez soruyorum — yedek aldın mı? Bu işlem geri alınamaz.')){
-        veri = { kitaplar:[], hedef:{} }; depoKaydet(); hepsiniCiz(); toast('Kütüphane boşaltıldı');
+        // Yalnız KİTAPLAR silinir. Hedefler kişisel ayardır, kütüphane içeriği değil —
+        // sessizce silinmeleri sürpriz olurdu (üstelik senkronda uzaktan geri geliyorlardı).
+        // Mezar taşları korunur; damgala silinen kitaplar için yenilerini üretir.
+        veri = { kitaplar:[], hedef: veri.hedef || {}, hedefG: veri.hedefG || {},
+          hedefSayfa: veri.hedefSayfa || {}, hedefSayfaG: veri.hedefSayfaG || {},
+          silinenler: veri.silinenler || {} };
+        depoKaydet(); hepsiniCiz(); toast('Kütüphane boşaltıldı — hedeflerin duruyor');
       }
       break;
   }
