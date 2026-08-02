@@ -404,6 +404,7 @@ function kitapNormalize(k){
     etiketler: Array.isArray(k.etiketler) ? k.etiketler.map(e => String(e).trim()).filter(Boolean) : [],
     kapak: k.kapak || null,
     seanslar: Array.isArray(k.seanslar) ? k.seanslar.filter(s => s && s.t) : [],
+    oturumlar: Array.isArray(k.oturumlar) ? k.oturumlar.filter(o => o && o.b) : [],
     odunc: Array.isArray(k.odunc) ? k.odunc.filter(o => o && o.kisi) : [],
     notlar: Array.isArray(k.notlar) ? k.notlar.filter(n => n && n.metin).map(n => ({
       id: n.id || uid(), tip: n.tip === 'alinti' ? 'alinti' : 'not',
@@ -1363,5 +1364,6 @@ hepsiniCiz();
 </script>
 <script src="./senkron.js"></script>
 <script src="./barkod.js"></script>
+<script src="./oturum.js"></script>
 </body>
 </html>
