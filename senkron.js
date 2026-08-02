@@ -22,27 +22,49 @@
   function bildir(m){ if(typeof toast === 'function') toast(m); }
 
   /* ---------- damgalama: depoKaydet sarmalayıcısı ---------- */
-  function anlikYukle(){ try{ return JSON.parse(localStorage.getItem(ANLIK_ANAHTAR)) || {}; }catch(e){ return {}; } }
-  function anlikKaydet(a){ try{ localStorage.setItem(ANLIK_ANAHTAR, JSON.stringify(a)); }catch(e){} }
+  const ANLIK_SURUM = 2;
+  /* v1'de her kitabın TAM JSON'u parmak izi olarak saklanıyordu: kütüphanenin
+     ikinci bir kopyası kadar yer tutuyor, localStorage kotasını iki katına
+     yakın hızda dolduruyordu. v2 kısa çift-hash tutar (~20 karakter/kitap). */
+  function anlikYukle(){
+    try{
+      const h = JSON.parse(localStorage.getItem(ANLIK_ANAHTAR));
+      if(!h) return { izler: {}, goc: false };
+      if(h.s === ANLIK_SURUM && h.p && typeof h.p === 'object') return { izler: h.p, goc: false };
+      return { izler: {}, goc: true };   // v1 (veya bozuk) — göç: yeniden damgalama YAPMA
+    }catch(e){ return { izler: {}, goc: true }; }
+  }
+  function anlikKaydet(izler){
+    try{ localStorage.setItem(ANLIK_ANAHTAR, JSON.stringify({ s: ANLIK_SURUM, p: izler })); }catch(e){}
+  }
   function kitapParmak(k){
     const kopya = { ...k }; delete kopya.g;
-    return JSON.stringify(kopya);
+    const s = JSON.stringify(kopya);
+    let h1 = 0x811c9dc5, h2 = 0x01000193;   // iki bağımsız karma → çakışma olasılığı ihmal edilebilir
+    for(let i = 0; i < s.length; i++){
+      const c = s.charCodeAt(i);
+      h1 = Math.imul(h1 ^ c, 16777619) >>> 0;
+      h2 = (Math.imul(h2, 33) ^ c) >>> 0;
+    }
+    return s.length.toString(36) + '-' + h1.toString(36) + h2.toString(36);
   }
   /* Değişen/yeni kitaba zaman damgası basar, silinenler için mezar taşı bırakır. */
   function damgala(){
     if(typeof veri !== 'object' || !veri || !Array.isArray(veri.kitaplar)) return;
     const t = Date.now();
-    const onceki = anlikYukle();
+    const { izler: onceki, goc } = anlikYukle();
     const simdiki = {};
     veri.silinenler = veri.silinenler || {};
     for(const k of veri.kitaplar){
       if(!k || !k.id) continue;
       const pf = kitapParmak(k);
       simdiki[k.id] = pf;
-      if(!k.g || onceki[k.id] !== pf) k.g = t;
+      // göç turunda parmak izi biçimi değiştiği için içerik değişmemiş sayılır:
+      // aksi halde tüm kütüphane taze damgalanır ve bayat cihaz güncel olanı ezerdi
+      if(!k.g || (!goc && onceki[k.id] !== pf)) k.g = t;
       if(veri.silinenler[k.id] && veri.silinenler[k.id] < k.g) delete veri.silinenler[k.id];
     }
-    for(const id of Object.keys(onceki))
+    if(!goc) for(const id of Object.keys(onceki))
       if(!(id in simdiki) && !veri.silinenler[id]) veri.silinenler[id] = t;
     veri.hedefG = veri.hedefG || {};
     for(const yil of Object.keys(veri.hedef || {}))
@@ -125,7 +147,8 @@
       const anlik = {};
       veri.kitaplar.forEach(k => { anlik[k.id] = kitapParmak(k); });
       anlikKaydet(anlik);
-      try{ localStorage.setItem('kk_kitaplik_v1', JSON.stringify(veri)); }catch(e){}
+      try{ localStorage.setItem('kk_kitaplik_v1', JSON.stringify(veri)); }
+      catch(e){ if(typeof kotaUyariGoster === 'function') kotaUyariGoster(); }
 
       ayarKaydet({ ...ayar, sonSenkron: Date.now() });
       if(typeof hepsiniCiz === 'function') hepsiniCiz();
@@ -200,11 +223,11 @@
     if(typeof window.depoKaydet === 'function' && !window.depoKaydet.__senkron){
       const asil = window.depoKaydet;
       const sarmal = function(){
+        // Damgayı ÖNCE bas, sonra tek yazım yap: eskiden kütüphane aynı çağrıda
+        // iki kez serileştirilip yazılıyordu ve ikinci yazım depoKaydet'in kota
+        // yakalamasını atlıyordu (kota uyarısı görünmüyordu).
+        try{ damgala(); }catch(e){}
         const s = asil.apply(this, arguments);
-        try{
-          damgala();
-          localStorage.setItem('kk_kitaplik_v1', JSON.stringify(veri));
-        }catch(e){}
         planla();
         return s;
       };

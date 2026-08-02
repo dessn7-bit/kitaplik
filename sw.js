@@ -1,4 +1,4 @@
-const CACHE = 'kitaplik-v16';
+const CACHE = 'kitaplik-v17';
 const ASSETS = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png', './senkron.js', './barkod.js', './oturum.js', './fikir.js', './katalog.js', './gorunum.js', './kart.js'];
 
 self.addEventListener('install', e => {

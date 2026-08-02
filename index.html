@@ -192,6 +192,12 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .kapak-onizle img{width:40px;height:58px;object-fit:cover;border-radius:4px;border:1px solid var(--border)}
 .kapak-onizle button{font-size:.74rem;color:var(--drop);padding:4px}
 
+.kota-uyari{display:none;position:sticky;top:0;z-index:50;background:var(--drop);color:#FFFDF7;
+  padding:12px 16px calc(12px + env(safe-area-inset-top));font-size:.85rem;line-height:1.5}
+.kota-uyari.acik{display:block}
+.kota-uyari b{display:block;font-size:.92rem;margin-bottom:3px}
+.kota-uyari button{margin-top:8px;padding:8px 14px;border-radius:8px;background:#FFFDF7;
+  color:var(--drop);font-size:.82rem;font-weight:600}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);
   background:var(--paper);border:1px solid var(--paper);color:#FDFAF3 !important;color:var(--paper);
   padding:10px 18px;border-radius:10px;font-size:.85rem;z-index:60;opacity:0;transition:opacity .2s;
@@ -200,6 +206,13 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 </style>
 </head>
 <body>
+
+<div class="kota-uyari" id="kotaUyari" role="alert">
+  <b>⚠ Depolama dolu — değişikliklerin kaydedilmiyor</b>
+  Şu an yazdığın her şey yalnızca bu sekmede duruyor; uygulamayı kapatınca kaybolur.
+  Hemen yedek al, sonra yer açmak için birkaç kitabı veya uzun notu sil.
+  <button data-act="disa-aktar">Yedeği şimdi indir</button>
+</div>
 
 <header>
   <div class="app-title">Kitap<span>lık</span></div>
@@ -414,20 +427,51 @@ function kitapNormalize(k){
       fikir: Array.isArray(n.fikir) ? n.fikir.map(f => String(f)).filter(Boolean) : [] })) : []
   };
 }
+/* Zaman damgası haritası (silinenler / hedefG): yalnız sayısal değerleri geçir.
+   Bu iki alan senkronun mezar taşı ve hedef çakışma mantığını taşır; yenilemede
+   düşerlerse silinen kitap geri diriliyor, bayat hedef yenisini eziyordu. */
+function damgaSuz(o){
+  if(!o || typeof o !== 'object' || Array.isArray(o)) return {};
+  const c = {};
+  for(const [k, v] of Object.entries(o)){
+    const n = Number(v);
+    if(Number.isFinite(n) && n > 0) c[k] = n;
+  }
+  return c;
+}
 function depoYukle(){
   try{
     const raw = localStorage.getItem(DEPO);
-    if(!raw) return { kitaplar:[], hedef:{} };
+    if(!raw) return { kitaplar:[], hedef:{}, hedefG:{}, silinenler:{} };
     const v = JSON.parse(raw);
     return {
       kitaplar: Array.isArray(v.kitaplar) ? v.kitaplar.map(kitapNormalize) : [],
-      hedef: (v.hedef && typeof v.hedef === 'object') ? v.hedef : {}
+      hedef: (v.hedef && typeof v.hedef === 'object') ? v.hedef : {},
+      hedefG: damgaSuz(v.hedefG),
+      silinenler: damgaSuz(v.silinenler)
     };
-  }catch(e){ return { kitaplar:[], hedef:{} }; }
+  }catch(e){ return { kitaplar:[], hedef:{}, hedefG:{}, silinenler:{} }; }
 }
 function depoKaydet(){
-  try{ localStorage.setItem(DEPO, JSON.stringify(veri)); }
-  catch(e){ toast('Kayıt yazılamadı — depolama dolu olabilir'); }
+  try{ localStorage.setItem(DEPO, JSON.stringify(veri)); kotaUyariGizle(); }
+  catch(e){ kotaUyariGoster(); }
+}
+/* Kota dolduğunda geçici toast yetmiyordu: kullanıcı uyarıyı kaçırınca
+   sonraki tüm değişiklikler yalnız bellekte kalıp sekme kapanınca gidiyordu.
+   Kalıcı şerit, başarılı ilk yazımda kendiliğinden kalkar. */
+function kotaUyariGoster(){
+  const el = document.getElementById('kotaUyari');
+  if(!el || el.classList.contains('acik')) { if(el) el.classList.add('acik'); return; }
+  el.classList.add('acik');
+  document.body.classList.add('kota-dolu');
+  toast('Depolama dolu — değişiklikler kaydedilmiyor');
+}
+function kotaUyariGizle(){
+  const el = document.getElementById('kotaUyari');
+  if(el && el.classList.contains('acik')){
+    el.classList.remove('acik');
+    document.body.classList.remove('kota-dolu');
+  }
 }
 
 /* ---------- yardımcılar ---------- */
@@ -1078,9 +1122,15 @@ function iceAktar(dosya){
       let eklendi = 0;
       const anah = k => (k.ad + '|' + (k.yazar||'')).toLocaleLowerCase('tr');
       const mevcut = new Set(veri.kitaplar.map(anah));
+      const mevcutIdler = new Set(veri.kitaplar.map(k => k.id));
       y.kitaplar.forEach(k => {
+        // 1) Aynı kitap (ad+yazar) zaten varsa atla — mükerrer kayıt olmasın.
         if(!k || !k.ad || mevcut.has(anah(k))) return;
-        veri.kitaplar.push(kitapNormalize(k));
+        // 2) Farklı kitap ama id çakışıyorsa YENİ id ver: aynı id'li iki kayıt
+        //    senkron birleştirmesinde birbirini yok ediyor, tek "Sil" ikisini birden siliyordu.
+        const kayit = kitapNormalize(mevcutIdler.has(k.id) ? { ...k, id: uid() } : k);
+        veri.kitaplar.push(kayit);
+        mevcutIdler.add(kayit.id);
         mevcut.add(anah(k)); eklendi++;
       });
       if(y.hedef && typeof y.hedef === 'object') veri.hedef = { ...y.hedef, ...veri.hedef };
@@ -1241,7 +1291,12 @@ document.addEventListener('click', e => {
     case 'detay': detayAc(el.dataset.id); break;
     case 'detay-kapat': document.getElementById('ortuDetay').classList.remove('acik'); durum.detayId = null; break;
     case 'alinti-git': detayAc(el.dataset.id); break;
-    case 'duzenle': formAc(durum.detayId); break;
+    case 'duzenle':
+      // Form ve detay aynı z-index'te; detay DOM'da sonra geldiği için üstte boyanıyordu.
+      // Detayı kapatıyoruz: kaydedince formKaydet detayı zaten geri açıyor.
+      document.getElementById('ortuDetay').classList.remove('acik');
+      formAc(durum.detayId);
+      break;
     case 'kitap-sil': {
       const k = kitapBul(durum.detayId);
       if(k && confirm(`"${k.ad}" silinsin mi? Notları ve seansları da silinir.`)){

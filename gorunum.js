@@ -105,13 +105,34 @@
       kitaplar.forEach(k => parcalar.push(kartHtml(k)));
     }
     kap.innerHTML = parcalar.join('');
+    kapakHatalariniBagla(kap, kitaplar);
     secimGorselTazele();
+  }
+  /* Kapak yüklenemezse yedek sırtı DOM API'siyle kurar.
+     Satır içi onerror KULLANILMAZ: attribute değeri iki kez çözüldüğü için
+     kitap adındaki apostrof JS dizesini kapatıp kod çalıştırabiliyordu. */
+  function yedekSirtKoy(img, ad){
+    if(!img || !img.parentNode) return;
+    const d = document.createElement('div');
+    d.className = 'iz-yedek';
+    d.style.background = sirtRenkL(ad);
+    d.textContent = String(ad == null ? '' : ad);
+    img.parentNode.replaceChild(d, img);
+  }
+  function kapakHatalariniBagla(kap, kitaplar){
+    const harita = new Map(kitaplar.map(k => [k.id, k]));
+    kap.querySelectorAll('.kart').forEach(kart => {
+      const img = kart.querySelector('img.iz-kapak');
+      if(!img) return;
+      const k = harita.get(kart.dataset.id);
+      const ad = k ? k.ad : '';
+      img.addEventListener('error', () => yedekSirtKoy(img, ad), { once: true });
+      if(img.complete && img.naturalWidth === 0) yedekSirtKoy(img, ad); // dinleyiciden önce düşmüşse
+    });
   }
   function kartHtml(k){
     const gorsel = k.kapak
-      ? '<img class="iz-kapak" src="' + kacir(k.kapak) + '" alt="" loading="lazy" ' +
-        'onerror="this.outerHTML=\'<div class=iz-yedek style=background:' + sirtRenkL(k.ad) + '>' +
-        kacir(k.ad).replace(/'/g,'') + '</div>\'">'
+      ? '<img class="iz-kapak" src="' + kacir(k.kapak) + '" alt="" loading="lazy">'
       : '<div class="iz-yedek" style="background:' + sirtRenkL(k.ad) + '">' + kacir(k.ad) + '</div>';
     const rozet = k.durum === 'okunuyor'
       ? '<div style="position:absolute;top:6px;left:6px;background:var(--brass);color:#FFFDF7;' +

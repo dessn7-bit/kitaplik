@@ -49,10 +49,7 @@ test.describe('G1 çekirdek', () => {
     await page.goto('/');
     await page.click('#liste .kart');
     await page.click('[data-act="duzenle"]');
-    // GERÇEK DAVRANIŞ (uygulama bulgusu): form, detay sayfasının ALTINDA açılır
-    // (iki .ortu da z-index:40, DOM'da sonraki detay üstte). Kullanıcı detayı
-    // kapatmadan formla etkileşemez — test bu yüzden önce detayı kapatır.
-    await page.click('[data-act="detay-kapat"]');
+    // M3'ten beri 'duzenle' detay örtüsünü kapatıyor; form doğrudan erişilebilir.
     await expect(page.locator('#f-ad')).toHaveValue('Eski Ad');
     await expect(page.locator('#f-yazar')).toHaveValue('Yazar A');
     await expect(page.locator('#f-sayfa')).toHaveValue('200');
