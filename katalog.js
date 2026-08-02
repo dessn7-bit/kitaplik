@@ -197,6 +197,7 @@
       bitisTarihi: durumSec === 'bitti' && typeof bugun === 'function' ? bugun() : null
     });
     kayit.raf = raf; kayit.isbn = t; kayit.g = simdi;
+    kayit.sahiplik = 'sahip';   // fiziksel kitabı okutuyorsun: istek listesi değil
     veri.kitaplar.push(kayit);
     if(typeof depoKaydet === 'function') depoKaydet();
     if(typeof hepsiniCiz === 'function') hepsiniCiz();

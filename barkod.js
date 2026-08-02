@@ -86,6 +86,7 @@
     const yaz = (id, v) => { const e = document.getElementById(id); if(e && v) e.value = v; };
     yaz('f-ad', k.ad); yaz('f-yazar', k.yazar); yaz('f-yayinevi', k.yayinevi);
     yaz('f-yil', k.yil); yaz('f-sayfa', k.sayfa);
+    yaz('f-isbn', isbn);   // okunan ISBN kayda geçsin (kopya tespitinin en sağlam anahtarı)
     const tur = document.getElementById('f-tur');
     if(tur && !tur.value && k.tur) tur.value = k.tur;
     if(k.kapak && typeof durum === 'object'){

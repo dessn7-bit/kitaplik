@@ -192,6 +192,24 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .kapak-onizle img{width:40px;height:58px;object-fit:cover;border-radius:4px;border:1px solid var(--border)}
 .kapak-onizle button{font-size:.74rem;color:var(--drop);padding:4px}
 
+/* veri modeli sprinti — kendi ad alanı (vm-) */
+.vm-chips{display:flex;gap:6px;padding:2px 16px 0;overflow-x:auto;scrollbar-width:none}
+.vm-chips::-webkit-scrollbar{display:none}
+.vm-chip{flex:0 0 auto;padding:5px 12px;border-radius:999px;border:1px dashed var(--border);
+  background:transparent;color:var(--muted2);font-size:.76rem}
+.vm-chip.vm-secili{border-style:solid;border-color:var(--brass);color:var(--brass);font-weight:600}
+.vm-rozet{font-size:.72rem;padding:3px 9px;border-radius:999px;border:1px solid var(--mavi);color:var(--mavi)}
+.vm-seri-kutu{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:11px 13px;margin-top:8px;font-size:.82rem;color:var(--muted);line-height:1.6}
+.vm-seri-kutu b{color:var(--brass);font-weight:600}
+.vm-seri-liste{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.vm-seri-oge{text-align:left;font-size:.82rem;color:var(--paper);padding:6px 9px;border-radius:8px;
+  border:1px solid var(--border);background:var(--surface2)}
+.vm-seri-oge.vm-bu{border-color:var(--brass);color:var(--brass)}
+.vm-eksik{color:var(--drop);font-weight:600}
+.vm-okuma-satir{display:flex;justify-content:space-between;gap:10px;font-size:.8rem;
+  color:var(--muted);padding:6px 0;border-bottom:1px solid var(--border)}
+.vm-okuma-satir:last-child{border-bottom:none}
 .kota-uyari{display:none;position:sticky;top:0;z-index:50;background:var(--drop);color:#FFFDF7;
   padding:12px 16px calc(12px + env(safe-area-inset-top));font-size:.85rem;line-height:1.5}
 .kota-uyari.acik{display:block}
@@ -231,6 +249,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <button class="chip" data-act="filtre" data-v="bitti">Bitti</button>
     <button class="chip" data-act="filtre" data-v="yarim">Yarım kaldı</button>
     <button class="chip" data-act="filtre" data-v="odunc">Ödünçte</button>
+  </div>
+  <div class="vm-chips" id="vmSahiplikChips">
+    <button class="vm-chip vm-secili" data-act="vm-sahiplik" data-v="hepsi">Tüm raf</button>
+    <button class="vm-chip" data-act="vm-sahiplik" data-v="sahip">Bende olanlar</button>
+    <button class="vm-chip" data-act="vm-sahiplik" data-v="istek">İstek listesi</button>
   </div>
   <div class="sort-row">
     <span class="count-label" id="sayac"></span>
@@ -351,6 +374,50 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
       </div>
     </div>
 
+    <div class="form-iki">
+      <div>
+        <label for="f-cevirmen">Çevirmen</label>
+        <input id="f-cevirmen" list="cevirmenListesi" autocomplete="off">
+        <datalist id="cevirmenListesi"></datalist>
+      </div>
+      <div>
+        <label for="f-dil">Dil</label>
+        <input id="f-dil" list="dilListesi" placeholder="tr" autocomplete="off">
+        <datalist id="dilListesi">
+          <option value="tr">Türkçe</option><option value="en">İngilizce</option>
+          <option value="de">Almanca</option><option value="fr">Fransızca</option>
+          <option value="ru">Rusça</option><option value="es">İspanyolca</option>
+          <option value="it">İtalyanca</option><option value="ar">Arapça</option>
+        </datalist>
+      </div>
+    </div>
+
+    <div class="form-iki">
+      <div>
+        <label for="f-seri">Seri / dizi</label>
+        <input id="f-seri" list="seriListesi" placeholder="ör. Kayıp Zamanın İzinde" autocomplete="off">
+        <datalist id="seriListesi"></datalist>
+      </div>
+      <div>
+        <label for="f-cilt">Kaçıncı cilt</label>
+        <input id="f-cilt" type="number" inputmode="numeric" min="1">
+      </div>
+    </div>
+
+    <div class="form-iki">
+      <div>
+        <label for="f-isbn">ISBN</label>
+        <input id="f-isbn" inputmode="numeric" placeholder="978…" autocomplete="off">
+      </div>
+      <div>
+        <label for="f-sahiplik">Sahiplik</label>
+        <select id="f-sahiplik">
+          <option value="sahip">Bende var</option>
+          <option value="istek">İstek listesi</option>
+        </select>
+      </div>
+    </div>
+
     <label for="f-etiket">Etiketler (virgülle ayır)</label>
     <input id="f-etiket" placeholder="ör. varoluşçuluk, çeviri, tekrar-okunacak" autocomplete="off">
 
@@ -438,7 +505,7 @@ let veri = depoYukle();
 let durum = { filtre:'hepsi', arama:'', etiket:'', sirala:'eklenme', sekme:'raf',
   formDuzenId:null, formDurum:'okunacak', formPuan:null, formKapak:null,
   detayId:null, notTip:'not', alintiArama:'', araTip:'ad',
-  gelenKitapId:null, gelenTip:'alinti' };
+  gelenKitapId:null, gelenTip:'alinti', sahiplikFiltre:'hepsi' };
 
 /* ---------- depo + geriye uyumlu göç ---------- */
 function kitapNormalize(k){
@@ -454,6 +521,13 @@ function kitapNormalize(k){
     etiketler: Array.isArray(k.etiketler) ? k.etiketler.map(e => String(e).trim()).filter(Boolean) : [],
     kapak: k.kapak || null, g: parseInt(k.g) || 0,
     raf: String(k.raf || ''), isbn: String(k.isbn || ''),
+    cevirmen: String(k.cevirmen || ''), dil: String(k.dil || '').trim().toLowerCase().slice(0, 8),
+    seri: String(k.seri || ''), ciltNo: parseInt(k.ciltNo) || null,
+    sahiplik: k.sahiplik === 'istek' ? 'istek' : 'sahip',   // eski kayıt = sahip (varsayılan)
+    okumalar: Array.isArray(k.okumalar) ? k.okumalar.filter(o => o && (o.bas || o.bit)).map(o => ({
+      bas: o.bas || null, bit: o.bit || null,
+      puan: (o.puan >= 1 && o.puan <= 10) ? Math.round(o.puan) : null,
+      not: o.not ? String(o.not) : '' })) : [],
     seanslar: Array.isArray(k.seanslar) ? k.seanslar.filter(s => s && s.t) : [],
     oturumlar: Array.isArray(k.oturumlar) ? k.oturumlar.filter(o => o && o.b) : [],
     odunc: Array.isArray(k.odunc) ? k.odunc.filter(o => o && o.kisi) : [],
@@ -571,8 +645,10 @@ function listeCiz(){
       : durum.filtre === 'odunc' ? !!aktifOdunc(k)
       : k.durum === durum.filtre;
     const etiketUy = !durum.etiket || (k.etiketler||[]).includes(durum.etiket);
-    const metin = (k.ad + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.raf||'') + ' ' + (k.etiketler||[]).join(' ')).toLocaleLowerCase('tr');
-    return durumUy && etiketUy && (!q || metin.includes(q));
+    const metin = (k.ad + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.raf||'')
+      + ' ' + (k.cevirmen||'') + ' ' + (k.seri||'') + ' ' + (k.etiketler||[]).join(' ')).toLocaleLowerCase('tr');
+    const sahiplikUy = durum.sahiplikFiltre === 'hepsi' || (k.sahiplik || 'sahip') === durum.sahiplikFiltre;
+    return durumUy && etiketUy && sahiplikUy && (!q || metin.includes(q));
   });
   const cmp = {
     eklenme:(a,b) => (b.eklenme||0) - (a.eklenme||0),
@@ -741,6 +817,9 @@ function olSec(i){
   if(a.yayinevi) document.getElementById('f-yayinevi').value = a.yayinevi;
   if(a.yil) document.getElementById('f-yil').value = a.yil;
   if(a.sayfa) document.getElementById('f-sayfa').value = a.sayfa;
+  // Google Books dil kodunu getiriyor (v.language) — forma yaz. Çevirmen bilgisi
+  // API'de güvenilir değil: UYDURMA, boş bırak.
+  if(a.dil) document.getElementById('f-dil').value = String(a.dil).toLowerCase();
   durum.formKapak = a.kapak;
   kapakOnizleCiz();
   sonucTemizle();
@@ -755,6 +834,15 @@ function kapakOnizleCiz(){
 }
 
 /* ---------- form ---------- */
+/* Önceki kayıtlardan datalist doldurur (çevirmen, seri) */
+function listeDoldur(listeId, alan){
+  const dl = document.getElementById(listeId);
+  if(!dl) return;
+  const hepsi = new Set();
+  veri.kitaplar.forEach(k => { if(k[alan]) hepsi.add(k[alan]); });
+  dl.innerHTML = [...hepsi].sort((a,b) => a.localeCompare(b,'tr'))
+    .map(v => `<option value="${escAttr(v)}">`).join('');
+}
 function formAc(id){
   durum.formDuzenId = id || null;
   const k = id ? kitapBul(id) : null;
@@ -771,6 +859,14 @@ function formAc(id){
   document.getElementById('f-yil').value = k && k.yil ? k.yil : '';
   document.getElementById('f-sayfa').value = k && k.sayfa ? k.sayfa : '';
   document.getElementById('f-tur').value = k ? (k.tur||'') : '';
+  document.getElementById('f-cevirmen').value = k ? (k.cevirmen||'') : '';
+  document.getElementById('f-dil').value = k ? (k.dil||'') : '';
+  document.getElementById('f-seri').value = k ? (k.seri||'') : '';
+  document.getElementById('f-cilt').value = k && k.ciltNo ? k.ciltNo : '';
+  document.getElementById('f-isbn').value = k ? (k.isbn||'') : '';
+  document.getElementById('f-sahiplik').value = k ? (k.sahiplik || 'sahip') : 'sahip';
+  listeDoldur('cevirmenListesi', 'cevirmen');
+  listeDoldur('seriListesi', 'seri');
   document.getElementById('f-etiket').value = k ? (k.etiketler||[]).join(', ') : '';
   document.getElementById('f-bas').value = k ? (k.baslamaTarihi||'') : '';
   document.getElementById('f-bit').value = k ? (k.bitisTarihi||'') : '';
@@ -808,11 +904,22 @@ function formKaydet(){
   const etiketler = document.getElementById('f-etiket').value
     .split(',').map(e => e.trim().replace(/^#/, '')).filter(Boolean);
 
+  const isbn = document.getElementById('f-isbn').value.replace(/[^0-9Xx]/g, '').toUpperCase();
+  // Aynı ISBN'li başka kayıt varsa UYAR ama engelleme: farklı baskı/cilt olabilir.
+  // Uyarı kayıt mesajına eklenir; ayrı toast atılsa kayıt mesajı onu anında eziyordu.
+  const ikiz = isbn ? veri.kitaplar.find(k => k.isbn === isbn && k.id !== durum.formDuzenId) : null;
+  const ikizUyari = ikiz ? ' — dikkat: "' + ikiz.ad + '" aynı ISBN ile zaten kayıtlı' : '';
+
   const ortak = {
     ad, yazar: document.getElementById('f-yazar').value.trim(),
     yayinevi: document.getElementById('f-yayinevi').value.trim(),
     yil: parseInt(document.getElementById('f-yil').value) || null,
     sayfa, tur: document.getElementById('f-tur').value.trim(),
+    cevirmen: document.getElementById('f-cevirmen').value.trim(),
+    dil: document.getElementById('f-dil').value.trim().toLowerCase(),
+    seri: document.getElementById('f-seri').value.trim(),
+    ciltNo: parseInt(document.getElementById('f-cilt').value) || null,
+    isbn, sahiplik: document.getElementById('f-sahiplik').value === 'istek' ? 'istek' : 'sahip',
     durum: durum.formDurum,
     puan: durum.formDurum === 'bitti' ? durum.formPuan : null,
     baslamaTarihi: bas, bitisTarihi: bit,
@@ -826,11 +933,11 @@ function formKaydet(){
       if(k.durum === 'bitti' && k.sayfa) k.guncelSayfa = k.sayfa;
       if(k.durum === 'okunacak') k.guncelSayfa = 0;
     }
-    toast('Kitap güncellendi');
+    toast('Kitap güncellendi' + ikizUyari);
   }else{
     veri.kitaplar.push(kitapNormalize({ ...ortak, id: uid(), eklenme: Date.now(),
       guncelSayfa: durum.formDurum === 'bitti' && sayfa ? sayfa : 0 }));
-    toast('Kitap rafa eklendi');
+    toast('Kitap rafa eklendi' + ikizUyari);
   }
   depoKaydet();
   document.getElementById('ortuForm').classList.remove('acik');
@@ -875,6 +982,43 @@ function detayAc(id){
   }
   if(k.durum === 'yarim'){
     eylemHtml = `<div class="detay-satir"><button class="btn btn-cerceve" data-act="baslat">Tekrar başla</button></div>`;
+  }
+  if(k.durum === 'bitti'){
+    eylemHtml = `<div class="detay-satir"><button class="btn btn-cerceve" data-act="yeniden-oku">Yeniden oku</button>
+      <div class="mini-not">Bu okuman geçmişe kaydedilir; tarihlerin ve puanın korunur.</div></div>`;
+  }
+
+  // okuma geçmişi (arşivlenmiş okumalar)
+  let gecmisHtml = '';
+  if((k.okumalar||[]).length){
+    gecmisHtml = `<div class="detay-satir"><label>Okuma geçmişi</label>` +
+      k.okumalar.map((o, i) => `<div class="vm-okuma-satir">
+        <span>${i+1}. okuma${o.bas || o.bit ? ' · ' + [trTarih(o.bas), trTarih(o.bit)].filter(Boolean).join(' – ') : ''}</span>
+        <span>${o.puan ? '★ ' + o.puan : ''}</span></div>`).join('') +
+      `<div class="vm-okuma-satir"><span>${k.okumalar.length+1}. okuma${
+        k.baslamaTarihi || k.bitisTarihi ? ' · ' + [trTarih(k.baslamaTarihi), trTarih(k.bitisTarihi)].filter(Boolean).join(' – ') : ''
+      }${k.durum === 'okunuyor' ? ' (sürüyor)' : ''}</span>
+        <span>${k.puan ? '★ ' + k.puan : ''}</span></div></div>`;
+  }
+
+  // seri kutusu: aynı serideki kitaplar + eksik cilt tespiti
+  let seriHtml = '';
+  if(k.seri){
+    const seridekiler = veri.kitaplar.filter(x => x.seri === k.seri)
+      .sort((a,b) => (a.ciltNo||999) - (b.ciltNo||999) || a.ad.localeCompare(b.ad,'tr'));
+    const ciltler = seridekiler.map(x => x.ciltNo).filter(n => n > 0);
+    const eksikler = [];
+    if(ciltler.length > 1){
+      const enB = Math.max(...ciltler);
+      for(let i = 1; i <= enB; i++) if(!ciltler.includes(i)) eksikler.push(i);
+    }
+    seriHtml = `<div class="detay-satir"><label>Seri</label>
+      <div class="vm-seri-kutu"><b>${esc(k.seri)}</b>${k.ciltNo ? ' · ' + k.ciltNo + '. cilt' : ''}
+        ${eksikler.length ? `<div class="vm-eksik">Eksik cilt: ${eksikler.join(', ')}</div>` : ''}
+        <div class="vm-seri-liste">${seridekiler.map(x => `<button class="vm-seri-oge${x.id === k.id ? ' vm-bu' : ''}"
+          data-act="detay" data-id="${escAttr(x.id)}">${x.ciltNo ? x.ciltNo + '. ' : ''}${esc(x.ad)}</button>`).join('')}</div>
+        <button class="btn btn-cerceve" style="margin-top:10px" data-act="vm-seri-filtre" data-v="${escAttr(k.seri)}">Bu seriyi rafta göster</button>
+      </div></div>`;
   }
 
   // ödünç
@@ -925,12 +1069,17 @@ function detayAc(id){
           ${k.tur ? `<span style="font-size:.75rem;color:var(--muted)">${esc(k.tur)}</span>` : ''}
           ${k.sayfa ? `<span style="font-size:.75rem;color:var(--muted)">${k.sayfa} sayfa</span>` : ''}
           ${k.yayinevi ? `<span style="font-size:.75rem;color:var(--muted)">${esc(k.yayinevi)}${k.yil ? ' · ' + k.yil : ''}</span>` : (k.yil ? `<span style="font-size:.75rem;color:var(--muted)">${k.yil}</span>` : '')}
+          ${k.cevirmen ? `<span style="font-size:.75rem;color:var(--muted)">Çev. ${esc(k.cevirmen)}</span>` : ''}
+          ${k.dil ? `<span style="font-size:.75rem;color:var(--muted2)">${esc(k.dil.toUpperCase())}</span>` : ''}
+          ${(k.sahiplik === 'istek') ? `<span class="vm-rozet">İstek listesi</span>` : ''}
         </div>
         ${(k.etiketler||[]).length ? `<div style="margin-top:7px">${k.etiketler.map(e => `<span class="etiket-mini">#${esc(e)} </span>`).join('')}</div>` : ''}
       </div>
     </div>
     ${tarihHtml ? `<div style="font-size:.78rem;color:var(--muted2);margin-top:10px">${tarihHtml}</div>` : ''}
     ${eylemHtml}
+    ${seriHtml}
+    ${gecmisHtml}
     ${oduncHtml}
     <div class="detay-satir">
       <label>Notlar &amp; alıntılar</label>
@@ -995,10 +1144,22 @@ function alintiCiz(){
 }
 
 /* ---------- istatistik ---------- */
+/* İstatistik kaydı: kitap şu an yeniden okunuyor olsa bile ÖNCEKİ tamamlanmış
+   okuması sayımlardan düşmesin diye arşivdeki son okumayı temsilci alır.
+   KARAR: bir kitap yılda birden çok kez bitirilse de bir kez sayılır (hedef "kaç
+   kitap bitirdim" sorusunu yanıtlıyor); okuma sayısı geçmişte görünür. */
+function istKayit(k){
+  if(k.durum === 'bitti') return k;
+  const arsiv = (k.okumalar||[]).filter(o => o && o.bit);
+  if(!arsiv.length) return null;
+  const son = arsiv.slice().sort((a,b) => String(a.bit).localeCompare(String(b.bit))).pop();
+  return { ...k, durum:'bitti', bitisTarihi: son.bit, baslamaTarihi: son.bas || null,
+    puan: (son.puan >= 1 && son.puan <= 10) ? son.puan : null };
+}
 function istCiz(){
   const kap = document.getElementById('istIcerik');
   const ks = veri.kitaplar;
-  const bittiler = ks.filter(k => k.durum === 'bitti');
+  const bittiler = ks.map(istKayit).filter(Boolean);
   const yil = new Date().getFullYear();
   const buYil = bittiler.filter(k => k.bitisTarihi && k.bitisTarihi.startsWith(String(yil)));
   const toplamSayfa = bittiler.reduce((t,k) => t + (k.sayfa||0), 0);
@@ -1143,10 +1304,14 @@ function disaAktar(){
 }
 function csvAktar(){
   const b = s => `"${String(s ?? '').replace(/"/g,'""')}"`;
-  const sat = [['Ad','Yazar','Yayınevi','Yıl','Tür','Durum','Puan','Sayfa','Güncel Sayfa','Başlama','Bitiş','Etiketler','Not Sayısı'].join(';')];
+  const sat = [['Ad','Yazar','Çevirmen','Dil','Yayınevi','Yıl','Tür','Seri','Cilt','ISBN','Sahiplik',
+    'Durum','Puan','Sayfa','Güncel Sayfa','Başlama','Bitiş','Okuma Sayısı','Etiketler','Not Sayısı'].join(';')];
   veri.kitaplar.forEach(k => sat.push([
-    b(k.ad), b(k.yazar), b(k.yayinevi), k.yil ?? '', b(k.tur), b(DURUM_AD[k.durum]), k.puan ?? '', k.sayfa ?? '',
+    b(k.ad), b(k.yazar), b(k.cevirmen), b(k.dil), b(k.yayinevi), k.yil ?? '', b(k.tur),
+    b(k.seri), k.ciltNo ?? '', b(k.isbn), b(k.sahiplik === 'istek' ? 'İstek listesi' : 'Bende var'),
+    b(DURUM_AD[k.durum]), k.puan ?? '', k.sayfa ?? '',
     k.guncelSayfa ?? '', k.baslamaTarihi ?? '', k.bitisTarihi ?? '',
+    (k.okumalar||[]).length + 1,
     b((k.etiketler||[]).join(', ')), (k.notlar||[]).length
   ].join(';')));
   dosyaIndir('\uFEFF' + sat.join('\r\n'), `kitaplik-${bugun()}.csv`, 'text/csv;charset=utf-8');
@@ -1462,6 +1627,33 @@ document.addEventListener('click', e => {
         durum.detayId = null; hepsiniCiz(); toast('Kitap silindi');
       }
       break; }
+    case 'yeniden-oku': {
+      const k = kitapBul(durum.detayId);
+      if(k){
+        // Mevcut okumayı arşivle — tarihler ve puan KAYBOLMAZ
+        k.okumalar = Array.isArray(k.okumalar) ? k.okumalar : [];
+        k.okumalar.push({ bas: k.baslamaTarihi || null, bit: k.bitisTarihi || null,
+          puan: (k.puan >= 1 && k.puan <= 10) ? k.puan : null, not: '' });
+        k.durum = 'okunuyor'; k.guncelSayfa = 0;
+        k.baslamaTarihi = bugun(); k.bitisTarihi = null; k.puan = null;
+        depoKaydet(); hepsiniCiz(); detayAc(k.id);
+        toast('Yeniden okumaya başladın — önceki okuman geçmişe kaydedildi');
+      }
+      break; }
+    case 'vm-sahiplik':
+      durum.sahiplikFiltre = v;
+      document.querySelectorAll('#vmSahiplikChips .vm-chip').forEach(c =>
+        c.classList.toggle('vm-secili', c.dataset.v === v));
+      listeCiz(); break;
+    case 'vm-seri-filtre': {
+      document.getElementById('ortuDetay').classList.remove('acik');
+      durum.detayId = null;
+      durum.arama = v;
+      document.getElementById('arama').value = v;
+      if(durum.sekme !== 'raf') sekmeGec('raf');
+      listeCiz();
+      toast('Rafta "' + v + '" serisi gösteriliyor');
+      break; }
     case 'baslat': {
       const k = kitapBul(durum.detayId);
       if(k){ k.durum = 'okunuyor'; k.baslamaTarihi = k.baslamaTarihi || bugun(); k.bitisTarihi = null;
@@ -1524,8 +1716,12 @@ document.addEventListener('click', e => {
     case 'hedef-kaydet': {
       const h = parseInt(document.getElementById('hedefInput').value) || 0;
       const yil = new Date().getFullYear();
+      const eskiH = veri.hedef[yil] || 0;
       if(h > 0){ veri.hedef[yil] = h; toast(`${yil} hedefi: ${h} kitap`); }
       else { delete veri.hedef[yil]; toast('Hedef kaldırıldı'); }
+      // Damgayı DEĞER DEĞİŞTİYSE tazele: senkron.damgala yalnız eksikse basıyordu,
+      // bu yüzden hedefi değiştirmek başka cihazın eski değerini yenemiyordu.
+      if(h !== eskiH){ veri.hedefG = veri.hedefG || {}; veri.hedefG[yil] = Date.now(); }
       depoKaydet(); istCiz();
       break; }
     case 'disa-aktar': disaAktar(); break;

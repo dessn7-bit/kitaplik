@@ -31,6 +31,11 @@
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   }
   function kitaplar(){ return (typeof veri === 'object' && veri && Array.isArray(veri.kitaplar)) ? veri.kitaplar : []; }
+  /* Çekirdekle aynı bakış: yeniden okunan kitap, önceki tamamlanmış okumasıyla temsil edilir. */
+  function bitmisKayitlar(){
+    if(typeof istKayit === 'function') return kitaplar().map(istKayit).filter(Boolean);
+    return kitaplar().filter(k => k.durum === 'bitti');
+  }
   /* Unutulup otomatik kapanan oturumlar (sup:true) hiçbir analize girmez. */
   function gecerliOturumlar(){
     const c = [];
@@ -41,8 +46,8 @@
   /* ---------- M1: tür / yazar puan analizi ---------- */
   function grupPuan(anahtarFn, esik){
     const harita = new Map();
-    kitaplar().forEach(k => {
-      if(k.durum !== 'bitti' || !k.puan) return;   // puansız bitmiş kitap ortalamaya KATILMAZ
+    bitmisKayitlar().forEach(k => {
+      if(!k.puan) return;   // puansız bitmiş kitap ortalamaya KATILMAZ
       const a = anahtarFn(k);
       if(!a) return;
       if(!harita.has(a)) harita.set(a, { ad: a, adet: 0, toplam: 0 });
@@ -91,7 +96,7 @@
   /* ---------- M2: bırakma analizi ---------- */
   function birakmaAnalizi(){
     const ks = kitaplar();
-    const bitti = ks.filter(k => k.durum === 'bitti').length;
+    const bitti = bitmisKayitlar().length;
     const yarim = ks.filter(k => k.durum === 'yarim');
     const olculebilir = yarim.filter(k => k.sayfa > 0 && k.guncelSayfa > 0);
     const yuzdeler = olculebilir.map(k => Math.min(100, Math.round(k.guncelSayfa / k.sayfa * 100)));
@@ -208,7 +213,7 @@
   function sayfaHedefDurum(){
     const yil = new Date().getFullYear();
     const hedef = ((typeof veri === 'object' && veri && veri.hedefSayfa) || {})[yil] || 0;
-    const bitenler = kitaplar().filter(k => k.durum === 'bitti' && k.bitisTarihi
+    const bitenler = bitmisKayitlar().filter(k => k.bitisTarihi
       && String(k.bitisTarihi).startsWith(String(yil)));
     const ilerleme = bitenler.reduce((t, k) => t + (k.sayfa || 0), 0);
     const gunNo = Math.floor((new Date() - new Date(yil, 0, 0)) / 86400000);
