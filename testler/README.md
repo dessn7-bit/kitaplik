@@ -1,6 +1,6 @@
 # Kitaplık Regresyon Test Paketi (Playwright)
 
-116 vaka, 13 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
+133 vaka, 14 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
 kırarsa bu paket kırmızıya döner. (Mutasyon denetiminden geçti: 7 el-yapımı mutasyon +
 G12'nin 3 kritik düzeltmesi geri alındığında ilgili vakalar kırmızıya düşüyor.)
 
@@ -35,6 +35,7 @@ koşar (temiz localStorage), service worker **engellidir** (`serviceWorkers:'blo
 | g11_alinti_karti | kart.js: PNG üretimi, boyutlar, taşma koruması, indirme/paylaşım |
 | g12_veri_guvenlik | ızgara kapak yedeği (XSS), mezar taşı kalıcılığı, Düzenle görünürlüğü, yedek id çakışması, anlık görüntü boyutu + kota şeridi |
 | g13_hizli_kazanimlar | not kimliği (data-nid/kid), raf gruplama düğmesi, ISBN ağ teşhisi, markdown dışa aktarım, paylaş hedefi |
+| g14_okur_zekasi | zeka.js: tür/yazar puan analizi, bırakma analizi, oturumlardan aylık sayfa, saat dağılımı, sayfa hedefi |
 
 ## Ağ taklidi — HİÇBİR test gerçek ağa çıkmaz
 
@@ -74,6 +75,14 @@ await page.goto('/');
 
 Tohum yalnız İLK yüklemede yazılır — reload testlerinde uygulamanın kaydettiği
 veri ezilmez (`__kk_tohumlandi` bayrağı).
+
+## Ad alanı kuralı (sprint dersi)
+
+Yeni bir UI parçası eklerken **kendi ad alanını kullan**: yeni CSS sınıfı ve `data-act`
+değerleri benzersiz önek taşısın (`zk-` gibi). Mevcut bir sınıfı (`.ol-sonuc`, `.not-kart`,
+`.yedek-kart`) veya mevcut bir `data-act` değerini yeni bağlamda tekrar kullanmak,
+testlerdeki genel seçicileri gölgeliyor ve alakasız vakaları kırıyor (iki kez yaşandı).
+Görsel dili korumak için stilleri kopyala, seçici adlarını yenile.
 
 ## Yeni vaka ekleme
 

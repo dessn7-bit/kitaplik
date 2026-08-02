@@ -479,15 +479,17 @@ function damgaSuz(o){
 function depoYukle(){
   try{
     const raw = localStorage.getItem(DEPO);
-    if(!raw) return { kitaplar:[], hedef:{}, hedefG:{}, silinenler:{} };
+    if(!raw) return { kitaplar:[], hedef:{}, hedefG:{}, hedefSayfa:{}, hedefSayfaG:{}, silinenler:{} };
     const v = JSON.parse(raw);
     return {
       kitaplar: Array.isArray(v.kitaplar) ? v.kitaplar.map(kitapNormalize) : [],
       hedef: (v.hedef && typeof v.hedef === 'object') ? v.hedef : {},
       hedefG: damgaSuz(v.hedefG),
+      hedefSayfa: damgaSuz(v.hedefSayfa),
+      hedefSayfaG: damgaSuz(v.hedefSayfaG),
       silinenler: damgaSuz(v.silinenler)
     };
-  }catch(e){ return { kitaplar:[], hedef:{}, hedefG:{}, silinenler:{} }; }
+  }catch(e){ return { kitaplar:[], hedef:{}, hedefG:{}, hedefSayfa:{}, hedefSayfaG:{}, silinenler:{} }; }
 }
 function depoKaydet(){
   try{ localStorage.setItem(DEPO, JSON.stringify(veri)); kotaUyariGizle(); }
@@ -1604,5 +1606,6 @@ hepsiniCiz();
 <script src="./katalog.js"></script>
 <script src="./gorunum.js"></script>
 <script src="./kart.js"></script>
+<script src="./zeka.js"></script>
 </body>
 </html>

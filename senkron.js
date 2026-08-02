@@ -69,6 +69,9 @@
     veri.hedefG = veri.hedefG || {};
     for(const yil of Object.keys(veri.hedef || {}))
       if(!veri.hedefG[yil]) veri.hedefG[yil] = t;
+    veri.hedefSayfaG = veri.hedefSayfaG || {};
+    for(const yil of Object.keys(veri.hedefSayfa || {}))
+      if(!veri.hedefSayfaG[yil]) veri.hedefSayfaG[yil] = t;
     anlikKaydet(simdiki);
   }
 
@@ -123,7 +126,14 @@
       const yg = ((yerel && yerel.hedefG) || {})[yil] || 0;
       if(!(yil in hedef) || yg >= (hedefG[yil]||0)){ hedef[yil] = v; hedefG[yil] = yg; }
     }
-    return { kitaplar, hedef, hedefG, silinenler };
+    // Sayfa hedefi: kitap hedefiyle aynı desen, kendi damgasıyla (hedefSayfaG)
+    const hedefSayfa = { ...((uzak && uzak.hedefSayfa) || {}) };
+    const hedefSayfaG = { ...((uzak && uzak.hedefSayfaG) || {}) };
+    for(const [yil, v] of Object.entries((yerel && yerel.hedefSayfa) || {})){
+      const yg = ((yerel && yerel.hedefSayfaG) || {})[yil] || 0;
+      if(!(yil in hedefSayfa) || yg >= (hedefSayfaG[yil]||0)){ hedefSayfa[yil] = v; hedefSayfaG[yil] = yg; }
+    }
+    return { kitaplar, hedef, hedefG, hedefSayfa, hedefSayfaG, silinenler };
   }
 
   /* ---------- senkron ---------- */
@@ -144,6 +154,7 @@
 
       veri.kitaplar = bir.kitaplar; veri.hedef = bir.hedef;
       veri.hedefG = bir.hedefG; veri.silinenler = bir.silinenler;
+      veri.hedefSayfa = bir.hedefSayfa; veri.hedefSayfaG = bir.hedefSayfaG;
       const anlik = {};
       veri.kitaplar.forEach(k => { anlik[k.id] = kitapParmak(k); });
       anlikKaydet(anlik);
