@@ -204,7 +204,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 <header>
   <div class="app-title">Kitap<span>lık</span></div>
   <div class="search-row" id="aramaSatiri">
-    <input type="search" id="arama" placeholder="Kitap, yazar veya etiket ara…" autocomplete="off">
+    <input type="search" id="arama" placeholder="Kitap, yazar, yayınevi veya etiket ara…" autocomplete="off">
     <button class="zar-btn" data-act="zar" title="Okunacaklardan rastgele öner">🎲</button>
   </div>
 </header>
@@ -289,6 +289,12 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <button class="sheet-kapat" data-act="form-kapat" aria-label="Kapat">✕</button>
     <div class="sheet-baslik" id="formBaslik">Yeni kitap</div>
 
+    <label>Neye göre arayayım?</label>
+    <div class="not-tip-sec" id="araTipSec" style="margin:5px 0 2px">
+      <button class="mini-chip secili" data-act="ara-tip" data-v="ad">Kitap adı</button>
+      <button class="mini-chip" data-act="ara-tip" data-v="yazar">Yazar</button>
+      <button class="mini-chip" data-act="ara-tip" data-v="yayinevi">Yayınevi</button>
+    </div>
     <label for="f-ad">Kitap adı *</label>
     <input id="f-ad" placeholder="Yazmaya başla, önerileri getireyim…" autocomplete="off">
     <div class="ol-durum" id="olDurum"></div>
@@ -382,7 +388,7 @@ const SIRT_RENK = ['#C89B4B','#8FA86B','#B06A4A','#7E8FA6','#A67E9E','#8A6A33','
 let veri = depoYukle();
 let durum = { filtre:'hepsi', arama:'', etiket:'', sirala:'eklenme', sekme:'raf',
   formDuzenId:null, formDurum:'okunacak', formPuan:null, formKapak:null,
-  detayId:null, notTip:'not', alintiArama:'' };
+  detayId:null, notTip:'not', alintiArama:'', araTip:'ad' };
 
 /* ---------- depo + geriye uyumlu göç ---------- */
 function kitapNormalize(k){
@@ -479,7 +485,7 @@ function listeCiz(){
       : durum.filtre === 'odunc' ? !!aktifOdunc(k)
       : k.durum === durum.filtre;
     const etiketUy = !durum.etiket || (k.etiketler||[]).includes(durum.etiket);
-    const metin = (k.ad + ' ' + (k.yazar||'') + ' ' + (k.etiketler||[]).join(' ')).toLocaleLowerCase('tr');
+    const metin = (k.ad + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.etiketler||[]).join(' ')).toLocaleLowerCase('tr');
     return durumUy && etiketUy && (!q || metin.includes(q));
   });
   const cmp = {
@@ -567,9 +573,12 @@ async function canliAra(q){
   const sinyal = araCtl.signal;
   const zam = setTimeout(() => araCtl.abort(), 9000);
   let agSorunu = false;
+  const tip = durum.araTip;
+  const gbSorgu = tip === 'yazar' ? 'inauthor:' + q
+    : tip === 'yayinevi' ? 'inpublisher:' + q : q;
   // 1) Google Books — yayınevi/yıl/sayfa zengin
   const gbSoz = fetch('https://www.googleapis.com/books/v1/volumes?key=AIzaSyCjjwU2NcpAgTVVSop0YNhIaQPmWWpHc04&country=TR&maxResults=6&printType=books&q='
-      + encodeURIComponent(q), { signal: sinyal })
+      + encodeURIComponent(gbSorgu), { signal: sinyal })
     .then(r => r.json())
     .then(j => (j.items || []).map(it => {
       const v = it.volumeInfo || {};
@@ -582,7 +591,8 @@ async function canliAra(q){
     }).filter(a => a.ad))
     .catch(e => { agSorunu = true; return []; });
   // 2) kitaplik-ara Worker — Goodreads + 1000Kitap (Türkçe derinlik)
-  const wSoz = fetch('https://kitaplik-ara.dessn7.workers.dev/ara?q=' + encodeURIComponent(q), { signal: sinyal })
+  const wSoz = tip === 'yayinevi' ? Promise.resolve([])
+    : fetch('https://kitaplik-ara.dessn7.workers.dev/ara?q=' + encodeURIComponent(q), { signal: sinyal })
     .then(r => r.json())
     .then(j => (j.sonuclar || []).filter(a => a && a.ad))
     .catch(e => { agSorunu = true; return []; });
@@ -593,8 +603,9 @@ async function canliAra(q){
   // 3) Son çare: Open Library
   if(!adaylar.length){
     try{
-      const r = await fetch('https://openlibrary.org/search.json?limit=6&fields=title,author_name,number_of_pages_median,cover_i,first_publish_year,publisher&q='
-        + encodeURIComponent(q), { signal: sinyal });
+      const olAlan = tip === 'yazar' ? '&author=' : tip === 'yayinevi' ? '&publisher=' : '&q=';
+      const r = await fetch('https://openlibrary.org/search.json?limit=6&fields=title,author_name,number_of_pages_median,cover_i,first_publish_year,publisher'
+        + olAlan + encodeURIComponent(q), { signal: sinyal });
       const j = await r.json();
       adaylar = (j.docs || []).map(d => ({
         ad: d.title || '', yazar: (d.author_name||[]).slice(0,2).join(', '),
@@ -609,7 +620,9 @@ async function canliAra(q){
   if(!adaylar.length){
     dEl.textContent = agSorunu
       ? 'İnternete ulaşılamadı — bu ortam bağlantıya kapalı olabilir. Elle girebilirsin.'
-      : 'Öneri bulunamadı — elle devam edebilirsin.';
+      : (tip === 'yazar' ? 'Bu yazarda sonuç yok — kitap adıyla aramayı dene.'
+         : tip === 'yayinevi' ? 'Bu yayınevinde sonuç yok — kitap adıyla aramayı dene.'
+         : 'Öneri bulunamadı — elle devam edebilirsin.');
     sEl.innerHTML = ''; return; }
   dEl.textContent = 'Birine tıkla, formu doldurayım:';
   sEl.innerHTML = adaylar.map((a, i) => `<button class="ol-item" data-act="ol-sec" data-i="${i}">
@@ -661,6 +674,10 @@ function formAc(id){
   const k = id ? kitapBul(id) : null;
   document.getElementById('formBaslik').textContent = k ? 'Kitabı düzenle' : 'Yeni kitap';
   sonAramaMetni = k ? k.ad : '';
+  durum.araTip = 'ad';
+  document.querySelectorAll('#araTipSec .mini-chip').forEach(c =>
+    c.classList.toggle('secili', c.dataset.v === 'ad'));
+  document.getElementById('f-ad').placeholder = 'Yazmaya başla, önerileri getireyim…';
   sonucTemizle();
   document.getElementById('f-ad').value = k ? k.ad : '';
   document.getElementById('f-yazar').value = k ? (k.yazar||'') : '';
@@ -1203,6 +1220,17 @@ document.addEventListener('click', e => {
     case 'yeni': formAc(null); break;
     case 'form-kapat': document.getElementById('ortuForm').classList.remove('acik'); break;
     case 'ol-sec': olSec(parseInt(el.dataset.i)); break;
+    case 'ara-tip': {
+      durum.araTip = v;
+      document.querySelectorAll('#araTipSec .mini-chip').forEach(c =>
+        c.classList.toggle('secili', c.dataset.v === v));
+      const gir = document.getElementById('f-ad');
+      gir.placeholder = v === 'yazar' ? 'Yazar adı yaz — kitaplarını listeleyeyim'
+        : v === 'yayinevi' ? 'Yayınevi yaz — kitaplarını listeleyeyim'
+        : 'Yazmaya başla, önerileri getireyim…';
+      sonAramaMetni = ''; sonucTemizle();
+      if(gir.value.trim().length >= 3) canliAra(gir.value.trim());
+      break; }
     case 'kapak-kaldir': durum.formKapak = null; kapakOnizleCiz(); break;
     case 'f-durum': durum.formDurum = v; if(v !== 'bitti') durum.formPuan = null; formDurumCiz(); puanCiz(); break;
     case 'f-puan': durum.formPuan = parseInt(v); puanCiz(); break;
