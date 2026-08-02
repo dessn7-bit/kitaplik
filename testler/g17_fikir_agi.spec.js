@@ -111,7 +111,7 @@ test.describe('G17 M2 — kesişim görünümü', () => {
     await page.click('#panel-alinti [data-act="fa-kesisim"][data-v="y-fikri"]');
     await expect(page.locator('#panel-alinti #faKesisimKart')).toBeVisible();
     await page.click('#panel-alinti [data-act="fa-kesisim-kapat"]');
-    expect(await page.locator('#panel-alinti #faKesisimKart').count()).toBe(0);
+    await expect(page.locator('#panel-alinti #faKesisimKart')).toHaveCount(0);
     await expect(page.locator('#panel-alinti #faKomsuKart')).toBeVisible();   // komşulara döndük
   });
 });
