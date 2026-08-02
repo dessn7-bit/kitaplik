@@ -409,7 +409,8 @@ function kitapNormalize(k){
     notlar: Array.isArray(k.notlar) ? k.notlar.filter(n => n && n.metin).map(n => ({
       id: n.id || uid(), tip: n.tip === 'alinti' ? 'alinti' : 'not',
       metin: String(n.metin), tarih: n.tarih || bugun(),
-      sayfa: parseInt(n.sayfa) || null })) : []
+      sayfa: parseInt(n.sayfa) || null,
+      fikir: Array.isArray(n.fikir) ? n.fikir.map(f => String(f)).filter(Boolean) : [] })) : []
   };
 }
 function depoYukle(){
@@ -1365,5 +1366,6 @@ hepsiniCiz();
 <script src="./senkron.js"></script>
 <script src="./barkod.js"></script>
 <script src="./oturum.js"></script>
+<script src="./fikir.js"></script>
 </body>
 </html>
