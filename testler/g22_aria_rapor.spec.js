@@ -210,6 +210,19 @@ test.describe('G22 M2 — yıl sonu raporu', () => {
     expect(gecen.ortPuan).toBe(5.5);         // (5 + 6) / 2
   });
 
+  test('aynı kitabı AYNI YIL iki kez bitirmek: kitap 1, sayfa bir kez, yeniden 1', async ({ page }) => {
+    await tohumla(page, [sahteKitap({ id: 'ik', ad: 'İki Kez Okunan', yazar: 'Y', tur: 'Felsefe',
+      sayfa: 250, durum: 'bitti', puan: 9, bitisTarihi: gun(YIL, 9, 20),
+      okumalar: [{ bas: gun(YIL, 1, 2), bit: gun(YIL, 1, 15), puan: 7, not: '' }] })]);
+    await istAc(page);
+    const o = await page.evaluate(y => window.__rapor.yilOzeti(y), YIL);
+    expect(o.kitap).toBe(1);            // FARKLI kitap sayısı
+    expect(o.sayfa).toBe(250);          // sayfalar mükerrer eklenmez
+    expect(o.yenidenSayisi).toBe(2);    // iki okumanın ikisi de "yeniden" işaretli
+    expect(o.aylik[0] + o.aylik[8]).toBe(1);   // kitap tek ayda sayılır (ilk olayın ayı)
+    expect(o.ortPuan).toBe(7);          // temsilci olay ilk kaydedilen okuma
+  });
+
   test('veri olmayan yılda anlamlı boş mesaj, uydurma sayı yok', async ({ page }) => {
     // yalnız GEÇEN yıl verisi var; varsayılan seçim bu yıl → boş durum
     await tohumla(page, [sahteKitap({ ad: 'Sadece Geçen Yıl', yazar: 'Y', sayfa: 100,
