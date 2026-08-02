@@ -120,9 +120,9 @@
           '<div><label for="seriRaf">Raf konumu</label>' +
             '<input id="seriRaf" placeholder="ör. üst raf" autocomplete="off"></div>' +
         '</div>' +
-        '<div style="margin-top:12px;border-radius:12px;overflow:hidden;background:#000;position:relative">' +
+        '<div style="margin-top:12px;border-radius:12px;overflow:hidden;background:var(--kamera-zemin);position:relative">' +
           '<video id="seriVideo" playsinline muted style="width:100%;max-height:38vh;object-fit:cover;display:block"></video>' +
-          '<div style="position:absolute;inset:24% 12%;border:2px solid rgba(255,253,247,.85);border-radius:10px;pointer-events:none"></div>' +
+          '<div style="position:absolute;inset:24% 12%;border:2px solid var(--kamera-cerceve);border-radius:10px;pointer-events:none"></div>' +
         '</div>' +
         '<div id="seriNot" style="font-size:.82rem;color:var(--muted);margin-top:10px"></div>' +
         '<div style="display:flex;gap:8px;margin-top:8px">' +

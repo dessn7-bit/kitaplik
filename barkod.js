@@ -184,9 +184,9 @@
         '<div class="tutamac"></div>' +
         '<button class="sheet-kapat" data-act="barkod-kapat" aria-label="Kapat">✕</button>' +
         '<div class="sheet-baslik">Barkod veya ISBN</div>' +
-        '<div style="margin-top:12px;border-radius:12px;overflow:hidden;background:#000;position:relative">' +
+        '<div style="margin-top:12px;border-radius:12px;overflow:hidden;background:var(--kamera-zemin);position:relative">' +
           '<video id="barkodVideo" playsinline muted style="width:100%;max-height:44vh;object-fit:cover;display:block"></video>' +
-          '<div style="position:absolute;inset:22% 12%;border:2px solid rgba(255,253,247,.85);border-radius:10px;pointer-events:none"></div>' +
+          '<div style="position:absolute;inset:22% 12%;border:2px solid var(--kamera-cerceve);border-radius:10px;pointer-events:none"></div>' +
         '</div>' +
         '<div id="barkodNot" style="font-size:.82rem;color:var(--muted);margin-top:10px"></div>' +
         '<label for="barkodElle">ISBN\'i elle yaz</label>' +

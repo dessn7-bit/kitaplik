@@ -1,6 +1,6 @@
 # Kitaplık Regresyon Test Paketi (Playwright)
 
-217 vaka, 20 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
+244 vaka, 21 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
 kırarsa bu paket kırmızıya döner. (Mutasyon denetiminden geçti: 7 el-yapımı mutasyon +
 G12'nin 3 kritik düzeltmesi geri alındığında ilgili vakalar kırmızıya düşüyor.)
 
@@ -42,6 +42,7 @@ koşar (temiz localStorage), service worker **engellidir** (`serviceWorkers:'blo
 | g18_fikirag_duzeltme | tüm kaynaklarda kontrol karakteri taraması, kesişim alt listeyi de süzer |
 | g19_dogruluk | Türkçe katlama (arama + kopya tespiti + etiket), oturumda tek sayfa kutusu |
 | g20_worker_sw | worker: boş sonuç cache'lenmez, kaynak sayaçları, /saglik · sw: köken filtresi, çevrimdışı yedek |
+| g21_gorunum_erisim | karanlık tema + kontrast (hesaplanmış), geniş ekran kırılımları, Esc/odak tuzağı/aria, dokunma hedefleri |
 
 **Yeni kitap alanı eklerken:** `kitapNormalize`'a eklemeyi unutma — yoksa alan yenilemede
 sessizce silinir. Her yeni alan için "yenilemede korunur" vakası zorunlu (g15 deseni).

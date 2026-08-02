@@ -268,7 +268,7 @@
     s.id = 'zkStil';
     s.textContent = `
       .zk-kart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-        padding:14px;box-shadow:0 1px 3px rgba(90,75,50,.08);margin-top:14px}
+        padding:14px;box-shadow:0 1px 3px var(--golge);margin-top:14px}
       .zk-baslik{font-family:var(--serif);font-size:1.05rem}
       .zk-alt-baslik{font-size:.78rem;color:var(--muted2);margin:10px 0 2px;letter-spacing:.03em}
       .zk-not{font-size:.78rem;color:var(--muted);margin-top:8px;line-height:1.55}

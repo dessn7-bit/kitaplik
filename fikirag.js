@@ -154,7 +154,7 @@
     s.textContent = `
       #faPanel{display:flex;flex-direction:column;gap:10px;margin:6px 0 2px}
       .fa-kart{background:var(--surface);border:1px solid var(--border);border-radius:12px;
-        padding:12px 13px;box-shadow:0 1px 3px rgba(90,75,50,.08)}
+        padding:12px 13px;box-shadow:0 1px 3px var(--golge)}
       .fa-baslik{font-family:var(--serif);font-size:.98rem}
       .fa-not{font-size:.76rem;color:var(--muted);margin-top:7px;line-height:1.5}
       .fa-vurgu{font-size:.82rem;color:var(--brass);font-weight:600;margin-top:8px}
@@ -162,7 +162,7 @@
       .fa-sira::-webkit-scrollbar{display:none}
       .fa-cip{flex:0 0 auto;padding:5px 11px;border-radius:999px;border:1px solid var(--border);
         background:var(--surface2);color:var(--muted);font-size:.74rem}
-      .fa-cip.fa-secili{background:var(--brass);color:#FFFDF7;border-color:var(--brass);font-weight:600}
+      .fa-cip.fa-secili{background:var(--brass);color:var(--uzeri);border-color:var(--brass);font-weight:600}
       .fa-komsu{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;
         text-align:left;padding:8px 10px;margin-top:7px;border:1px solid var(--border);
         border-radius:9px;background:var(--surface2);font-size:.84rem;color:var(--paper)}

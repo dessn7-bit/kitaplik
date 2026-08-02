@@ -19,6 +19,23 @@
     });
   }
   function bildir(m){ if(typeof toast === 'function') toast(m); }
+  /* Etiket silme KARARI: onay yerine GERİ ALMA.
+     Onay her silmede friksiyon yaratır (etiket düzenlemek sık yapılan iş);
+     geri alma akışı bozmaz ve kaybı tamamen kurtarır. Dokunma hedefi de
+     ~12px'ten ~42px'e çıktığı için kazara silme zaten seyrekleşti. */
+  function geriAlSun(mesaj, geriAl){
+    bildir(mesaj + ' — geri almak için dokun');
+    var t = document.getElementById('toast');
+    if(!t){ return; }
+    var temizle = function(){
+      t.style.pointerEvents = ''; t.style.cursor = '';
+      t.removeEventListener('click', tik);
+    };
+    var tik = function(){ temizle(); geriAl(); };
+    t.style.pointerEvents = 'auto'; t.style.cursor = 'pointer';
+    t.addEventListener('click', tik);
+    setTimeout(temizle, 2400);
+  }
   function normEtiket(s){
     return String(s || '').trim().replace(/^#/, '').replace(/\s+/g, ' ').slice(0, 40);
   }
@@ -223,8 +240,13 @@
         return;
       }
       if(act === 'fikir-sil'){
-        fikirSilNottan(el.dataset.nid, el.dataset.v, el.dataset.kid);
-        bildir(T.silindi);
+        var silNid = el.dataset.nid, silKid = el.dataset.kid, silEtiket = el.dataset.v;
+        fikirSilNottan(silNid, silEtiket, silKid);
+        geriAlSun(T.silindi, function(){
+          fikirEkleNota(silNid, silEtiket, silKid);
+          bildir('Geri alındı: #' + silEtiket);
+          yenidenCiz();
+        });
         yenidenCiz();
         return;
       }

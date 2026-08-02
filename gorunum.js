@@ -37,27 +37,27 @@
       #liste.izgara .kart-yazar{font-size:.72rem;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       #liste.izgara .kart-alt,#liste.izgara .ilerleme-txt{display:none}
       #liste.izgara .iz-kapak{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:8px;
-        border:1px solid var(--border);background:var(--surface2);box-shadow:0 2px 6px rgba(90,75,50,.14)}
+        border:1px solid var(--border);background:var(--surface2);box-shadow:0 2px 6px var(--golge-orta)}
       #liste.izgara .iz-yedek{width:100%;aspect-ratio:2/3;border-radius:8px;display:flex;align-items:flex-end;
-        padding:8px;font-family:var(--serif);font-size:.8rem;color:#FFFDF7;line-height:1.2;
-        box-shadow:0 2px 6px rgba(90,75,50,.14);overflow:hidden}
-      .vm-iz-istek{position:absolute;top:6px;right:6px;background:var(--mavi);color:#FFFDF7;
+        padding:8px;font-family:var(--serif);font-size:.8rem;color:var(--uzeri);line-height:1.2;
+        box-shadow:0 2px 6px var(--golge-orta);overflow:hidden}
+      .vm-iz-istek{position:absolute;top:6px;right:6px;background:var(--mavi);color:var(--uzeri);
         font-size:.6rem;padding:2px 6px;border-radius:999px;z-index:2;letter-spacing:.02em}
       .raf-basligi{grid-column:1/-1;font-size:.8rem;color:var(--muted);margin:6px 0 -4px;letter-spacing:.03em}
       .kart.secili{outline:2px solid var(--brass);outline-offset:2px;border-radius:12px}
       .secim-isaret{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
-        background:var(--brass);color:#FFFDF7;display:flex;align-items:center;justify-content:center;
-        font-size:.8rem;z-index:3;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+        background:var(--brass);color:var(--uzeri);display:flex;align-items:center;justify-content:center;
+        font-size:.8rem;z-index:3;box-shadow:0 1px 4px var(--golge-orta)}
       .toplu-cubuk{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:31;
         background:var(--surface);border-top:1px solid var(--brass-dim);padding:10px 14px;
-        display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 -3px 12px rgba(90,75,50,.12)}
+        display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 -3px 12px var(--golge-orta)}
       .toplu-cubuk .sayi{font-size:.85rem;color:var(--brass);font-weight:600;margin-right:auto}
       .toplu-cubuk button{padding:8px 12px;border-radius:8px;border:1px solid var(--border);
         background:var(--surface2);font-size:.8rem;color:var(--paper)}
       .toplu-cubuk button.tehlike{border-color:var(--drop);color:var(--drop)}
       .gorunum-dugme{padding:6px 10px;border-radius:8px;border:1px solid var(--border);
         background:var(--surface);font-size:.8rem;color:var(--muted)}
-      .gorunum-dugme.aktif{background:var(--brass);color:#FFFDF7;border-color:var(--brass)}
+      .gorunum-dugme.aktif{background:var(--brass);color:var(--uzeri);border-color:var(--brass)}
     `;
     document.head.appendChild(s);
   }
@@ -150,7 +150,7 @@
       ? '<img class="iz-kapak" src="' + kacir(k.kapak) + '" alt="" loading="lazy">'
       : '<div class="iz-yedek" style="background:' + sirtRenkL(k.ad) + '">' + kacir(k.ad) + '</div>';
     const rozet = k.durum === 'okunuyor'
-      ? '<div style="position:absolute;top:6px;left:6px;background:var(--brass);color:#FFFDF7;' +
+      ? '<div style="position:absolute;top:6px;left:6px;background:var(--brass);color:var(--uzeri);' +
         'font-size:.62rem;padding:2px 6px;border-radius:999px">okunuyor</div>' : '';
     // Izgarada yer dar: sol üst "okunuyor" rozetine ayrılmış, seçim işareti geçici;
     // istek işareti sağ üstte küçük bir pil olarak duruyor (kapak üstünde okunur kalsın diye dolu zemin).
