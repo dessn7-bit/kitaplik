@@ -80,10 +80,10 @@ test.describe('G13 M2 — raf gruplama düğmesi', () => {
     ]);
     await page.goto('/');
     await page.click('#izgaraBtn');
-    await expect(page.locator('.raf-basligi')).toHaveCount(0);
+    await expect(page.locator('#liste .raf-basligi')).toHaveCount(0);
     await page.click('#rafGrupBtn');
-    await expect(page.locator('.raf-basligi')).toHaveCount(2);
-    await expect(page.locator('.raf-basligi').first()).toContainText('raf belirtilmemiş');
+    await expect(page.locator('#liste .raf-basligi')).toHaveCount(2);
+    await expect(page.locator('#liste .raf-basligi').first()).toContainText('raf belirtilmemiş');
     await expect(page.locator('#liste')).toContainText('üst raf · 2');
     await expect(page.locator('#liste .kart')).toHaveCount(3);
   });
@@ -93,11 +93,11 @@ test.describe('G13 M2 — raf gruplama düğmesi', () => {
     await page.goto('/');
     await page.click('#izgaraBtn');
     await page.click('#rafGrupBtn');
-    await expect(page.locator('.raf-basligi')).toHaveCount(1);
+    await expect(page.locator('#liste .raf-basligi')).toHaveCount(1);
     expect(await page.evaluate(() =>
       JSON.parse(localStorage.getItem('kk_gorunum_v1')).rafGrupla)).toBe(true);
     await page.reload();
-    await expect(page.locator('.raf-basligi')).toHaveCount(1);
+    await expect(page.locator('#liste .raf-basligi')).toHaveCount(1);
     await expect(page.locator('#rafGrupBtn')).toBeVisible();
   });
 });

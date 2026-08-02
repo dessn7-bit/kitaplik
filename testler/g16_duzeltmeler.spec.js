@@ -89,25 +89,25 @@ async function seriDetayAc(page, kitaplar) {
   await tohumla(page, kitaplar);
   await page.goto('/');
   await page.click(`#liste .kart[data-id="${kitaplar[0].id}"]`);
-  await expect(page.locator('.vm-seri-kutu')).toBeVisible();
+  await expect(page.locator('#detayIcerik .vm-seri-kutu')).toBeVisible();
 }
 
 test.describe('G16 D3 — eksik cilt yalnız aradaki boşluklar', () => {
 
   test('3,4,6 → yalnız 5 eksik (1 ve 2 sayılmaz)', async ({ page }) => {
     await seriDetayAc(page, [seriKitap('C3', 3), seriKitap('C4', 4), seriKitap('C6', 6)]);
-    await expect(page.locator('.vm-eksik')).toContainText('Eksik cilt: 5');
-    await expect(page.locator('.vm-eksik')).not.toContainText('1');
-    await expect(page.locator('.vm-eksik')).not.toContainText('2');
+    await expect(page.locator('#detayIcerik .vm-eksik')).toContainText('Eksik cilt: 5');
+    await expect(page.locator('#detayIcerik .vm-eksik')).not.toContainText('1');
+    await expect(page.locator('#detayIcerik .vm-eksik')).not.toContainText('2');
   });
 
   test('1,2,4 → 3 eksik (davranış korundu)', async ({ page }) => {
     await seriDetayAc(page, [seriKitap('C1', 1), seriKitap('C2', 2), seriKitap('C4', 4)]);
-    await expect(page.locator('.vm-eksik')).toContainText('Eksik cilt: 3');
+    await expect(page.locator('#detayIcerik .vm-eksik')).toContainText('Eksik cilt: 3');
   });
 
   test('ardışık seride uyarı yok', async ({ page }) => {
     await seriDetayAc(page, [seriKitap('C2', 2), seriKitap('C3', 3), seriKitap('C4', 4)]);
-    expect(await page.locator('.vm-eksik').count()).toBe(0);
+    expect(await page.locator('#detayIcerik .vm-eksik').count()).toBe(0);
   });
 });

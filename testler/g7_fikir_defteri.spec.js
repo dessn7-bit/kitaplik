@@ -17,8 +17,8 @@ test.describe('G7 fikir defteri', () => {
     await tohumla(page, [alintiliKitap('Kitap Bir', 'Varlık zamandır.')]);
     await page.goto('/');
     await alintiSekmesi(page);
-    await expect(page.locator('.fikir-giris')).toHaveCount(1);
-    await page.fill('.fikir-giris', 'varoluş');
+    await expect(page.locator('#alintiIcerik .fikir-giris')).toHaveCount(1);
+    await page.fill('#alintiIcerik .fikir-giris', 'varoluş');
     await page.click('[data-act="fikir-ekle"]');
     await expect(page.locator('#toast')).toContainText('Fikir eklendi: #varoluş');
     expect(await page.evaluate(() => veri.kitaplar[0].notlar[0].fikir)).toEqual(['varoluş']);
@@ -40,11 +40,11 @@ test.describe('G7 fikir defteri', () => {
     await tohumla(page, [alintiliKitap('Kitap Bir', 'Metin.')]);
     await page.goto('/');
     await alintiSekmesi(page);
-    await page.fill('.fikir-giris', '#Varlık');
+    await page.fill('#alintiIcerik .fikir-giris', '#Varlık');
     await page.click('[data-act="fikir-ekle"]');
     await expect.poll(() => page.evaluate(() => veri.kitaplar[0].notlar[0].fikir)).toEqual(['Varlık']);
     // TR küçük hali mükerrer sayılmalı
-    await page.fill('.fikir-giris', 'varlık');
+    await page.fill('#alintiIcerik .fikir-giris', 'varlık');
     await page.click('[data-act="fikir-ekle"]');
     await page.waitForTimeout(300);
     expect(await page.evaluate(() => veri.kitaplar[0].notlar[0].fikir)).toEqual(['Varlık']);
@@ -96,7 +96,7 @@ test.describe('G7 fikir defteri', () => {
     await tohumla(page, [alintiliKitap('Kalıcı Kitap', 'Kalıcı metin.')]);
     await page.goto('/');
     await alintiSekmesi(page);
-    await page.fill('.fikir-giris', 'kalıcı-fikir');
+    await page.fill('#alintiIcerik .fikir-giris', 'kalıcı-fikir');
     await page.click('[data-act="fikir-ekle"]');
     await expect.poll(() => page.evaluate(() => veri.kitaplar[0].notlar[0].fikir.length)).toBe(1);
     await page.reload();

@@ -1,6 +1,6 @@
 # Kitaplık Regresyon Test Paketi (Playwright)
 
-163 vaka, 16 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
+178 vaka, 17 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
 kırarsa bu paket kırmızıya döner. (Mutasyon denetiminden geçti: 7 el-yapımı mutasyon +
 G12'nin 3 kritik düzeltmesi geri alındığında ilgili vakalar kırmızıya düşüyor.)
 
@@ -38,6 +38,7 @@ koşar (temiz localStorage), service worker **engellidir** (`serviceWorkers:'blo
 | g14_okur_zekasi | zeka.js: tür/yazar puan analizi, bırakma analizi, oturumlardan aylık sayfa, saat dağılımı, sayfa hedefi |
 | g15_veri_modeli | çevirmen/dil, elle ISBN, yeniden okuma (okumalar[]), seri+cilt, sahiplik/istek listesi, hedef damgası |
 | g16_duzeltmeler | istek rozeti (liste+ızgara), kütüphaneyi boşalt üst düzey alanlar, eksik cilt boşluk mantığı |
+| g17_fikir_agi | fikirag.js: eş-geçim, komşular, kesişim görünümü, fikir haritası sıralamaları, ilişki önerisi |
 
 **Yeni kitap alanı eklerken:** `kitapNormalize`'a eklemeyi unutma — yoksa alan yenilemede
 sessizce silinir. Her yeni alan için "yenilemede korunur" vakası zorunlu (g15 deseni).
@@ -88,6 +89,10 @@ değerleri benzersiz önek taşısın (`zk-` gibi). Mevcut bir sınıfı (`.ol-s
 `.yedek-kart`) veya mevcut bir `data-act` değerini yeni bağlamda tekrar kullanmak,
 testlerdeki genel seçicileri gölgeliyor ve alakasız vakaları kırıyor (iki kez yaşandı).
 Görsel dili korumak için stilleri kopyala, seçici adlarını yenile.
+
+**Seçiciler her zaman kapsamlı olsun:** `page.locator('#panel-alinti .fa-kart')` gibi.
+Belge geneli sınıf seçicisi (`page.locator('.vm-rozet')`) bugün tek eşleşme bulsa bile,
+aynı sınıf ikinci bir yerde kullanıldığı anda strict-mode ihlaliyle kırılır — üç kez yaşandı.
 
 ## Yeni vaka ekleme
 

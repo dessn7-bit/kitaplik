@@ -34,7 +34,7 @@ test.describe('G2 arama ve kaynaklar', () => {
     page.__agAyar.google = gbYanit([{ ad: 'Tanrı Yanılgısı', yazar: 'Richard Dawkins',
       yayinevi: 'Kuzey Yayınları', yil: 2006, sayfa: 420 }]);
     await page.fill('#f-ad', 'tanrı yanılgısı');
-    await page.click('.ol-item >> nth=0');
+    await page.click('#olSonuc .ol-item >> nth=0');
     await expect(page.locator('#f-ad')).toHaveValue('Tanrı Yanılgısı');
     await expect(page.locator('#f-yazar')).toHaveValue('Richard Dawkins');
     await expect(page.locator('#f-yayinevi')).toHaveValue('Kuzey Yayınları');
@@ -50,9 +50,9 @@ test.describe('G2 arama ve kaynaklar', () => {
       { ad: 'Simyacı (Cep)', yazar: 'Paulo Coelho', yayinevi: '', yil: null, sayfa: null, kapak: null, kaynak: '1000Kitap ★8.1' }
     ] };
     await page.fill('#f-ad', 'simyacı');
-    await expect(page.locator('.ol-item')).toHaveCount(2);
-    await expect(page.locator('.ol-item >> nth=0')).toContainText('Goodreads');
-    await expect(page.locator('.ol-item >> nth=1')).toContainText('1000Kitap');
+    await expect(page.locator('#olSonuc .ol-item')).toHaveCount(2);
+    await expect(page.locator('#olSonuc .ol-item >> nth=0')).toContainText('Goodreads');
+    await expect(page.locator('#olSonuc .ol-item >> nth=1')).toContainText('1000Kitap');
   });
 
   test('aynı kitap iki kaynaktan gelirse tek satır görünür', async ({ page }) => {
@@ -63,7 +63,7 @@ test.describe('G2 arama ve kaynaklar', () => {
       { ad: 'Bambaşka Kitap', yazar: 'Başka Yazar', kaynak: 'Goodreads' }
     ] };
     await page.fill('#f-ad', 'tanrı yanılgısı');
-    await expect(page.locator('.ol-item')).toHaveCount(2); // 1 tekil + 1 farklı
+    await expect(page.locator('#olSonuc .ol-item')).toHaveCount(2); // 1 tekil + 1 farklı
     // .ol-sonuc stil sınıfını gelen-alıntı paneli de kullanıyor; arama sonucunu id ile hedefle.
     await expect(page.locator('#olSonuc')).toContainText('Bambaşka Kitap');
   });
@@ -75,8 +75,8 @@ test.describe('G2 arama ve kaynaklar', () => {
       { ad: 'Kürk Mantolu Madonna', yazar: 'Sabahattin Ali', kaynak: 'Goodreads' }
     ] };
     await page.fill('#f-ad', 'kürk mantolu');
-    await expect(page.locator('.ol-item')).toHaveCount(1);
-    await expect(page.locator('.ol-item')).toContainText('Kürk Mantolu Madonna');
+    await expect(page.locator('#olSonuc .ol-item')).toHaveCount(1);
+    await expect(page.locator('#olSonuc .ol-item')).toContainText('Kürk Mantolu Madonna');
     expect(page.__agSayac.olArama).toBe(0); // aday varken OL çağrılmaz
   });
 
@@ -85,8 +85,8 @@ test.describe('G2 arama ve kaynaklar', () => {
     page.__agAyar.olArama = { docs: [{ title: 'Nadir Kitap', author_name: ['Bilinmez Yazar'],
       number_of_pages_median: 180, first_publish_year: 1970, publisher: ['Eski Basım'], cover_i: null }] };
     await page.fill('#f-ad', 'nadir kitap');
-    await expect(page.locator('.ol-item')).toHaveCount(1);
-    await expect(page.locator('.ol-item')).toContainText('OpenLibrary');
+    await expect(page.locator('#olSonuc .ol-item')).toHaveCount(1);
+    await expect(page.locator('#olSonuc .ol-item')).toContainText('OpenLibrary');
     expect(page.__agSayac.olArama).toBeGreaterThan(0);
   });
 

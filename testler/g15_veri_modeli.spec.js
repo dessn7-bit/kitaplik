@@ -50,7 +50,7 @@ test.describe('G15 M1 — çevirmen ve dil', () => {
       title: 'Foreign Book', authors: ['An Author'], publisher: 'Pub', publishedDate: '2010',
       pageCount: 250, language: 'en', imageLinks: null } }] };
     await page.fill('#f-ad', 'foreign book');
-    await page.click('.ol-item >> nth=0');
+    await page.click('#olSonuc .ol-item >> nth=0');
     await expect(page.locator('#f-dil')).toHaveValue('en');
     await expect(page.locator('#f-cevirmen')).toHaveValue('');   // API'de yok → boş bırakıldı
   });
@@ -153,9 +153,9 @@ test.describe('G15 M3 — yeniden okuma', () => {
     await page.goto('/');
     await page.click('#liste .kart');
     await expect(page.locator('#detayIcerik')).toContainText('Okuma geçmişi');
-    await expect(page.locator('.vm-okuma-satir').first()).toContainText('1. okuma');
-    await expect(page.locator('.vm-okuma-satir').first()).toContainText('★ 7');
-    await expect(page.locator('.vm-okuma-satir').nth(1)).toContainText('2. okuma');
+    await expect(page.locator('#detayIcerik .vm-okuma-satir').first()).toContainText('1. okuma');
+    await expect(page.locator('#detayIcerik .vm-okuma-satir').first()).toContainText('★ 7');
+    await expect(page.locator('#detayIcerik .vm-okuma-satir').nth(1)).toContainText('2. okuma');
   });
 
   test('eski kayıt (okumalar alanı yok) açılınca çökme olmaz', async ({ page }) => {
@@ -197,9 +197,9 @@ test.describe('G15 M4 — seri ve cilt takibi', () => {
       sahteKitap({ ad: 'Alakasız Kitap' })]);
     await page.goto('/');
     await page.click('#liste .kart[data-id="' + await page.evaluate(() => veri.kitaplar[0].id) + '"]');
-    await expect(page.locator('.vm-seri-liste .vm-seri-oge')).toHaveCount(2);
-    await expect(page.locator('.vm-seri-oge.vm-bu')).toContainText('Birinci Cilt');
-    await page.click('.vm-seri-oge:not(.vm-bu)');
+    await expect(page.locator('#detayIcerik .vm-seri-liste .vm-seri-oge')).toHaveCount(2);
+    await expect(page.locator('#detayIcerik .vm-seri-oge.vm-bu')).toContainText('Birinci Cilt');
+    await page.click('#detayIcerik .vm-seri-oge:not(.vm-bu)');
     await expect(page.locator('#detayIcerik .sheet-baslik')).toContainText('İkinci Cilt');
   });
 
@@ -207,15 +207,15 @@ test.describe('G15 M4 — seri ve cilt takibi', () => {
     await tohumla(page, [seriKitap('C1', 1), seriKitap('C2', 2), seriKitap('C4', 4)]);
     await page.goto('/');
     await page.click('#liste .kart >> nth=0');
-    await expect(page.locator('.vm-eksik')).toContainText('Eksik cilt: 3');
+    await expect(page.locator('#detayIcerik .vm-eksik')).toContainText('Eksik cilt: 3');
   });
 
   test('tek ciltli seride eksik uyarısı ÇIKMAZ', async ({ page }) => {
     await tohumla(page, [seriKitap('Tek Cilt', 1)]);
     await page.goto('/');
     await page.click('#liste .kart');
-    await expect(page.locator('.vm-seri-kutu')).toBeVisible();
-    expect(await page.locator('.vm-eksik').count()).toBe(0);
+    await expect(page.locator('#detayIcerik .vm-seri-kutu')).toBeVisible();
+    expect(await page.locator('#detayIcerik .vm-eksik').count()).toBe(0);
   });
 
   test('"Bu seriyi rafta göster" listeyi seriye göre süzer', async ({ page }) => {
