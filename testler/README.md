@@ -1,7 +1,8 @@
 # Kitaplık Regresyon Test Paketi (Playwright)
 
-71 vaka, 10 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
-kırarsa bu paket kırmızıya döner.
+82 vaka, 11 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
+kırarsa bu paket kırmızıya döner. (Mutasyon denetiminden geçti: 7 el-yapımı mutasyonun
+7'si de en az bir vakayı kırmızıya düşürüyor.)
 
 ## Nasıl koşulur
 
@@ -31,6 +32,7 @@ koşar (temiz localStorage), service worker **engellidir** (`serviceWorkers:'blo
 | g8_senkron | `__senkron.birlestir` saf mantık + g damgası kalıcılığı (KRİTİK) |
 | g9_gorunum_toplu | ızgara görünümü, çoklu seçim, toplu raf/etiket/durum/silme |
 | g10_yedek_aktarim | JSON dışa/içe aktarım, Goodreads CSV, bozuk dosya |
+| g11_alinti_karti | kart.js: PNG üretimi, boyutlar, taşma koruması, indirme/paylaşım |
 
 ## Ağ taklidi — HİÇBİR test gerçek ağa çıkmaz
 

@@ -96,6 +96,30 @@ test.describe('G4 seri tarama', () => {
     await page.evaluate(() => { window.__sahteKod = null; });
   });
 
+  test('aynı-kod kilidi: yavaş kaynak + sürekli tarama → 1 kayıt ve 4 sn içinde 1 kaynak sorgusu', async ({ page }) => {
+    // M7 mutasyon boşluğunu kapatan vaka. Debounce'un gözlemlenebilir işi iki katlı:
+    // (1) kayıt tekliği (zatenVar ikinci katman olarak da korur),
+    // (2) aynı koda 4 sn içinde İKİNCİ kaynak sorgusu atılMAması — mutantı bu öldürür.
+    await kameraTaklit(page);
+    await page.goto('/');
+    // Google yanıtını ~1.2 sn geciktir: tarama tikleri sorgu sürerken de akmaya devam eder
+    await page.route(url => url.href.includes('googleapis.com/books'), async route => {
+      page.__agSayac.google++;
+      await new Promise(coz => setTimeout(coz, 1200));
+      await route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify(gbIsbnYanit({ ad: 'Yavaş Gelen Kitap', yazar: 'Y' })) });
+    });
+    await seriAc(page);
+    await page.evaluate(kod => { window.__sahteKod = kod; }, ISBN_A);
+    await expect(page.locator('#seriNot')).toContainText('Eklendi', { timeout: 15000 });
+    // kod okunmaya DEVAM ediyor — döngü aynı kodu birkaç kez daha görür
+    // (4 sn'lik debounce penceresinin İÇİNDE kalacak kadar bekle)
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => { window.__sahteKod = null; });
+    expect(await page.evaluate(() => veri.kitaplar.length)).toBe(1); // tek kayıt
+    expect(page.__agSayac.google).toBe(1); // 4 sn penceresinde TEK kaynak sorgusu
+  });
+
   test('bilinmeyen ISBN eklenmez', async ({ page }) => {
     await kameraTaklit(page);
     await page.goto('/');
