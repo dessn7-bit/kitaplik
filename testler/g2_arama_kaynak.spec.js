@@ -64,7 +64,8 @@ test.describe('G2 arama ve kaynaklar', () => {
     ] };
     await page.fill('#f-ad', 'tanrı yanılgısı');
     await expect(page.locator('.ol-item')).toHaveCount(2); // 1 tekil + 1 farklı
-    await expect(page.locator('.ol-sonuc')).toContainText('Bambaşka Kitap');
+    // .ol-sonuc stil sınıfını gelen-alıntı paneli de kullanıyor; arama sonucunu id ile hedefle.
+    await expect(page.locator('#olSonuc')).toContainText('Bambaşka Kitap');
   });
 
   test('Google boş dönerse worker sonuçları yine görünür', async ({ page }) => {

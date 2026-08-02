@@ -35,12 +35,16 @@
   }
 
   /* ---------- iki kaynaktan ISBN sorgusu ---------- */
+  /* Dönüş: { sonuc, agSorunu }. agSorunu YALNIZ iki kaynak da yanıt veremediğinde
+     true olur — biri yanıt verip bulamadıysa "kayıtlarda yok" doğru teşhistir.
+     Eskiden ağ arızası da "bu ISBN kayıtlarda yok" diye raporlanıyordu. */
   async function isbnAra(isbn){
     const t = isbnTemizle(isbn);
-    let sonuc = null;
+    let sonuc = null, gbHata = false, olHata = false;
     try{
       const r = await fetch('https://www.googleapis.com/books/v1/volumes?key=' + GB_ANAHTAR
         + '&country=TR&q=isbn:' + encodeURIComponent(t));
+      if(!r.ok) throw new Error('http ' + r.status);
       const j = await r.json();
       if(j.totalItems && j.items && j.items[0]){
         const v = j.items[0].volumeInfo || {};
@@ -54,10 +58,11 @@
           tur: (v.categories||[])[0] || ''
         };
       }
-    }catch(e){}
+    }catch(e){ gbHata = true; }
     // Open Library: eksik alanları tamamlar (özellikle yayınevi)
     try{
       const r = await fetch('https://openlibrary.org/api/books?format=json&jscmd=data&bibkeys=ISBN:' + encodeURIComponent(t));
+      if(!r.ok) throw new Error('http ' + r.status);
       const j = await r.json();
       const d = j && Object.values(j)[0];
       if(d){
@@ -72,8 +77,8 @@
         else for(const k of ['yazar','yayinevi','yil','sayfa','kapak'])
           if(!sonuc[k] && ol[k]) sonuc[k] = ol[k];
       }
-    }catch(e){}
-    return sonuc;
+    }catch(e){ olHata = true; }
+    return { sonuc, agSorunu: gbHata && olHata };
   }
 
   /* ---------- formu doldur ---------- */
@@ -99,10 +104,15 @@
     if(!isbnGecerli(t)){ bildir('Geçersiz ISBN — 10 veya 13 haneli olmalı'); return false; }
     const dEl = document.getElementById('olDurum');
     if(dEl) dEl.textContent = 'ISBN ' + t + ' sorgulanıyor…';
-    const k = await isbnAra(t);
+    const { sonuc: k, agSorunu } = await isbnAra(t);
     if(!k || !k.ad){
-      if(dEl) dEl.textContent = 'Bu ISBN kayıtlarda yok — kitap adıyla arayabilir veya elle girebilirsin.';
-      bildir('ISBN bulunamadı');
+      if(agSorunu){
+        if(dEl) dEl.textContent = 'İnternete ulaşılamadı — bağlantını kontrol edip tekrar dene.';
+        bildir('İnternete ulaşılamadı');
+      }else{
+        if(dEl) dEl.textContent = 'Bu ISBN kayıtlarda yok — kitap adıyla arayabilir veya elle girebilirsin.';
+        bildir('ISBN bulunamadı');
+      }
       return false;
     }
     formuDoldur(k, t);

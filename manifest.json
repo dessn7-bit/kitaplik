@@ -8,6 +8,23 @@
   "background_color": "#F5EFE3",
   "theme_color": "#F5EFE3",
   "lang": "tr",
+  "share_target": {
+    "action": "./index.html",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "shortcuts": [
+    {
+      "name": "Alıntılar",
+      "short_name": "Alıntılar",
+      "url": "./index.html?sekme=alinti",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "./icon-192.png",

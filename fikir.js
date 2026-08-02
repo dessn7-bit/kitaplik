@@ -32,10 +32,23 @@
     });
     return cikti;
   }
-  function notBul(id){
+  /* Not kimlikle bulunur. Metin eşleştirme KULLANILMAZ: birebir aynı metinli iki
+     alıntıda (aynı cümleyi iki kitaptan kaydetmek olağan) etiket yanlış nota gidiyordu.
+     Çekirdek her not kartına data-nid + data-kid basar. */
+  function notBul(id, kitapId){
+    if(kitapId){
+      var k = (veri.kitaplar || []).filter(function(x){ return x.id === kitapId; })[0];
+      if(k){
+        var n = (k.notlar || []).filter(function(x){ return x.id === id; })[0];
+        if(n) return { n: n, k: k };
+      }
+    }
     var hepsi = tumNotlar();
     for(var i = 0; i < hepsi.length; i++) if(hepsi[i].n.id === id) return hepsi[i];
     return null;
+  }
+  function kartKimlik(kart){
+    return { nid: kart.dataset.nid || '', kid: kart.dataset.kid || '' };
   }
   function fikirSayimlari(){
     var say = {};
@@ -47,8 +60,8 @@
     });
     return say;
   }
-  function fikirEkleNota(notId, etiket){
-    var b = notBul(notId);
+  function fikirEkleNota(notId, etiket, kitapId){
+    var b = notBul(notId, kitapId);
     if(!b) return false;
     var e = normEtiket(etiket);
     if(!e) return false;
@@ -60,8 +73,8 @@
     if(typeof depoKaydet === 'function') depoKaydet();
     return !varMi;
   }
-  function fikirSilNottan(notId, etiket){
-    var b = notBul(notId);
+  function fikirSilNottan(notId, etiket, kitapId){
+    var b = notBul(notId, kitapId);
     if(!b || !Array.isArray(b.n.fikir)) return;
     b.n.fikir = b.n.fikir.filter(function(x){ return x !== etiket; });
     if(typeof depoKaydet === 'function') depoKaydet();
@@ -103,38 +116,38 @@
   }
 
   function kartlariZenginlestir(){
-    var kap = document.getElementById('alintiIcerik');
+    zenginlestir(document.getElementById('alintiIcerik'));
+  }
+  /* Hem Al\u0131nt\u0131lar sekmesi hem kitap detay\u0131 i\u00e7in tek yol: kart kimli\u011finden git. */
+  function zenginlestir(kap){
     if(!kap) return;
-    var hepsi = tumNotlar();
-    var kartlar = kap.querySelectorAll('.not-kart');
-    Array.prototype.forEach.call(kartlar, function(kart){
+    Array.prototype.forEach.call(kap.querySelectorAll('.not-kart'), function(kart){
       if(kart.dataset.fikirHazir === '1') return;
-      var metinEl = kart.querySelector('.not-metin');
-      if(!metinEl) return;
-      var metin = metinEl.textContent;
-      var esles = null;
-      for(var i = 0; i < hepsi.length; i++) if(hepsi[i].n.metin === metin){ esles = hepsi[i]; break; }
-      if(!esles) return;
+      var kim = kartKimlik(kart);
+      if(!kim.nid) return;
+      var b = notBul(kim.nid, kim.kid);
+      if(!b) return;
       kart.dataset.fikirHazir = '1';
-      kart.dataset.notId = esles.n.id;
 
       var alt = document.createElement('div');
       alt.style.marginTop = '8px';
-      alt.innerHTML = etiketSatiri(esles.n) +
+      alt.innerHTML = etiketSatiri(b.n, kim.kid || b.k.id) +
         '<div style="display:flex;gap:6px;margin-top:7px">' +
-          '<input class="fikir-giris" data-nid="' + esles.n.id + '" placeholder="' + T.fikirEkle +
+          '<input class="fikir-giris" data-nid="' + kacir(kim.nid) + '" placeholder="' + T.fikirEkle +
             '" autocomplete="off" style="flex:1;font-size:.82rem;padding:7px 10px">' +
-          '<button class="mini-chip" data-act="fikir-ekle" data-nid="' + esles.n.id + '">' + T.ekle + '</button>' +
+          '<button class="mini-chip" data-act="fikir-ekle" data-nid="' + kacir(kim.nid) +
+            '" data-kid="' + kacir(kim.kid || b.k.id) + '">' + T.ekle + '</button>' +
         '</div>';
       kart.appendChild(alt);
     });
   }
-  function etiketSatiri(n){
+  function etiketSatiri(n, kitapId){
     var et = n.fikir || [];
     if(!et.length) return '';
     return '<div style="display:flex;flex-wrap:wrap;gap:5px">' + et.map(function(e){
       return '<span class="mini-chip" style="padding:3px 9px;font-size:.72rem">#' + kacir(e) +
-        ' <button data-act="fikir-sil" data-nid="' + n.id + '" data-v="' + kacir(e) +
+        ' <button data-act="fikir-sil" data-nid="' + kacir(n.id) + '" data-kid="' + kacir(kitapId || '') +
+        '" data-v="' + kacir(e) +
         '" style="color:var(--muted2);margin-left:2px">\u00d7</button></span>';
     }).join('') + '</div>';
   }
@@ -153,8 +166,8 @@
     var kartlar = kap.querySelectorAll('.not-kart');
     var gorunen = 0;
     Array.prototype.forEach.call(kartlar, function(kart){
-      var id = kart.dataset.notId;
-      var b = id ? notBul(id) : null;
+      var kim = kartKimlik(kart);
+      var b = kim.nid ? notBul(kim.nid, kim.kid) : null;
       var uygun = b && (b.n.fikir || []).indexOf(secili) >= 0;
       kart.style.display = uygun ? '' : 'none';
       if(uygun) gorunen++;
@@ -177,30 +190,7 @@
   }
 
   function detayZenginlestir(){
-    var kap = document.getElementById('detayIcerik');
-    if(!kap) return;
-    var kartlar = kap.querySelectorAll('.not-kart');
-    if(!kartlar.length) return;
-    var k = (veri.kitaplar || []).filter(function(x){ return x.id === durum.detayId; })[0];
-    if(!k) return;
-    Array.prototype.forEach.call(kartlar, function(kart){
-      if(kart.dataset.fikirHazir === '1') return;
-      var metinEl = kart.querySelector('.not-metin');
-      if(!metinEl) return;
-      var n = (k.notlar || []).filter(function(x){ return x.metin === metinEl.textContent; })[0];
-      if(!n) return;
-      kart.dataset.fikirHazir = '1';
-      kart.dataset.notId = n.id;
-      var alt = document.createElement('div');
-      alt.style.marginTop = '8px';
-      alt.innerHTML = etiketSatiri(n) +
-        '<div style="display:flex;gap:6px;margin-top:7px">' +
-          '<input class="fikir-giris" data-nid="' + n.id + '" placeholder="' + T.fikirEkle +
-            '" autocomplete="off" style="flex:1;font-size:.82rem;padding:7px 10px">' +
-          '<button class="mini-chip" data-act="fikir-ekle" data-nid="' + n.id + '">' + T.ekle + '</button>' +
-        '</div>';
-      kart.appendChild(alt);
-    });
+    zenginlestir(document.getElementById('detayIcerik'));
   }
 
   function baslat(){
@@ -216,18 +206,22 @@
       }
       if(act === 'fikir-ekle'){
         var nid = el.dataset.nid;
-        var giris = document.querySelector('.fikir-giris[data-nid="' + nid + '"]');
+        // Giriş kutusunu AYNI kart içinde ara: detay ve Alıntılar sekmesi aynı anda
+        // DOM'da olabildiği için belge geneli seçici yanlış kutuyu bulabiliyordu.
+        var kart = el.closest('.not-kart');
+        var giris = (kart && kart.querySelector('.fikir-giris'))
+          || document.querySelector('.fikir-giris[data-nid="' + nid + '"]');
         if(!giris) return;
         var deger = giris.value;
         if(!normEtiket(deger)){ return; }
-        var yeni = fikirEkleNota(nid, deger);
+        var yeni = fikirEkleNota(nid, deger, el.dataset.kid);
         giris.value = '';
         bildir(yeni ? T.eklendi + '#' + normEtiket(deger) : '#' + normEtiket(deger));
         yenidenCiz();
         return;
       }
       if(act === 'fikir-sil'){
-        fikirSilNottan(el.dataset.nid, el.dataset.v);
+        fikirSilNottan(el.dataset.nid, el.dataset.v, el.dataset.kid);
         bildir(T.silindi);
         yenidenCiz();
         return;
@@ -244,7 +238,8 @@
       e.preventDefault();
       var nid = t.dataset.nid;
       if(!normEtiket(t.value)) return;
-      var yeni = fikirEkleNota(nid, t.value);
+      var kartE = t.closest('.not-kart');
+      var yeni = fikirEkleNota(nid, t.value, kartE ? kartE.dataset.kid : '');
       var etiket = normEtiket(t.value);
       t.value = '';
       bildir(yeni ? T.eklendi + '#' + etiket : '#' + etiket);

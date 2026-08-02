@@ -195,27 +195,21 @@
   }
 
   /* ---------- kartlara düğme takma ---------- */
-  function notBilgi(metin){
-    for(const k of (veri.kitaplar||[]))
-      for(const n of (k.notlar||[]))
-        if(n.metin === metin) return { n, k };
-    return null;
-  }
+  /* Not, çekirdeğin bastığı data-nid/data-kid ile bulunur. Metin eşleştirme
+     KULLANILMAZ: aynı cümle iki kitapta kayıtlıysa kart yanlış kitabı atfediyordu. */
   function dugmeTak(kapId){
     const kap = document.getElementById(kapId);
     if(!kap) return;
     kap.querySelectorAll('.not-kart').forEach(kart => {
       if(kart.dataset.paylasHazir === '1') return;
-      const metinEl = kart.querySelector('.not-metin');
-      if(!metinEl) return;
-      const b = notBilgi(metinEl.textContent);
-      if(!b) return;
+      const nid = kart.dataset.nid, kid = kart.dataset.kid;
+      if(!nid || !kid) return;
       kart.dataset.paylasHazir = '1';
       const d = document.createElement('button');
       d.className = 'mini-chip';
       d.dataset.act = 'alinti-kart';
-      d.dataset.nid = b.n.id;
-      d.dataset.kid = b.k.id;
+      d.dataset.nid = nid;
+      d.dataset.kid = kid;
       d.style.marginTop = '8px';
       d.textContent = '🖼 Kart yap';
       kart.appendChild(d);

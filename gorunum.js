@@ -73,6 +73,19 @@
     s.dataset.act = 'secim-ac';
     s.textContent = '✓ Seç';
     satir.insertBefore(s, b);
+    // Raf gruplama YALNIZ ızgara açıkken anlamlı — liste görünümünde gizli durur.
+    const r = document.createElement('button');
+    r.id = 'rafGrupBtn'; r.className = 'gorunum-dugme' + (rafGrupla ? ' aktif' : '');
+    r.dataset.act = 'raf-grupla';
+    r.textContent = '▤ Rafa göre';
+    satir.insertBefore(r, b.nextSibling);
+    rafDugmeTazele();
+  }
+  function rafDugmeTazele(){
+    const r = document.getElementById('rafGrupBtn');
+    if(!r) return;
+    r.style.display = izgara ? '' : 'none';
+    r.classList.toggle('aktif', rafGrupla);
   }
 
   function sirtRenkL(ad){
@@ -271,6 +284,7 @@
       const sarmal = function(){
         const s = asil.apply(this, arguments);
         dugmeEkle();
+        rafDugmeTazele();
         izgaraTazele();
         secimGorselTazele();
         return s;
@@ -317,7 +331,14 @@
         izgara = !izgara; ayarYaz();
         el.textContent = izgara ? '☰ Liste' : '▦ Izgara';
         el.classList.toggle('aktif', izgara);
+        rafDugmeTazele();
         if(typeof listeCiz === 'function') listeCiz();
+        return;
+      }
+      if(act === 'raf-grupla'){
+        rafGrupla = !rafGrupla; ayarYaz();
+        rafDugmeTazele();
+        izgaraTazele();
         return;
       }
       if(act === 'secim-ac'){ secimModu ? secimKapat() : secimAc(null); return; }
@@ -399,7 +420,7 @@
   if(document.getElementById('liste')) baslat();
   else document.addEventListener('DOMContentLoaded', baslat);
 
-  window.__gorunum = { secimAc, secimKapat, izgaraCiz, izgaraTazele,
+  window.__gorunum = { secimAc, secimKapat, izgaraCiz, izgaraTazele, rafDugmeTazele,
     secilenler: () => secilenler, izgaraMi: () => izgara,
     izgaraYaz: v => { izgara = v; ayarYaz(); },
     rafGruplaYaz: v => { rafGrupla = v; ayarYaz(); } };

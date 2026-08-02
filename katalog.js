@@ -165,10 +165,18 @@
     sonKodZaman[t] = simdi;
     const not = document.getElementById('seriNot');
     if(not) not.textContent = 'ISBN ' + t + ' aranıyor…';
-    const k = await window.__barkod.isbnAra(t);
+    const { sonuc: k, agSorunu } = await window.__barkod.isbnAra(t);
     if(!k || !k.ad){
-      if(not) not.textContent = 'ISBN ' + t + ' bulunamadı — elle ekleyebilirsin.';
-      bildir('Bulunamadı: ' + t);
+      // Ağ arızası "kitap yok" demek DEĞİL: seri taramada sessizce atlanırsa
+      // Kaan tüm rafı tarayıp hiçbirinin bulunmadığını sanabilir.
+      if(agSorunu){
+        if(not) not.innerHTML = '<b style="color:var(--drop)">⚠ İnternete ulaşılamadı</b> — '
+          + 'ISBN ' + kacir(t) + ' sorgulanamadı, kitap EKLENMEDİ. Bağlantını kontrol edip tekrar okut.';
+        bildir('İnternete ulaşılamadı — kitap eklenmedi');
+      }else{
+        if(not) not.textContent = 'ISBN ' + t + ' bulunamadı — elle ekleyebilirsin.';
+        bildir('Bulunamadı: ' + t);
+      }
       return;
     }
     const eski = zatenVar(t, k.ad, k.yazar);

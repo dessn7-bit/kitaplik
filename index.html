@@ -267,6 +267,13 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
       <button class="btn btn-cerceve" data-act="csv-aktar">CSV indir (Excel için)</button>
     </div>
     <div class="yedek-kart">
+      <h3>Alıntı ve notları dışa aktar</h3>
+      <p>Bütün alıntıların ve notların, kitaplara göre gruplanmış tek bir Markdown (.md) dosyası olarak iner — yazı çalışmanda doğrudan kullanabilirsin.</p>
+      <button class="btn btn-brass" data-act="md-alinti">Sadece alıntılar (.md)</button>
+      <div style="height:8px"></div>
+      <button class="btn btn-cerceve" data-act="md-hepsi">Alıntılar + notlar (.md)</button>
+    </div>
+    <div class="yedek-kart">
       <h3>Goodreads'ten aktar</h3>
       <p>Goodreads → My Books → sol menüde <b>Import and export</b> → <b>Export Library</b> ile CSV indir, buraya yükle. Kitaplar rafları (okundu/okunuyor/okunacak), puanların (5'lik → 10'luğa çevrilir), tarihler, yorumların ve kapaklarıyla gelir.</p>
       <button class="btn btn-brass" data-act="gr-aktar">Goodreads CSV yükle</button>
@@ -384,6 +391,35 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   </div>
 </div>
 
+<!-- ===== GELEN ALINTI (paylaş hedefi) ===== -->
+<div class="ortu" id="ortuGelen">
+  <div class="sheet">
+    <div class="tutamac"></div>
+    <button class="sheet-kapat" data-act="gelen-kapat" aria-label="Kapat">✕</button>
+    <div class="sheet-baslik">Gelen alıntı</div>
+    <p style="font-size:.82rem;color:var(--muted);margin-top:6px">Paylaştığın metni hangi kitaba kaydedeyim?</p>
+
+    <label for="gelen-metin">Metin</label>
+    <textarea id="gelen-metin" rows="5" style="min-height:110px"></textarea>
+
+    <label for="gelen-ara">Kitap</label>
+    <input id="gelen-ara" placeholder="Kitap adı veya yazar yaz…" autocomplete="off">
+    <div id="gelen-secili" style="font-size:.82rem;color:var(--brass);margin-top:6px"></div>
+    <div class="ol-sonuc" id="gelen-liste"></div>
+
+    <div class="not-tip-sec" id="gelenTip" style="margin-top:12px">
+      <button class="mini-chip secili" data-act="gelen-tip" data-v="alinti">Alıntı</button>
+      <button class="mini-chip" data-act="gelen-tip" data-v="not">Not</button>
+      <input class="sayfa-input" id="gelen-sayfa" type="number" inputmode="numeric" min="1" placeholder="sf.">
+    </div>
+
+    <div class="form-alt">
+      <button class="btn btn-cerceve" data-act="gelen-kapat" style="flex:1">Vazgeç</button>
+      <button class="btn btn-brass" data-act="gelen-kaydet" style="flex:2">Kitaba kaydet</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== DETAY ===== -->
 <div class="ortu" id="ortuDetay">
   <div class="sheet" id="detayIcerik"></div>
@@ -401,7 +437,8 @@ const SIRT_RENK = ['#C89B4B','#8FA86B','#B06A4A','#7E8FA6','#A67E9E','#8A6A33','
 let veri = depoYukle();
 let durum = { filtre:'hepsi', arama:'', etiket:'', sirala:'eklenme', sekme:'raf',
   formDuzenId:null, formDurum:'okunacak', formPuan:null, formKapak:null,
-  detayId:null, notTip:'not', alintiArama:'', araTip:'ad' };
+  detayId:null, notTip:'not', alintiArama:'', araTip:'ad',
+  gelenKitapId:null, gelenTip:'alinti' };
 
 /* ---------- depo + geriye uyumlu göç ---------- */
 function kitapNormalize(k){
@@ -866,7 +903,7 @@ function detayAc(id){
 
   const notlar = (k.notlar||[]).slice().reverse();
   const notHtml = notlar.map(n => `
-    <div class="not-kart ${n.tip === 'alinti' ? 'alinti' : ''}">
+    <div class="not-kart ${n.tip === 'alinti' ? 'alinti' : ''}" data-nid="${escAttr(n.id)}" data-kid="${escAttr(k.id)}">
       <div class="not-metin">${esc(n.metin)}</div>
       <div class="not-tarih">${n.tip === 'alinti' ? 'Alıntı' : 'Not'}${n.sayfa ? ' · sf. ' + n.sayfa : ''} · ${trTarih(n.tarih)}</div>
       <button class="not-sil" data-act="not-sil" data-nid="${n.id}" aria-label="Notu sil">✕</button>
@@ -938,7 +975,7 @@ function alintiCiz(){
     .sort((a,b) => (b.tarih||'').localeCompare(a.tarih||''));
 
   const listeHtml = filtreli.length ? filtreli.map(n => `
-    <div class="not-kart ${n.tip === 'alinti' ? 'alinti' : ''}">
+    <div class="not-kart ${n.tip === 'alinti' ? 'alinti' : ''}" data-nid="${escAttr(n.id)}" data-kid="${escAttr(n.kitap.id)}">
       <div class="not-metin">${esc(n.metin)}</div>
       <div class="not-tarih">${esc(n.kitap.ad)}${n.sayfa ? ' · sf. ' + n.sayfa : ''} · ${trTarih(n.tarih)}
         <button style="color:var(--brass);margin-left:6px" data-act="alinti-git" data-id="${n.kitap.id}">kitaba git →</button></div>
@@ -1113,6 +1150,51 @@ function csvAktar(){
   dosyaIndir('\uFEFF' + sat.join('\r\n'), `kitaplik-${bugun()}.csv`, 'text/csv;charset=utf-8');
   toast('CSV indirildi');
 }
+/* Alıntı/not dışa aktarımı — Markdown.
+   BOM YOK: .md dosyasını okuyan editörler (Obsidian, VS Code, Word) UTF-8'i
+   BOM'suz bekler; BOM ilk başlığın önünde görünür karakter olarak sızabiliyor.
+   (CSV'de BOM var, orası Excel için gerekli — bilinçli fark.) */
+function notlariMdUret(sadeceAlinti){
+  const aylar = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  const bl = [], simdi = new Date();
+  let alintiSay = 0, notSay = 0, kitapSay = 0;
+  const siraliKitaplar = veri.kitaplar.slice().sort((a,b) => a.ad.localeCompare(b.ad,'tr'));
+  for(const k of siraliKitaplar){
+    const notlar = (k.notlar||[]).filter(n => sadeceAlinti ? n.tip === 'alinti' : true);
+    if(!notlar.length) continue;
+    kitapSay++;
+    bl.push('## ' + k.ad + (k.yazar ? ' — ' + k.yazar : ''));
+    bl.push('');
+    for(const n of notlar){
+      if(n.tip === 'alinti') alintiSay++; else notSay++;
+      const govde = String(n.metin).split('\n');
+      bl.push(n.tip === 'alinti' ? govde.map(s => '> ' + s).join('\n') : govde.join('\n'));
+      const kuyruk = [];
+      if(n.sayfa) kuyruk.push('(sf. ' + n.sayfa + ')');
+      if((n.fikir||[]).length) kuyruk.push(n.fikir.map(f => '#' + String(f).replace(/\s+/g,'-')).join(' '));
+      if(kuyruk.length) bl.push(kuyruk.join(' '));
+      bl.push('');
+    }
+  }
+  if(!kitapSay) return null;
+  const tarih = simdi.getDate() + ' ' + aylar[simdi.getMonth()] + ' ' + simdi.getFullYear();
+  const ozet = [kitapSay + ' kitap', alintiSay + ' alıntı'];
+  if(!sadeceAlinti) ozet.push(notSay + ' not');
+  const bas = ['# Kitaplık — ' + (sadeceAlinti ? 'Alıntılar' : 'Alıntılar ve notlar'),
+    '', tarih + ' · ' + ozet.join(', '), ''];
+  return bas.concat(bl).join('\n');
+}
+function notlariMdAktar(sadeceAlinti){
+  const md = notlariMdUret(sadeceAlinti);
+  if(!md){
+    toast(sadeceAlinti ? 'Dışa aktarılacak alıntı yok' : 'Dışa aktarılacak alıntı veya not yok');
+    return false;
+  }
+  dosyaIndir(md, `kitaplik-${sadeceAlinti ? 'alintilar' : 'alinti-not'}-${bugun()}.md`,
+    'text/markdown;charset=utf-8');
+  toast(sadeceAlinti ? 'Alıntılar indirildi' : 'Alıntı ve notlar indirildi');
+  return true;
+}
 function iceAktar(dosya){
   const okuyucu = new FileReader();
   okuyucu.onload = () => {
@@ -1231,6 +1313,78 @@ function seansEkle(k, eskiSayfa, yeniSayfa){
   const son = k.seanslar[k.seanslar.length - 1];
   if(son && son.t === t) son.b = yeniSayfa; // aynı gün: seansı güncelle
   else k.seanslar.push({ t, a: eskiSayfa, b: yeniSayfa });
+}
+
+/* ---------- paylaş hedefi: gelen metni alıntı olarak kaydet ----------
+   manifest share_target GET kullanır: statik barındırmada POST'u karşılayacak
+   sunucu yok, servis worker'a POST işleme yükü bindirmek de kırılgan olurdu.
+   Metin URL parametresiyle gelir, panel açılır, kayıttan sonra URL temizlenir. */
+function gelenParametre(){
+  try{
+    const p = new URLSearchParams(location.search);
+    const metin = (p.get('text') || '').trim();
+    const baslik = (p.get('title') || '').trim();
+    const kaynak = (p.get('url') || '').trim();
+    const govde = [metin || baslik, kaynak && kaynak !== metin ? kaynak : ''].filter(Boolean).join('\n');
+    return govde ? govde : null;
+  }catch(e){ return null; }
+}
+function urlTemizle(){
+  try{ history.replaceState({}, '', location.pathname); }catch(e){}
+}
+function gelenListeCiz(){
+  const q = document.getElementById('gelen-ara').value.trim().toLocaleLowerCase('tr');
+  const kap = document.getElementById('gelen-liste');
+  const adaylar = veri.kitaplar
+    .filter(k => !q || (k.ad + ' ' + (k.yazar||'')).toLocaleLowerCase('tr').includes(q))
+    .sort((a,b) => (b.eklenme||0) - (a.eklenme||0))
+    .slice(0, 6);
+  if(!veri.kitaplar.length){
+    kap.innerHTML = '<div class="ol-durum">Kütüphanen boş — önce bir kitap ekle, sonra alıntıyı kaydedebilirsin.</div>';
+    return;
+  }
+  kap.innerHTML = adaylar.length ? adaylar.map(k => `<button class="ol-item" data-act="gelen-kitap" data-id="${escAttr(k.id)}">
+      <div><div class="oi-ad">${esc(k.ad)}</div>
+      <div class="oi-alt">${esc([k.yazar, DURUM_AD[k.durum]].filter(Boolean).join(' · '))}</div></div>
+    </button>`).join('')
+    : '<div class="ol-durum">Eşleşen kitap yok.</div>';
+}
+function gelenSeciliCiz(){
+  const el = document.getElementById('gelen-secili');
+  const k = durum.gelenKitapId ? kitapBul(durum.gelenKitapId) : null;
+  el.textContent = k ? 'Seçili kitap: ' + k.ad : '';
+}
+function gelenAc(metin){
+  durum.gelenKitapId = null;
+  durum.gelenTip = 'alinti';
+  document.getElementById('gelen-metin').value = metin;
+  document.getElementById('gelen-ara').value = '';
+  document.getElementById('gelen-sayfa').value = '';
+  document.querySelectorAll('#gelenTip .mini-chip').forEach(c =>
+    c.classList.toggle('secili', c.dataset.v === 'alinti'));
+  gelenListeCiz(); gelenSeciliCiz();
+  document.getElementById('ortuGelen').classList.add('acik');
+}
+function gelenKapat(){
+  document.getElementById('ortuGelen').classList.remove('acik');
+  durum.gelenKitapId = null;
+  urlTemizle();   // kapatmak da bir karardır: yenilemede panel geri gelmesin
+}
+function gelenKaydet(){
+  const metin = document.getElementById('gelen-metin').value.trim();
+  if(!metin){ toast('Metin boş olamaz'); return false; }
+  if(!veri.kitaplar.length){ toast('Önce kütüphanene bir kitap ekle'); return false; }
+  const k = durum.gelenKitapId ? kitapBul(durum.gelenKitapId) : null;
+  if(!k){ toast('Önce kitap seç'); return false; }
+  k.notlar = k.notlar || [];
+  k.notlar.push({ id: uid(), tip: durum.gelenTip === 'not' ? 'not' : 'alinti',
+    metin, tarih: bugun(), sayfa: parseInt(document.getElementById('gelen-sayfa').value) || null });
+  depoKaydet(); hepsiniCiz();
+  document.getElementById('ortuGelen').classList.remove('acik');
+  durum.gelenKitapId = null;
+  urlTemizle();
+  toast((durum.gelenTip === 'not' ? 'Not' : 'Alıntı') + ' kaydedildi — ' + k.ad);
+  return true;
 }
 
 /* ---------- çizim / sekme ---------- */
@@ -1374,6 +1528,16 @@ document.addEventListener('click', e => {
       break; }
     case 'disa-aktar': disaAktar(); break;
     case 'csv-aktar': csvAktar(); break;
+    case 'md-alinti': notlariMdAktar(true); break;
+    case 'md-hepsi': notlariMdAktar(false); break;
+    case 'gelen-kapat': gelenKapat(); break;
+    case 'gelen-kaydet': gelenKaydet(); break;
+    case 'gelen-kitap': durum.gelenKitapId = el.dataset.id; gelenSeciliCiz(); break;
+    case 'gelen-tip':
+      durum.gelenTip = v;
+      document.querySelectorAll('#gelenTip .mini-chip').forEach(c =>
+        c.classList.toggle('secili', c.dataset.v === v));
+      break;
     case 'ice-aktar': document.getElementById('iceDosya').click(); break;
     case 'gr-aktar': document.getElementById('grDosya').click(); break;
     case 'tumunu-sil':
@@ -1404,6 +1568,10 @@ document.getElementById('grDosya').addEventListener('change', e => {
   e.target.value = '';
 });
 document.getElementById('f-ad').addEventListener('input', canliAraTetikle);
+document.getElementById('gelen-ara').addEventListener('input', gelenListeCiz);
+document.getElementById('ortuGelen').addEventListener('click', e => {
+  if(e.target.id === 'ortuGelen') gelenKapat();
+});
 document.getElementById('ortuForm').addEventListener('click', e => {
   if(e.target.id === 'ortuForm') e.target.classList.remove('acik');
 });
@@ -1418,6 +1586,16 @@ if('serviceWorker' in navigator){
 }
 
 hepsiniCiz();
+
+/* Paylaş hedefinden gelindiyse paneli aç; kısayoldan gelindiyse sekmeyi seç */
+(function(){
+  const gelen = gelenParametre();
+  if(gelen){ gelenAc(gelen); return; }
+  try{
+    const s = new URLSearchParams(location.search).get('sekme');
+    if(s && document.getElementById('panel-' + s)){ sekmeGec(s); urlTemizle(); }
+  }catch(e){}
+})();
 </script>
 <script src="./senkron.js"></script>
 <script src="./barkod.js"></script>
