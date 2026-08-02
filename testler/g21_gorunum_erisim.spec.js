@@ -106,11 +106,29 @@ test.describe('G21 M1 — karanlık tema', () => {
     const olcum = await page.evaluate(() => {
       const kart = document.querySelector('#liste .kart');
       const baslik = kart.querySelector('.kart-baslik');
+      const yazar = kart.querySelector('.kart-yazar');
       const zemin = getComputedStyle(kart).backgroundColor;
       return { baslikRenk: getComputedStyle(baslik).color, kartZemin: zemin,
+        yazarRenk: yazar ? getComputedStyle(yazar).color : null,
         govdeZemin: getComputedStyle(document.body).backgroundColor };
     });
     expect(kontrast(olcum.baslikRenk, olcum.kartZemin)).toBeGreaterThanOrEqual(4.5);
+    expect(kontrast(olcum.yazarRenk, olcum.kartZemin),
+      `kart yazar rengi ${olcum.yazarRenk} / ${olcum.kartZemin}`).toBeGreaterThanOrEqual(4.5);
+    /* SABİT RENK KAÇAĞI DENETİMİ: pirinç ZEMİN üzerindeki metin. Karanlıkta pirinç
+       açık renge döndüğü için sabit beyaz (#FFFDF7) metin okunmaz hale gelir —
+       değişkene (--uzeri) bağlı olmayan her kural burada yakalanır. */
+    const pirincUstu = await page.evaluate(() => {
+      const oge = [...document.querySelectorAll('.chip.active, .btn-brass, .durum-btn.secili, .mini-chip.secili, .tm-dugme.tm-secili')]
+        .filter(e => e.offsetParent !== null);
+      return oge.map(e => ({ sinif: e.className, metin: getComputedStyle(e).color,
+        zemin: getComputedStyle(e).backgroundColor }));
+    });
+    expect(pirincUstu.length).toBeGreaterThan(0);
+    for (const o of pirincUstu) {
+      expect(kontrast(o.metin, o.zemin),
+        `pirinç zeminli öğe (${o.sinif}): ${o.metin} / ${o.zemin}`).toBeGreaterThanOrEqual(4.5);
+    }
     expect(parlaklik(olcum.govdeZemin)).toBeLessThan(0.1);
   });
 
