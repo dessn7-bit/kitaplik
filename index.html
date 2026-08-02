@@ -1220,6 +1220,8 @@ function detayAc(id){
       <button class="btn btn-tehlike" data-act="kitap-sil" style="flex:1">Sil</button>
     </div>`;
   document.getElementById('ortuDetay').classList.add('acik');
+  // içerik her açılışta yeniden üretiliyor: başlık id'si ve dialog nitelikleri tazelenmeli
+  ortuAriaKur(document.getElementById('ortuDetay'));
 }
 
 /* ---------- alıntılar sekmesi ---------- */
@@ -1716,6 +1718,39 @@ function odaklanabilirler(kap){
     .filter(el => el.offsetParent !== null || el === document.activeElement);
 }
 let odakGeri = null;
+
+/* ---------- ARIA dialog semantiği ----------
+   Pencere işaretlemesini ÇEKİRDEK kurar: eklentiler kendi pencerelerini
+   .ortu > .sheet > .sheet-baslik deseniyle yazdıkları sürece hiçbir şey yapmaz. */
+function ortuAriaKur(o){
+  const sheet = o && o.querySelector('.sheet');
+  if(!sheet) return;
+  sheet.setAttribute('role', 'dialog');
+  sheet.setAttribute('aria-modal', 'true');
+  const baslik = sheet.querySelector('.sheet-baslik');
+  if(baslik){
+    if(!baslik.id) baslik.id = (o.id || 'ortu') + 'Baslik';
+    sheet.setAttribute('aria-labelledby', baslik.id);
+  }
+}
+/* Arka planı ekran okuyucudan ve odaktan çeker. AÇIK pencerenin KENDİSİNE asla
+   aria-hidden verilmez (odaklanmış öğe gizli ağaçta kalırdı — klasik hata). */
+const ARKA_PLAN_SEC = 'header, section.panel, nav, .fab, .kota-uyari, .toplu-cubuk';
+function gizle(el, gizliMi){
+  if(!el) return;
+  if(gizliMi){ el.setAttribute('inert', ''); el.setAttribute('aria-hidden', 'true'); }
+  else { el.removeAttribute('inert'); el.removeAttribute('aria-hidden'); }
+}
+function ortuKatmanlariTazele(){
+  const acik = acikOrtuler();
+  const ust = acik.length ? acik[acik.length - 1] : null;
+  // toast bilinçli olarak DIŞARIDA: aria-live bölgesi susturulmamalı
+  document.querySelectorAll(ARKA_PLAN_SEC).forEach(el => gizle(el, !!ust));
+  document.querySelectorAll('.ortu').forEach(o => {
+    if(o === ust){ gizle(o, false); ortuAriaKur(o); }
+    else gizle(o, !!ust && o.classList.contains('acik'));   // alttaki açık pencereler de gizlenir
+  });
+}
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape'){
     const o = ustOrtu();
@@ -1737,9 +1772,11 @@ document.addEventListener('keydown', e => {
 /* Pencere açılınca odak İÇERİ taşınır (metin kutusuna değil, sayfaya: mobilde
    klavyenin kendiliğinden açılmasını istemiyoruz), kapanınca açan öğeye döner. */
 new MutationObserver(kayitlar => {
+  let ortuDegisti = false;
   for(const k of kayitlar){
     const o = k.target;
     if(!o.classList || !o.classList.contains('ortu')) continue;
+    ortuDegisti = true;
     if(o.classList.contains('acik')){
       if(!odakGeri) odakGeri = document.activeElement;
       const sheet = o.querySelector('.sheet');
@@ -1749,6 +1786,7 @@ new MutationObserver(kayitlar => {
       setTimeout(() => { try{ g.focus(); }catch(h){} }, 0);
     }
   }
+  if(ortuDegisti) ortuKatmanlariTazele();
 }).observe(document.body, { subtree:true, attributes:true, attributeFilter:['class'] });
 
 /* ---------- olaylar ---------- */
@@ -1996,5 +2034,6 @@ temaDugmeleriCiz();
 <script src="./kart.js"></script>
 <script src="./zeka.js"></script>
 <script src="./fikirag.js"></script>
+<script src="./rapor.js"></script>
 </body>
 </html>
