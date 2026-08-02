@@ -109,9 +109,13 @@ aynı sınıf ikinci bir yerde kullanıldığı anda strict-mode ihlaliyle kır�
 
 ## Bilinen gerçek-davranış notları (testlerde belgelendi)
 
-- **Detaydan "Düzenle"**: düzenleme formu detay sayfasının ALTINDA açılır
-  (iki `.ortu` da z-index:40, DOM'da sonraki üstte). Kullanıcı detayı kapatınca
-  formu görür. g1'deki düzenleme testi bu yüzden önce detayı kapatır.
+- **Detaydan "Düzenle"**: eskiden form detayın ALTINDA açılıyordu (iki `.ortu` da
+  z-index:40). G12 M3'te düzeltildi: `duzenle` artık detay örtüsünü kapatıyor,
+  kaydedince `formKaydet` detayı geri açıyor. (Bu not, düzeltilmiş davranışı belgeler.)
+- **Pencere katmanları**: çekirdek her `.ortu` açılışında ARIA (role/aria-modal/
+  labelledby) kurar ve arka planı `inert`+`aria-hidden` yapar; açık pencerenin
+  KENDİSİ asla gizlenmez. Yeni pencere eklerken `.ortu > .sheet > .sheet-baslik`
+  desenine uy, gerisi kendiliğinden çalışır.
 - **TR arama**: G19 M1'den beri `katla()` hem i-ailesini hem aksanları düzleştirir;
   "HEIDEGGER", "HEİDEGGER", "heidegger" hepsi bulur. Etiket mükerrer kontrolü ise
   `iKatla()` kullanır (yalnız i-ailesi) — "saç" ile "sac" ayrı etiket kalır.
