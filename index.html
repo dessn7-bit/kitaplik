@@ -564,34 +564,42 @@ async function canliAra(q){
   dEl.textContent = 'Aranıyor…';
   if(araCtl) araCtl.abort();
   araCtl = new AbortController();
+  const sinyal = araCtl.signal;
   const zam = setTimeout(() => araCtl.abort(), 9000);
-  let adaylar = [];
   let agSorunu = false;
-  // 1) Google Books — Türkçe baskılarda güçlü, yayınevi bilgisi var
-  try{
-    const r = await fetch('https://www.googleapis.com/books/v1/volumes?key=AIzaSyCjjwU2NcpAgTVVSop0YNhIaQPmWWpHc04&country=TR&maxResults=6&printType=books&q='
-      + encodeURIComponent(q), { signal: araCtl.signal });
-    const j = await r.json();
-    adaylar = (j.items || []).map(it => {
+  // 1) Google Books — yayınevi/yıl/sayfa zengin
+  const gbSoz = fetch('https://www.googleapis.com/books/v1/volumes?key=AIzaSyCjjwU2NcpAgTVVSop0YNhIaQPmWWpHc04&country=TR&maxResults=6&printType=books&q='
+      + encodeURIComponent(q), { signal: sinyal })
+    .then(r => r.json())
+    .then(j => (j.items || []).map(it => {
       const v = it.volumeInfo || {};
       return { ad: v.title || '', yazar: (v.authors||[]).slice(0,2).join(', '),
         yayinevi: v.publisher || '',
         yil: v.publishedDate ? parseInt(v.publishedDate.slice(0,4)) || null : null,
-        sayfa: v.pageCount || null, dil: (v.language||'').toUpperCase(),
+        sayfa: v.pageCount || null, dil: (v.language||'').toUpperCase(), kaynak: 'Google',
         kapak: (v.imageLinks && v.imageLinks.thumbnail)
           ? v.imageLinks.thumbnail.replace('http://','https://') : null };
-    }).filter(a => a.ad);
-  }catch(e){ agSorunu = true; }
-  // 2) Yedek: Open Library
+    }).filter(a => a.ad))
+    .catch(e => { agSorunu = true; return []; });
+  // 2) kitaplik-ara Worker — Goodreads + 1000Kitap (Türkçe derinlik)
+  const wSoz = fetch('https://kitaplik-ara.dessn7.workers.dev/ara?q=' + encodeURIComponent(q), { signal: sinyal })
+    .then(r => r.json())
+    .then(j => (j.sonuclar || []).filter(a => a && a.ad))
+    .catch(e => { agSorunu = true; return []; });
+
+  const [gb, wk] = await Promise.all([gbSoz, wSoz]);
+  let adaylar = araTekillestir([...gb, ...wk]).slice(0, 8);
+
+  // 3) Son çare: Open Library
   if(!adaylar.length){
     try{
       const r = await fetch('https://openlibrary.org/search.json?limit=6&fields=title,author_name,number_of_pages_median,cover_i,first_publish_year,publisher&q='
-        + encodeURIComponent(q), { signal: araCtl.signal });
+        + encodeURIComponent(q), { signal: sinyal });
       const j = await r.json();
       adaylar = (j.docs || []).map(d => ({
         ad: d.title || '', yazar: (d.author_name||[]).slice(0,2).join(', '),
         yayinevi: (d.publisher||[])[0] || '', yil: d.first_publish_year || null,
-        sayfa: d.number_of_pages_median || null, dil: '',
+        sayfa: d.number_of_pages_median || null, dil: '', kaynak: 'OpenLibrary',
         kapak: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : null
       })).filter(a => a.ad);
     }catch(e){ agSorunu = true; }
@@ -605,13 +613,24 @@ async function canliAra(q){
     sEl.innerHTML = ''; return; }
   dEl.textContent = 'Birine tıkla, formu doldurayım:';
   sEl.innerHTML = adaylar.map((a, i) => `<button class="ol-item" data-act="ol-sec" data-i="${i}">
-      ${a.kapak ? `<img src="${escAttr(a.kapak.replace('-M.jpg','-S.jpg'))}" alt="" loading="lazy">`
+      ${a.kapak ? `<img src="${escAttr(a.kapak)}" alt="" loading="lazy">`
         : '<div style="width:32px;height:46px;background:var(--surface2);border-radius:3px;flex:0 0 32px"></div>'}
       <div><div class="oi-ad">${esc(a.ad)}</div>
-      <div class="oi-alt">${esc([a.yazar, a.yayinevi, a.yil, a.sayfa ? a.sayfa + ' sf' : '', a.dil]
+      <div class="oi-alt">${esc([a.yazar, a.yayinevi, a.yil, a.sayfa ? a.sayfa + ' sf' : '', a.dil, a.kaynak]
         .filter(Boolean).join(' · '))}</div></div>
     </button>`).join('');
   sEl._adaylar = adaylar;
+}
+function araNorm(s){ return String(s||'').toLocaleLowerCase('tr').replace(/[^a-z0-9çğıöşü]+/g,''); }
+function araTekillestir(liste){
+  const gorulen = new Set(), cikti = [];
+  for(const a of liste){
+    if(!a || !a.ad) continue;
+    const k = araNorm(a.ad) + '|' + araNorm(a.yazar);
+    if(gorulen.has(k)) continue;
+    gorulen.add(k); cikti.push(a);
+  }
+  return cikti;
 }
 function olSec(i){
   const adaylar = document.getElementById('olSonuc')._adaylar;
