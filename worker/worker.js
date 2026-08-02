@@ -14,6 +14,25 @@ export default {
       'Vary': 'Origin'
     };
     if (istek.method === 'OPTIONS') return new Response(null, { headers: cors });
+
+    /* Sağlık ucu: iki kaynağa da bilinen bir sorgu atar, kaç sonuç döndüklerini ve
+       süreyi bildirir. Kazıma yapısı değişirse belirti burada sayı olarak görünür.
+       ASLA cache'lenmez — teşhis her seferinde taze olmalı. */
+    if (url.pathname === '/saglik') {
+      const q = url.searchParams.get('q') || 'tanri yanilgisi';
+      const t0 = Date.now();
+      const [gr, bk] = await Promise.all([goodreads(q), binKitap(q)]);
+      const sonuc = {
+        sorgu: q,
+        goodreads: gr.length,
+        binkitap: bk.length,
+        toplam: tekillestir([...gr, ...bk]).length,
+        sureMs: Date.now() - t0,
+        durum: (gr.length || bk.length) ? (gr.length && bk.length ? 'iki kaynak da calisiyor' : 'TEK KAYNAK CALISIYOR') : 'HIC KAYNAK CALISMIYOR'
+      };
+      return json(sonuc, { ...cors, 'Cache-Control': 'no-store' });
+    }
+
     if (url.pathname !== '/ara')
       return new Response('kitaplik-ara v1', { headers: { 'Content-Type': 'text/plain; charset=utf-8', ...cors } });
 
@@ -28,8 +47,14 @@ export default {
 
     const [gr, bk] = await Promise.all([goodreads(q), binKitap(q)]);
     const sonuclar = tekillestir([...gr, ...bk]).slice(0, 8);
+    // kaynak sayaçları: istemci kullanmasa da teşhis için yanıtta dursun
+    const kaynaklar = { goodreads: gr.length, binkitap: bk.length };
 
-    const yanit = json({ sonuclar }, { ...cors, 'Cache-Control': 'public, max-age=21600' });
+    // BOŞ sonucu cache'leme: kaynak geçici düşse 6 saat boyunca boş yanıt servis
+    // edilip arıza kendi kendini uzatıyordu.
+    if (!sonuclar.length) return json({ sonuclar, kaynaklar }, { ...cors, 'Cache-Control': 'no-store' });
+
+    const yanit = json({ sonuclar, kaynaklar }, { ...cors, 'Cache-Control': 'public, max-age=21600' });
     ctx.waitUntil(cache.put(cacheKey, yanit.clone()));
     return yanit;
   }

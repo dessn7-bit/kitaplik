@@ -588,6 +588,24 @@ function kotaUyariGizle(){
 }
 
 /* ---------- yardımcılar ---------- */
+/* ---------- Türkçe metin katlama ----------
+   tr-locale küçültme tek başına ASİMETRİK: ASCII "I" → "ı" olduğu için "Insan"
+   yazan kullanıcı "İnsan"ı bulamıyordu. katla() aksanları da düzleştirir; iki taraf
+   da katlandığı için tr-küçültmeyle eşleşen her şey burada da eşleşir (üst küme).
+   ARAMA ve KİTAP KOPYA TESPİTİ katla() kullanır: kaçırmak (kitabı bulamamak,
+   mükerrer kayıt üretmek) yanlış eşleşmekten daha pahalı.
+   ETİKET mükerrer kontrolü iKatla() kullanır: yalnız noktalı/noktasız i ailesini
+   birleştirir — ş/s, ç/c, ğ/g farkı Türkçede AYRI kelimedir ("saç"≠"sac"),
+   etiketleri sessizce birleştirmek kullanıcının ayrımını yok ederdi. */
+const KATLAMA = { 'ı':'i', 'İ':'i', 'ş':'s', 'ğ':'g', 'ü':'u', 'ö':'o', 'ç':'c',
+  'â':'a', 'î':'i', 'û':'u', 'Â':'a', 'Î':'i', 'Û':'u' };
+function katla(s){
+  return String(s ?? '').toLocaleLowerCase('tr')
+    .replace(/[ıİşğüöçâîûÂÎÛ]/g, c => KATLAMA[c] || c);
+}
+function iKatla(s){
+  return String(s ?? '').toLocaleLowerCase('tr').replace(/ı/g, 'i');
+}
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escAttr(s){ return esc(s); }
@@ -639,14 +657,14 @@ function hizAnaliz(k){
 /* ---------- liste ---------- */
 function listeCiz(){
   const kap = document.getElementById('liste');
-  const q = durum.arama.toLocaleLowerCase('tr');
+  const q = katla(durum.arama);
   let ks = veri.kitaplar.filter(k => {
     const durumUy = durum.filtre === 'hepsi' ? true
       : durum.filtre === 'odunc' ? !!aktifOdunc(k)
       : k.durum === durum.filtre;
     const etiketUy = !durum.etiket || (k.etiketler||[]).includes(durum.etiket);
-    const metin = (k.ad + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.raf||'')
-      + ' ' + (k.cevirmen||'') + ' ' + (k.seri||'') + ' ' + (k.etiketler||[]).join(' ')).toLocaleLowerCase('tr');
+    const metin = katla(k.ad + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.raf||'')
+      + ' ' + (k.cevirmen||'') + ' ' + (k.seri||'') + ' ' + (k.etiketler||[]).join(' '));
     const sahiplikUy = durum.sahiplikFiltre === 'hepsi' || (k.sahiplik || 'sahip') === durum.sahiplikFiltre;
     return durumUy && etiketUy && sahiplikUy && (!q || metin.includes(q));
   });
@@ -966,11 +984,13 @@ function detayAc(id){
         + `</div>`;
     }
     eylemHtml = `<div class="detay-satir">
-      <label>Neredesin?</label>
-      <div class="ilerleme-guncelle">
-        <input type="number" inputmode="numeric" min="0" ${k.sayfa?`max="${k.sayfa}"`:''} id="d-sayfa" value="${k.guncelSayfa||0}">
-        <span>${k.sayfa ? '/ ' + k.sayfa + ' sayfa' : 'sayfa'}</span>
-        <button class="btn btn-cerceve" style="width:auto;padding:9px 14px" data-act="ilerleme-kaydet">Kaydet</button>
+      <div id="dIlerlemeKutu">
+        <label>Neredesin?</label>
+        <div class="ilerleme-guncelle">
+          <input type="number" inputmode="numeric" min="0" ${k.sayfa?`max="${k.sayfa}"`:''} id="d-sayfa" value="${k.guncelSayfa||0}">
+          <span>${k.sayfa ? '/ ' + k.sayfa + ' sayfa' : 'sayfa'}</span>
+          <button class="btn btn-cerceve" style="width:auto;padding:9px 14px" data-act="ilerleme-kaydet">Kaydet</button>
+        </div>
       </div>
       ${k.sayfa ? `<div class="ilerleme" style="margin-top:10px"><div style="width:${p}%"></div></div>
       <div class="ilerleme-txt">%${p} tamamlandı</div>` : ''}
@@ -1123,9 +1143,9 @@ function alintiCiz(){
     </div>`;
   }
 
-  const q = durum.alintiArama.toLocaleLowerCase('tr');
+  const q = katla(durum.alintiArama);
   const filtreli = tumu
-    .filter(n => !q || (n.metin + ' ' + n.kitap.ad + ' ' + (n.kitap.yazar||'')).toLocaleLowerCase('tr').includes(q))
+    .filter(n => !q || katla(n.metin + ' ' + n.kitap.ad + ' ' + (n.kitap.yazar||'')).includes(q))
     .sort((a,b) => (b.tarih||'').localeCompare(a.tarih||''));
 
   const listeHtml = filtreli.length ? filtreli.map(n => `
@@ -1372,7 +1392,7 @@ function iceAktar(dosya){
       const y = JSON.parse(okuyucu.result);
       if(!y || !Array.isArray(y.kitaplar)) throw new Error('biçim');
       let eklendi = 0;
-      const anah = k => (k.ad + '|' + (k.yazar||'')).toLocaleLowerCase('tr');
+      const anah = k => katla(k.ad + '|' + (k.yazar||''));
       const mevcut = new Set(veri.kitaplar.map(anah));
       const mevcutIdler = new Set(veri.kitaplar.map(k => k.id));
       y.kitaplar.forEach(k => {
@@ -1431,7 +1451,7 @@ function goodreadsAktar(dosya){
       const I = ad => baslik.indexOf(ad);
       if(I('Title') < 0 || I('Author') < 0) throw new Error('biçim');
       const al = (row, ad) => { const i = I(ad); return i >= 0 ? (row[i] || '').trim() : ''; };
-      const anah = k => (k.ad + '|' + (k.yazar||'')).toLocaleLowerCase('tr');
+      const anah = k => katla(k.ad + '|' + (k.yazar||''));
       const mevcut = new Set(veri.kitaplar.map(anah));
       const RAF = { 'read':'bitti', 'currently-reading':'okunuyor', 'to-read':'okunacak' };
       let eklendi = 0, atlandi = 0;
@@ -1439,7 +1459,7 @@ function goodreadsAktar(dosya){
         const ad = al(row, 'Title');
         if(!ad){ continue; }
         const yazar = al(row, 'Author');
-        if(mevcut.has((ad + '|' + yazar).toLocaleLowerCase('tr'))){ atlandi++; continue; }
+        if(mevcut.has(katla(ad + '|' + yazar))){ atlandi++; continue; }
         const raf = al(row, 'Exclusive Shelf');
         const durumu = RAF[raf] || 'okunacak';
         const puan5 = parseInt(al(row, 'My Rating')) || 0;
@@ -1503,10 +1523,10 @@ function urlTemizle(){
   try{ history.replaceState({}, '', location.pathname); }catch(e){}
 }
 function gelenListeCiz(){
-  const q = document.getElementById('gelen-ara').value.trim().toLocaleLowerCase('tr');
+  const q = katla(document.getElementById('gelen-ara').value.trim());
   const kap = document.getElementById('gelen-liste');
   const adaylar = veri.kitaplar
-    .filter(k => !q || (k.ad + ' ' + (k.yazar||'')).toLocaleLowerCase('tr').includes(q))
+    .filter(k => !q || katla(k.ad + ' ' + (k.yazar||'')).includes(q))
     .sort((a,b) => (b.eklenme||0) - (a.eklenme||0))
     .slice(0, 6);
   if(!veri.kitaplar.length){

@@ -10,13 +10,27 @@ function not(metin, fikir) {
 }
 
 /* --------- D1: kaynak dosyada kontrol karakteri yok --------- */
-test.describe('G18 D1 — fikirag.js kaynak temizliği', () => {
+test.describe('G18 D1 — kaynak dosyalarında kontrol karakteri yok', () => {
 
-  test('dosyada NUL (0x00) baytı yok', async () => {
-    const bayt = fs.readFileSync(path.join(__dirname, '..', 'fikirag.js'));
-    const nul = bayt.filter(b => b === 0).length;
-    expect(nul).toBe(0);
-  });
+  /* Görünmez kontrol karakteri kaynağa sızabiliyor (fikirag.js'te iki gerçek NUL
+     baytı çıktı: git dosyayı ikili sayıp diff'leri gizliyordu). TÜM uygulama
+     dosyalarını tara. İzinliler: TAB(09), LF(0A), CR(0D). */
+  const DOSYALAR = ['index.html', 'sw.js', 'senkron.js', 'barkod.js', 'oturum.js',
+    'fikir.js', 'katalog.js', 'gorunum.js', 'kart.js', 'zeka.js', 'fikirag.js',
+    'manifest.json', path.join('worker', 'worker.js')];
+
+  for (const dosya of DOSYALAR) {
+    test(`${dosya}: kontrol karakteri (0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F) yok`, async () => {
+      const bayt = fs.readFileSync(path.join(__dirname, '..', dosya));
+      const kotu = [];
+      for (let i = 0; i < bayt.length; i++) {
+        const b = bayt[i];
+        const yasak = (b <= 0x08) || b === 0x0B || b === 0x0C || (b >= 0x0E && b <= 0x1F);
+        if (yasak) kotu.push({ konum: i, bayt: '0x' + b.toString(16).padStart(2, '0') });
+      }
+      expect(kotu, `${dosya} içinde kontrol karakteri: ${JSON.stringify(kotu.slice(0, 5))}`).toEqual([]);
+    });
+  }
 
   test('eş-geçim anahtarı hâlâ doğru çalışıyor (boşluklu etiketler karışmaz)', async ({ page }) => {
     // "a b" + "c" ile "a" + "b c" ayrımı: ayraç belirsizliği olsa bu ikisi çakışırdı

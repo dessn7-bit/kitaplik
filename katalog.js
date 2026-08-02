@@ -148,11 +148,13 @@
         + '<button class="not-sil" data-act="seri-geri" data-id="' + x.id + '" aria-label="Geri al">✕</button>'
         + '</div>').join('');
   }
+  /* Kitap kopya tespiti çekirdeğin katla()'sıyla: "Istanbul" ve "İstanbul" aynı kitaptır. */
+  const kat = s => (typeof katla === 'function') ? katla(s) : String(s ?? '').toLocaleLowerCase('tr');
   function zatenVar(isbn, ad, yazar){
-    const a = (ad||'').toLocaleLowerCase('tr'), y = (yazar||'').toLocaleLowerCase('tr');
+    const a = kat(ad), y = kat(yazar);
     return (veri.kitaplar||[]).find(k =>
       (isbn && k.isbn === isbn) ||
-      (k.ad.toLocaleLowerCase('tr') === a && (k.yazar||'').toLocaleLowerCase('tr') === y));
+      (kat(k.ad) === a && kat(k.yazar) === y));
   }
   async function kodIsle(kod, elle){
     if(!window.__barkod || !window.__barkod.isbnGecerli(kod)){

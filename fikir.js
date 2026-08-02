@@ -66,9 +66,11 @@
     var e = normEtiket(etiket);
     if(!e) return false;
     b.n.fikir = Array.isArray(b.n.fikir) ? b.n.fikir : [];
-    var varMi = b.n.fikir.some(function(x){
-      return String(x).toLocaleLowerCase('tr') === e.toLocaleLowerCase('tr');
-    });
+    // Etikette YALNIZ i-ailesi katlanır (iKatla): "saç" ile "sac" ayrı etiketlerdir,
+    // sessizce birleştirmek kullanıcının ayrımını yok ederdi.
+    var iKat = function(s){ return (typeof iKatla === 'function') ? iKatla(s)
+      : String(s == null ? '' : s).toLocaleLowerCase('tr'); };
+    var varMi = b.n.fikir.some(function(x){ return iKat(x) === iKat(e); });
     if(!varMi) b.n.fikir.push(e);
     if(typeof depoKaydet === 'function') depoKaydet();
     return !varMi;

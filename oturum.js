@@ -118,6 +118,11 @@
     }
     const o = acikOturum();
     const bende = o && o.kitapId === k.id;
+    /* Oturum açıkken çekirdeğin "Neredesin?" kutusunu gizle: aynı panelde iki ayrı
+       sayfa girişi kalıyordu. Oturum kutusu daha zengin (bitirince süreyi de yazar),
+       o yüzden sahne onun. Oturum kapanınca çekirdek kutusu kendiliğinden geri gelir. */
+    const cekirdekKutu = kap.querySelector('#dIlerlemeKutu');
+    if(cekirdekKutu) cekirdekKutu.style.display = bende ? 'none' : '';
     const sr = toplamSure(k), hz = hizSayfaSaat(k);
     const ozet = sr > 0
       ? '<div class="hiz-kutu">Bu kitapla geçirdiğin süre: <b>' + sureMetni(sr) + '</b>'

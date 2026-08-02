@@ -81,10 +81,10 @@ test.describe('G1 çekirdek', () => {
     // TR büyük harf (İ noktalı — TR klavyede büyük i budur)
     await page.fill('#arama', 'HEİDEGGER');
     await expect(page.locator('#liste .kart')).toHaveCount(1);
-    // BİLİNEN SINIR (gerçek davranış): ASCII I → TR küçültmede 'ı' olur, eşleşmez.
-    // Uygulama tr-locale kurallarına tutarlı uyuyor; bu satır davranışı belgeler.
+    // ASCII büyük I ile de bulunur (G19 M1'den beri katla() i-ailesini birleştiriyor).
+    // Eskiden tr-locale küçültme "I"yı "ı" yaptığı için bu arama BOŞ dönüyordu.
     await page.fill('#arama', 'HEIDEGGER');
-    await expect(page.locator('#liste .kart')).toHaveCount(0);
+    await expect(page.locator('#liste .kart')).toHaveCount(1);
   });
 
   test('yayınevi ve raf üzerinden arama çalışır', async ({ page }) => {

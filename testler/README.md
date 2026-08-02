@@ -1,6 +1,6 @@
 # Kitaplık Regresyon Test Paketi (Playwright)
 
-183 vaka, 18 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
+217 vaka, 20 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
 kırarsa bu paket kırmızıya döner. (Mutasyon denetiminden geçti: 7 el-yapımı mutasyon +
 G12'nin 3 kritik düzeltmesi geri alındığında ilgili vakalar kırmızıya düşüyor.)
 
@@ -39,7 +39,9 @@ koşar (temiz localStorage), service worker **engellidir** (`serviceWorkers:'blo
 | g15_veri_modeli | çevirmen/dil, elle ISBN, yeniden okuma (okumalar[]), seri+cilt, sahiplik/istek listesi, hedef damgası |
 | g16_duzeltmeler | istek rozeti (liste+ızgara), kütüphaneyi boşalt üst düzey alanlar, eksik cilt boşluk mantığı |
 | g17_fikir_agi | fikirag.js: eş-geçim, komşular, kesişim görünümü, fikir haritası sıralamaları, ilişki önerisi |
-| g18_fikirag_duzeltme | kaynak dosyada NUL baytı yok, kesişim alt listeyi de süzer |
+| g18_fikirag_duzeltme | tüm kaynaklarda kontrol karakteri taraması, kesişim alt listeyi de süzer |
+| g19_dogruluk | Türkçe katlama (arama + kopya tespiti + etiket), oturumda tek sayfa kutusu |
+| g20_worker_sw | worker: boş sonuç cache'lenmez, kaynak sayaçları, /saglik · sw: köken filtresi, çevrimdışı yedek |
 
 **Yeni kitap alanı eklerken:** `kitapNormalize`'a eklemeyi unutma — yoksa alan yenilemede
 sessizce silinir. Her yeni alan için "yenilemede korunur" vakası zorunlu (g15 deseni).
@@ -108,6 +110,6 @@ aynı sınıf ikinci bir yerde kullanıldığı anda strict-mode ihlaliyle kır�
 - **Detaydan "Düzenle"**: düzenleme formu detay sayfasının ALTINDA açılır
   (iki `.ortu` da z-index:40, DOM'da sonraki üstte). Kullanıcı detayı kapatınca
   formu görür. g1'deki düzenleme testi bu yüzden önce detayı kapatır.
-- **TR arama**: ASCII büyük I içeren arama ("HEIDEGGER") tr-locale küçültmede
-  `ı`ya döner ve "Heidegger"i BULMAZ; TR klavye büyük i'si ("HEİDEGGER") bulur.
-  g1'deki TR arama testi her iki davranışı da sabitler.
+- **TR arama**: G19 M1'den beri `katla()` hem i-ailesini hem aksanları düzleştirir;
+  "HEIDEGGER", "HEİDEGGER", "heidegger" hepsi bulur. Etiket mükerrer kontrolü ise
+  `iKatla()` kullanır (yalnız i-ailesi) — "saç" ile "sac" ayrı etiket kalır.

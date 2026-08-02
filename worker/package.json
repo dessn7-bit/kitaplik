@@ -1,0 +1,6 @@
+{
+  "name": "kitaplik-ara-worker",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker kaynak arsivi — canli deploy C:/Users/Kaan/_kitaplik_worker klasorunden yapilir. type:module, testlerin worker.js'i ESM olarak import edebilmesi icin."
+}

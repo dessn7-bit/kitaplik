@@ -395,7 +395,10 @@
         ks.forEach(k => {
           k.etiketler = Array.isArray(k.etiketler) ? k.etiketler : [];
           yeni.forEach(e => {
-            const var_ = k.etiketler.some(x => x.toLocaleLowerCase('tr') === e.toLocaleLowerCase('tr'));
+            // etikette yalnız i-ailesi katlanır (fikir.js ile aynı karar)
+            const iKat = s => (typeof iKatla === 'function') ? iKatla(s)
+              : String(s ?? '').toLocaleLowerCase('tr');
+            const var_ = k.etiketler.some(x => iKat(x) === iKat(e));
             if(!var_) k.etiketler.push(e);
           });
           k.g = Date.now();
