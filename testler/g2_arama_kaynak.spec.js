@@ -1,0 +1,117 @@
+'use strict';
+const { test, expect } = require('./yardim');
+
+function gbYanit(kitaplar) {
+  return {
+    totalItems: kitaplar.length,
+    items: kitaplar.map(k => ({ volumeInfo: {
+      title: k.ad, authors: k.yazar ? [k.yazar] : [],
+      publisher: k.yayinevi || '', publishedDate: k.yil ? String(k.yil) : '',
+      pageCount: k.sayfa || 0, language: 'tr',
+      imageLinks: null
+    } }))
+  };
+}
+
+async function formAc(page) {
+  await page.goto('/');
+  await page.click('[data-act="yeni"]');
+}
+
+test.describe('G2 arama ve kaynaklar', () => {
+
+  test('3 harften kısa sorgu istek atmaz', async ({ page }) => {
+    await formAc(page);
+    await page.fill('#f-ad', 'ab');
+    await page.waitForTimeout(900); // debounce 450ms'in yeterince üstü
+    expect(page.__agSayac.google).toBe(0);
+    expect(page.__agSayac.worker).toBe(0);
+    expect(page.__agSayac.olArama).toBe(0);
+  });
+
+  test('Google Books sonucu formu doldurur', async ({ page }) => {
+    await formAc(page);
+    page.__agAyar.google = gbYanit([{ ad: 'Tanrı Yanılgısı', yazar: 'Richard Dawkins',
+      yayinevi: 'Kuzey Yayınları', yil: 2006, sayfa: 420 }]);
+    await page.fill('#f-ad', 'tanrı yanılgısı');
+    await page.click('.ol-item >> nth=0');
+    await expect(page.locator('#f-ad')).toHaveValue('Tanrı Yanılgısı');
+    await expect(page.locator('#f-yazar')).toHaveValue('Richard Dawkins');
+    await expect(page.locator('#f-yayinevi')).toHaveValue('Kuzey Yayınları');
+    await expect(page.locator('#f-yil')).toHaveValue('2006');
+    await expect(page.locator('#f-sayfa')).toHaveValue('420');
+    await expect(page.locator('#olDurum')).toContainText('Form dolduruldu');
+  });
+
+  test('worker (Goodreads+1000Kitap) sonuçları listeye eklenir', async ({ page }) => {
+    await formAc(page);
+    page.__agAyar.worker = { sonuclar: [
+      { ad: 'Simyacı', yazar: 'Paulo Coelho', yayinevi: '', yil: null, sayfa: null, kapak: null, kaynak: 'Goodreads' },
+      { ad: 'Simyacı (Cep)', yazar: 'Paulo Coelho', yayinevi: '', yil: null, sayfa: null, kapak: null, kaynak: '1000Kitap ★8.1' }
+    ] };
+    await page.fill('#f-ad', 'simyacı');
+    await expect(page.locator('.ol-item')).toHaveCount(2);
+    await expect(page.locator('.ol-item >> nth=0')).toContainText('Goodreads');
+    await expect(page.locator('.ol-item >> nth=1')).toContainText('1000Kitap');
+  });
+
+  test('aynı kitap iki kaynaktan gelirse tek satır görünür', async ({ page }) => {
+    await formAc(page);
+    page.__agAyar.google = gbYanit([{ ad: 'Tanrı Yanılgısı', yazar: 'Richard Dawkins' }]);
+    page.__agAyar.worker = { sonuclar: [
+      { ad: 'Tanrı Yanılgısı', yazar: 'Richard Dawkins', kaynak: 'Goodreads' },
+      { ad: 'Bambaşka Kitap', yazar: 'Başka Yazar', kaynak: 'Goodreads' }
+    ] };
+    await page.fill('#f-ad', 'tanrı yanılgısı');
+    await expect(page.locator('.ol-item')).toHaveCount(2); // 1 tekil + 1 farklı
+    await expect(page.locator('.ol-sonuc')).toContainText('Bambaşka Kitap');
+  });
+
+  test('Google boş dönerse worker sonuçları yine görünür', async ({ page }) => {
+    await formAc(page);
+    // google varsayılan boş; worker dolu
+    page.__agAyar.worker = { sonuclar: [
+      { ad: 'Kürk Mantolu Madonna', yazar: 'Sabahattin Ali', kaynak: 'Goodreads' }
+    ] };
+    await page.fill('#f-ad', 'kürk mantolu');
+    await expect(page.locator('.ol-item')).toHaveCount(1);
+    await expect(page.locator('.ol-item')).toContainText('Kürk Mantolu Madonna');
+    expect(page.__agSayac.olArama).toBe(0); // aday varken OL çağrılmaz
+  });
+
+  test('ikisi de boş dönerse OpenLibrary son çare devreye girer', async ({ page }) => {
+    await formAc(page);
+    page.__agAyar.olArama = { docs: [{ title: 'Nadir Kitap', author_name: ['Bilinmez Yazar'],
+      number_of_pages_median: 180, first_publish_year: 1970, publisher: ['Eski Basım'], cover_i: null }] };
+    await page.fill('#f-ad', 'nadir kitap');
+    await expect(page.locator('.ol-item')).toHaveCount(1);
+    await expect(page.locator('.ol-item')).toContainText('OpenLibrary');
+    expect(page.__agSayac.olArama).toBeGreaterThan(0);
+  });
+
+  test('hepsi hata verirse "İnternete ulaşılamadı" mesajı çıkar', async ({ page }) => {
+    await formAc(page);
+    page.__agAyar.google = 'hata';
+    page.__agAyar.worker = 'hata';
+    page.__agAyar.olArama = 'hata';
+    await page.fill('#f-ad', 'ulaşılamayan kitap');
+    await expect(page.locator('#olDurum')).toContainText('İnternete ulaşılamadı');
+  });
+
+  test('yazar modu inauthor:, yayınevi modu inpublisher: üretir; yayınevi modunda worker çağrılmaz', async ({ page }) => {
+    await formAc(page);
+    // yazar modu
+    await page.click('[data-act="ara-tip"][data-v="yazar"]');
+    await page.fill('#f-ad', 'dawkins');
+    await expect.poll(() => page.__agSayac.google).toBeGreaterThan(0);
+    expect(page.__agSayac.sonGoogleUrl).toContain('inauthor%3Adawkins');
+    const yazarModuWorker = page.__agSayac.worker;
+    expect(yazarModuWorker).toBeGreaterThan(0); // yazar modunda worker da aranır
+
+    // yayınevi modu
+    await page.click('[data-act="ara-tip"][data-v="yayinevi"]');
+    await page.fill('#f-ad', 'can yayınları');
+    await expect.poll(() => page.__agSayac.sonGoogleUrl).toContain('inpublisher%3A');
+    expect(page.__agSayac.worker).toBe(yazarModuWorker); // yayınevi modunda worker ÇAĞRILMAZ
+  });
+});

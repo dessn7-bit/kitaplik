@@ -1,0 +1,11 @@
+{
+  "name": "kitaplik-testler",
+  "private": true,
+  "description": "Kitaplik PWA regresyon test paketi (Playwright)",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
