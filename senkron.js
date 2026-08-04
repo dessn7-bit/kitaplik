@@ -22,10 +22,14 @@
   function bildir(m){ if(typeof toast === 'function') toast(m); }
 
   /* ---------- damgalama: depoKaydet sarmalayıcısı ---------- */
-  const ANLIK_SURUM = 2;
+  const ANLIK_SURUM = 3;
   /* v1'de her kitabın TAM JSON'u parmak izi olarak saklanıyordu: kütüphanenin
      ikinci bir kopyası kadar yer tutuyor, localStorage kotasını iki katına
-     yakın hızda dolduruyordu. v2 kısa çift-hash tutar (~20 karakter/kitap). */
+     yakın hızda dolduruyordu. v2 kısa çift-hash tutar (~20 karakter/kitap).
+     v3: kitapNormalize'a kapakYerel eklendi — normalize çıktısı değiştiği için
+     TÜM parmak izleri değişir; sürüm artmasaydı ilk açılış bütün kütüphaneyi
+     taze damgalar, bayat cihaz güncel düzenlemeleri ezerdi. KURAL: kitapNormalize
+     şeması her değiştiğinde bu sürüm de artmalı (göç turu damga basmaz). */
   function anlikYukle(){
     try{
       const h = JSON.parse(localStorage.getItem(ANLIK_ANAHTAR));

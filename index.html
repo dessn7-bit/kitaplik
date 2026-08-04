@@ -309,6 +309,22 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   padding:10px 18px;border-radius:10px;font-size:.85rem;z-index:60;opacity:0;transition:opacity .2s;
   pointer-events:none;max-width:88vw;text-align:center}
 .toast.goster{opacity:1}
+/* ---------- Kendi kapak fotoğrafı (kp-) ---------- */
+.kp-bekliyor{background:var(--surface2)}
+.kp-form-satir{margin-top:10px}
+.kp-form-durum{display:none;align-items:center;justify-content:space-between;gap:10px;
+  margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;
+  font-size:.78rem;color:var(--muted)}
+.kp-kucuk-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface);color:var(--drop);font-size:.76rem;font-weight:600;flex:0 0 auto}
+.kp-detay-satir{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.kp-detay-satir .kp-kucuk-btn{color:var(--paper)}
+.kp-cihaz-notu{font-size:.72rem;color:var(--muted2);width:100%}
+.kp-onizle-kutu{display:flex;justify-content:center;margin-top:12px}
+.kp-onizle-kutu img{max-width:100%;max-height:320px;border-radius:10px;border:1px solid var(--border)}
+.kp-bilgi{text-align:center;font-size:.78rem;color:var(--muted);margin-top:8px}
+.kp-not{font-size:.78rem;color:var(--muted);margin-top:10px;line-height:1.5}
+.kp-depo-satir{font-size:.82rem;color:var(--muted);margin:10px 0}
 </style>
 </head>
 <body>
@@ -405,6 +421,13 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
       <p>JSON yedeğini seç. Mevcut kayıtlarla birleştirilir; aynı kitap (ad + yazar) iki kez eklenmez.</p>
       <button class="btn btn-cerceve" data-act="ice-aktar">Dosya seç</button>
       <input type="file" id="iceDosya" accept="application/json,.json" hidden>
+    </div>
+    <div class="yedek-kart">
+      <h3>Kapak fotoğrafları</h3>
+      <p>Kendi çektiğin kapak fotoğrafları <b>yalnız bu cihazda</b> saklanır — senkrona ve JSON
+      yedeğine girmezler. Cihaz değiştirirsen fotoğrafları yeni cihazda yeniden çekmen gerekir.</p>
+      <div class="kp-depo-satir" id="kpDepoBilgi">Hesaplanıyor…</div>
+      <button class="btn btn-tehlike" data-act="kp-tum-sil">Tüm fotoğrafları sil</button>
     </div>
     <div class="yedek-kart">
       <h3>Tümünü sil</h3>
@@ -525,6 +548,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
       <button data-act="kapak-kaldir">Kaldır</button>
     </div>
 
+    <div class="kp-form-satir">
+      <button type="button" class="kp-kucuk-btn" data-act="kp-form-cek">📷 Kapak fotoğrafı çek/seç</button>
+      <div class="kp-form-durum" id="kpFormDurum"></div>
+    </div>
+
     <label>Durum</label>
     <div class="durum-secim" id="fDurum">
       <button class="durum-btn secili" data-act="f-durum" data-v="okunacak">Okunacak</button>
@@ -590,6 +618,28 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   <div class="sheet" id="detayIcerik"></div>
 </div>
 
+<!-- ===== KAPAK FOTOĞRAFI ÖNİZLEME (kp-) — mantık kapak.js'te ===== -->
+<div class="ortu" id="ortuKapak">
+  <div class="sheet">
+    <div class="tutamac"></div>
+    <button class="sheet-kapat" data-act="kp-vazgec" aria-label="Kapat">✕</button>
+    <div class="sheet-baslik" id="ortuKapakBaslik">Kapak fotoğrafı</div>
+    <div class="kp-onizle-kutu"><img id="kpOnizle" alt="Kapak önizleme"></div>
+    <div class="kp-bilgi" id="kpBilgi"></div>
+    <p class="kp-not">📱 Bu fotoğraf <b>yalnız bu cihazda</b> saklanır — senkrona ve JSON yedeğine girmez.</p>
+    <div class="form-alt">
+      <button class="btn btn-cerceve" data-act="kp-vazgec" style="flex:1">Vazgeç</button>
+      <button class="btn btn-brass" data-act="kp-onay" style="flex:2">Kaydet</button>
+    </div>
+  </div>
+</div>
+<!-- Girdi bilinçli olarak örtülerin DIŞINDA: pencere katmanı açıkken arka plan
+     inert oluyor; girdi inert bir kapsayıcıda kalırsa click() sessizce yutulur.
+     KARAR: capture özniteliği YOK — capture=environment iOS/Android'de doğrudan
+     kamerayı açıp galeriden seçimi imkânsız kılıyor; özniteliksiz girdi yerel
+     seçim sayfasını gösterir (Fotoğraf Çek / Galeri) → "çek/seç" sözü tutulur. -->
+<input type="file" id="kpDosya" accept="image/*" hidden>
+
 <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
@@ -618,6 +668,11 @@ function kitapNormalize(k){
     baslamaTarihi: k.baslamaTarihi || null, bitisTarihi: k.bitisTarihi || null,
     etiketler: Array.isArray(k.etiketler) ? k.etiketler.map(e => String(e).trim()).filter(Boolean) : [],
     kapak: k.kapak || null, g: parseInt(k.g) || 0,
+    /* kapakYerel: bu kitabın kullanıcı çekimi kapak fotoğrafı VAR işareti.
+       Fotoğrafın kendisi IndexedDB'de (kk_kapak_v1, anahtar=id) — localStorage'a
+       ve senkron gövdesine asla girmez; yalnız bu boolean senkronlanır ki
+       kitap-bazlı birleşmede işaret kaybolmasın. */
+    kapakYerel: k.kapakYerel === true,
     raf: String(k.raf || ''), isbn: String(k.isbn || ''),
     cevirmen: String(k.cevirmen || ''), dil: String(k.dil || '').trim().toLowerCase().slice(0, 8),
     seri: String(k.seri || ''), ciltNo: parseInt(k.ciltNo) || null,
@@ -796,7 +851,13 @@ function listeCiz(){
       ilerlemeHtml = `<div class="ilerleme"><div style="width:${p}%"></div></div>
         <div class="ilerleme-txt">${k.guncelSayfa||0} / ${k.sayfa} · %${p}${tahminTxt}</div>`;
     }
-    const sol = k.kapak
+    // Kapak önceliği: yerel fotoğraf > uzak URL > sırt. Yerel img'nin src'sini
+    // kapak.js IndexedDB'den doldurur; blob yoksa data-kp-yedek (uzak) devralır,
+    // o da hata verirse onerror sırt şeridine düşürür.
+    const sol = k.kapakYerel && window.__kapak
+      ? `<img class="kapak-mini kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt=""
+           onerror="this.outerHTML='<div class=sirt style=background:${sirtRenk(k.ad)}></div>'">`
+      : k.kapak
       ? `<img class="kapak-mini" src="${escAttr(k.kapak)}" alt="" loading="lazy"
            onerror="this.outerHTML='<div class=sirt style=background:${sirtRenk(k.ad)}></div>'">`
       : `<div class="sirt" style="background:${sirtRenk(k.ad)}"></div>`;
@@ -991,6 +1052,7 @@ function formAc(id){
   durum.formPuan = k ? (k.puan||null) : null;
   durum.formKapak = k ? (k.kapak||null) : null;
   formDurumCiz(); puanCiz(); kapakOnizleCiz();
+  if(window.__kapak) window.__kapak.formAcildi(); // bekleyen fotoğraf durumunu sıfırla + şeridi çiz
   document.getElementById('ortuForm').classList.add('acik');
 }
 function formDurumCiz(){
@@ -1043,6 +1105,7 @@ function formKaydet(){
     etiketler, kapak: durum.formKapak
   };
 
+  let kayitId; // formda bekleyen kapak fotoğrafı bu kitaba bağlanacak
   if(durum.formDuzenId){
     const k = kitapBul(durum.formDuzenId);
     if(k){
@@ -1050,16 +1113,20 @@ function formKaydet(){
       if(k.durum === 'bitti' && k.sayfa) k.guncelSayfa = k.sayfa;
       if(k.durum === 'okunacak') k.guncelSayfa = 0;
     }
+    kayitId = durum.formDuzenId;
     toast('Kitap güncellendi' + ikizUyari);
   }else{
-    veri.kitaplar.push(kitapNormalize({ ...ortak, id: uid(), eklenme: Date.now(),
-      guncelSayfa: durum.formDurum === 'bitti' && sayfa ? sayfa : 0 }));
+    const yeni = kitapNormalize({ ...ortak, id: uid(), eklenme: Date.now(),
+      guncelSayfa: durum.formDurum === 'bitti' && sayfa ? sayfa : 0 });
+    veri.kitaplar.push(yeni);
+    kayitId = yeni.id;
     toast('Kitap rafa eklendi' + ikizUyari);
   }
   depoKaydet();
   document.getElementById('ortuForm').classList.remove('acik');
   hepsiniCiz();
   if(durum.detayId) detayAc(durum.detayId);
+  if(window.__kapak) window.__kapak.formKaydedildi(kayitId);
 }
 
 /* ---------- detay ---------- */
@@ -1180,7 +1247,9 @@ function detayAc(id){
     <div class="tutamac"></div>
     <button class="sheet-kapat" data-act="detay-kapat" aria-label="Kapat">✕</button>
     <div class="detay-ust">
-      ${k.kapak ? `<img class="detay-kapak" src="${escAttr(k.kapak)}" alt="" onerror="this.style.display='none'">` : ''}
+      ${k.kapakYerel && window.__kapak
+        ? `<img class="detay-kapak kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt="" onerror="this.style.display='none'">`
+        : k.kapak ? `<img class="detay-kapak" src="${escAttr(k.kapak)}" alt="" onerror="this.style.display='none'">` : ''}
       <div style="min-width:0">
         <div class="sheet-baslik">${esc(k.ad)}</div>
         ${k.yazar ? `<div class="detay-yazar">${esc(k.yazar)}</div>` : ''}
@@ -1196,6 +1265,11 @@ function detayAc(id){
         </div>
         ${(k.etiketler||[]).length ? `<div style="margin-top:7px">${k.etiketler.map(e => `<span class="etiket-mini">#${esc(e)} </span>`).join('')}</div>` : ''}
       </div>
+    </div>
+    <div class="kp-detay-satir">
+      <button class="kp-kucuk-btn" data-act="kp-cek">📷 Kapak fotoğrafı çek/seç</button>
+      ${k.kapakYerel ? `<button class="kp-kucuk-btn" data-act="kp-detay-kaldir">Fotoğrafı kaldır</button>
+      <div class="kp-cihaz-notu">Kapak fotoğrafı yalnız bu cihazda saklanır — senkrona girmez.</div>` : ''}
     </div>
     ${tarihHtml ? `<div style="font-size:.78rem;color:var(--muted2);margin-top:10px">${tarihHtml}</div>` : ''}
     ${eylemHtml}
@@ -1839,6 +1913,7 @@ document.addEventListener('click', e => {
       const k = kitapBul(durum.detayId);
       if(k && confirm(`"${k.ad}" silinsin mi? Notları ve seansları da silinir.`)){
         veri.kitaplar = veri.kitaplar.filter(x => x.id !== durum.detayId);
+        if(window.__kapak) window.__kapak.sil(k.id); // kapak fotoğrafı yetim kalmasın
         depoKaydet();
         document.getElementById('ortuDetay').classList.remove('acik');
         durum.detayId = null; hepsiniCiz(); toast('Kitap silindi');
@@ -1971,6 +2046,7 @@ document.addEventListener('click', e => {
         veri = { kitaplar:[], hedef: veri.hedef || {}, hedefG: veri.hedefG || {},
           hedefSayfa: veri.hedefSayfa || {}, hedefSayfaG: veri.hedefSayfaG || {},
           silinenler: veri.silinenler || {} };
+        if(window.__kapak) window.__kapak.hepsiniSil(true); // kapak fotoğrafları da yetim kalmasın
         depoKaydet(); hepsiniCiz(); toast('Kütüphane boşaltıldı — hedeflerin duruyor');
       }
       break;
@@ -2035,5 +2111,6 @@ temaDugmeleriCiz();
 <script src="./zeka.js"></script>
 <script src="./fikirag.js"></script>
 <script src="./rapor.js"></script>
+<script src="./kapak.js"></script>
 </body>
 </html>

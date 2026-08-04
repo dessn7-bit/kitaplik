@@ -142,11 +142,19 @@
       const k = harita.get(kart.dataset.id);
       const ad = k ? k.ad : '';
       img.addEventListener('error', () => yedekSirtKoy(img, ad), { once: true });
-      if(img.complete && img.naturalWidth === 0) yedekSirtKoy(img, ad); // dinleyiciden önce düşmüşse
+      // src'siz yerel-kapak img'leri (kapak.js dolduracak) erken-düşme sayılmaz:
+      // src yokken complete=true + naturalWidth=0 normaldir, sırta çevrilmemeli.
+      if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) yedekSirtKoy(img, ad); // dinleyiciden önce düşmüşse
     });
   }
   function kartHtml(k){
-    const gorsel = k.kapak
+    // Kapak önceliği: yerel fotoğraf > uzak URL > sırt. Yerel img src'siz doğar;
+    // kapak.js görünürlüğe girince IndexedDB'den doldurur (500 kitaplık ızgarada
+    // hepsi birden yüklenmesin). Blob yoksa data-kp-yedek, o da yoksa error → sırt.
+    const gorsel = (k.kapakYerel && window.__kapak)
+      ? '<img class="iz-kapak kp-bekliyor" data-kp-id="' + kacir(k.id) + '"' +
+        (k.kapak ? ' data-kp-yedek="' + kacir(k.kapak) + '"' : '') + ' alt="">'
+      : k.kapak
       ? '<img class="iz-kapak" src="' + kacir(k.kapak) + '" alt="" loading="lazy">'
       : '<div class="iz-yedek" style="background:' + sirtRenkL(k.ad) + '">' + kacir(k.ad) + '</div>';
     const rozet = k.durum === 'okunuyor'
@@ -373,7 +381,10 @@
         if(!confirm(n + ' kitap kalıcı olarak silinsin mi? Notları ve oturumları da silinir.')) return;
         veri.silinenler = veri.silinenler || {};
         const t = Date.now();
-        secilenler.forEach(id => { veri.silinenler[id] = t; });
+        secilenler.forEach(id => {
+          veri.silinenler[id] = t;
+          if(window.__kapak) window.__kapak.sil(id); // kapak fotoğrafları yetim kalmasın
+        });
         veri.kitaplar = veri.kitaplar.filter(k => !secilenler.has(k.id));
         secilenler.clear();
         kaydetVeTazele(n + ' kitap silindi');
