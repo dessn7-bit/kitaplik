@@ -325,6 +325,25 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .kp-bilgi{text-align:center;font-size:.78rem;color:var(--muted);margin-top:8px}
 .kp-not{font-size:.78rem;color:var(--muted);margin-top:10px;line-height:1.5}
 .kp-depo-satir{font-size:.82rem;color:var(--muted);margin:10px 0}
+/* ---------- Ne okusam? önerileri (on-) — stiller zar-btn'den kopya, seçici yeni ---------- */
+.on-ac-btn{flex:0 0 46px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:1.2rem}
+.on-ac-btn:active{transform:scale(.9)}
+.on-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.on-item:last-child{border-bottom:none}
+.on-kapak{flex:0 0 52px;width:52px;height:76px;object-fit:cover;border-radius:6px;background:var(--surface2)}
+.on-yedek{flex:0 0 52px;width:52px;height:76px;border-radius:6px}
+.on-icerik{min-width:0;flex:1}
+.on-ad{font-weight:600;font-size:.95rem;text-align:left;padding:0;background:none;border:none;color:var(--paper)}
+.on-yazar{font-size:.82rem;color:var(--muted);margin-top:2px}
+.on-neden{font-size:.78rem;color:var(--muted2);margin-top:5px;line-height:1.45}
+.on-bar{height:6px;border-radius:999px;background:var(--surface2);margin-top:7px;overflow:hidden}
+.on-bar-ic{height:100%;border-radius:999px;background:var(--brass)}
+.on-satir{display:flex;gap:8px;margin-top:9px;align-items:center}
+.on-btn{padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--paper);font-size:.78rem;font-weight:600}
+.on-btn-birincil{background:var(--brass);color:var(--uzeri);border-color:var(--brass)}
+.on-rozet{font-size:.72rem;color:var(--brass);border:1px solid var(--brass);border-radius:999px;padding:3px 9px}
+.on-bolum-baslik{font-size:.8rem;font-weight:700;color:var(--muted);margin:16px 0 2px}
+.on-mesaj{font-size:.85rem;color:var(--muted);line-height:1.55;padding:10px 0}
 </style>
 </head>
 <body>
@@ -342,6 +361,10 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <input type="search" id="arama" placeholder="Kitap, yazar, yayınevi veya etiket ara…" autocomplete="off">
     <button class="zar-btn" data-act="zar" title="Okunacaklardan rastgele öner"
       aria-label="Okunacaklardan rastgele kitap öner">🎲</button>
+    <!-- Zar SİLİNMEDİ (karar): zar "kader seçsin" anıdır, öneri motoru "bana göre
+         seç" anıdır — iki farklı ruh hali, yan yana dururlar. Mantık oneri.js'te. -->
+    <button class="on-ac-btn" data-act="on-ac" title="Ne okusam? Sana göre öneriler"
+      aria-label="Ne okusam? Kişisel okuma önerileri">💡</button>
   </div>
 </header>
 
@@ -613,6 +636,16 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   </div>
 </div>
 
+<!-- ===== NE OKUSAM? (on-) — mantık oneri.js'te ===== -->
+<div class="ortu" id="ortuOneri">
+  <div class="sheet">
+    <div class="tutamac"></div>
+    <button class="sheet-kapat" data-act="on-kapat" aria-label="Kapat">✕</button>
+    <div class="sheet-baslik" id="ortuOneriBaslik">Ne okusam?</div>
+    <div id="oneriIcerik"></div>
+  </div>
+</div>
+
 <!-- ===== DETAY ===== -->
 <div class="ortu" id="ortuDetay">
   <div class="sheet" id="detayIcerik"></div>
@@ -666,6 +699,9 @@ function kitapNormalize(k){
     puan: (k.puan >= 1 && k.puan <= 10) ? Math.round(k.puan) : null,
     guncelSayfa: parseInt(k.guncelSayfa) || 0,
     baslamaTarihi: k.baslamaTarihi || null, bitisTarihi: k.bitisTarihi || null,
+    /* ertelemeTarihi: "Şimdi değil" (öneri motoru) — bu tarihten 30 gün boyunca
+       önerilmez. Senkronla taşınır. Şema değişti → ANLIK_SURUM 4 (senkron.js). */
+    ertelemeTarihi: k.ertelemeTarihi || null,
     etiketler: Array.isArray(k.etiketler) ? k.etiketler.map(e => String(e).trim()).filter(Boolean) : [],
     kapak: k.kapak || null, g: parseInt(k.g) || 0,
     /* kapakYerel: bu kitabın kullanıcı çekimi kapak fotoğrafı VAR işareti.
@@ -1053,6 +1089,11 @@ function formAc(id){
   durum.formKapak = k ? (k.kapak||null) : null;
   formDurumCiz(); puanCiz(); kapakOnizleCiz();
   if(window.__kapak) window.__kapak.formAcildi(); // bekleyen fotoğraf durumunu sıfırla + şeridi çiz
+  // Öneri paneli açıkken form açılırsa (öneri → detay → bitir/düzenle) form DOM'da
+  // önce geldiği için panelin ALTINA gömülüp inert'lenirdi (G12 M3'teki desenin
+  // aynısı). Panel bir fırlatıcıdır; form açılırken kapatılır.
+  const ortuOneriEl = document.getElementById('ortuOneri');
+  if(ortuOneriEl) ortuOneriEl.classList.remove('acik');
   document.getElementById('ortuForm').classList.add('acik');
 }
 function formDurumCiz(){
@@ -1756,6 +1797,11 @@ function hepsiniCiz(){
   etiketFiltreDoldur(); listeCiz();
   if(durum.sekme === 'ist') istCiz();
   if(durum.sekme === 'alinti') alintiCiz();
+  // öneri paneli açıkken veri değiştiyse (detaydan başlat/bitir/sil vb.) panel
+  // bayat kalmasın — bayat "Okumaya başla" düğmesi yanlış kitaba yazabilirdi
+  const ortuOneriEl = document.getElementById('ortuOneri');
+  if(window.__oneri && ortuOneriEl && ortuOneriEl.classList.contains('acik'))
+    window.__oneri.panelCiz();
 }
 function temaDugmeleriCiz(){
   const secili = window.temaTercihi ? window.temaTercihi() : 'sistem';
@@ -2112,5 +2158,6 @@ temaDugmeleriCiz();
 <script src="./fikirag.js"></script>
 <script src="./rapor.js"></script>
 <script src="./kapak.js"></script>
+<script src="./oneri.js"></script>
 </body>
 </html>

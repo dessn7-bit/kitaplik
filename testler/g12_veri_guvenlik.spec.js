@@ -217,7 +217,8 @@ test.describe('G12 M5 — depo şişmesi ve kota uyarısı', () => {
     await page.evaluate(() => depoKaydet());
     expect(await page.evaluate(() => veri.kitaplar[0].g)).toBe(777); // damga korundu
     const anlik = await page.evaluate(() => JSON.parse(localStorage.getItem('kk_senkron_anlik_v1')));
-    expect(anlik.s).toBe(3);                     // yeni biçime geçti (v3: kapakYerel şema göçü)
+    // güncel sürüm dinamik okunur: her şema yükseltmesinde bu vaka elle değişmesin
+    expect(anlik.s).toBe(await page.evaluate(() => window.__senkron.ANLIK_SURUM));
     expect(String(anlik.p.G1).length).toBeLessThan(40);
   });
 

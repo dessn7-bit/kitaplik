@@ -359,7 +359,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     await page.evaluate(() => depoKaydet()); // damgala göç turunda koşsun
     expect(await page.evaluate(() => veri.kitaplar[0].g)).toBe(5); // damga korundu
     const anlik = await page.evaluate(() => JSON.parse(localStorage.getItem('kk_senkron_anlik_v1')));
-    expect(anlik.s).toBe(3); // anlık yeni sürümle yazıldı
+    expect(anlik.s).toBe(await page.evaluate(() => window.__senkron.ANLIK_SURUM)); // yeni sürümle yazıldı
     // ikinci tur (aynı sürüm): içerik değişmedi → damga yine değişmez
     await page.reload();
     await page.evaluate(() => depoKaydet());

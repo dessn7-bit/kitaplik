@@ -1,7 +1,7 @@
 # Kitaplık Regresyon Test Paketi (Playwright)
 
-281 vaka, 23 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
-kırarsa bu paket kırmızıya döner. (Mutasyon denetiminden geçti: 9 el-yapımı mutasyon +
+301 vaka, 24 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
+kırarsa bu paket kırmızıya döner. (Mutasyon denetiminden geçti: 11 el-yapımı mutasyon +
 G12'nin 3 kritik düzeltmesi geri alındığında ilgili vakalar kırmızıya düşüyor.)
 
 ## Nasıl koşulur
@@ -45,6 +45,7 @@ koşar (temiz localStorage), service worker **engellidir** (`serviceWorkers:'blo
 | g21_gorunum_erisim | karanlık tema + kontrast (hesaplanmış), geniş ekran kırılımları, Esc/odak tuzağı/aria, dokunma hedefleri |
 | g22_aria_rapor | tam ARIA dialog (role/aria-modal/labelledby, inert katmanları), rapor.js yıl sonu raporu + PNG |
 | g23_kapak_foto | kapak.js: kendi kapak fotoğrafı — IndexedDB deposu, boyut/kalite işleme, yerel>uzak>sırt önceliği, silme kancaları, senkron/yedek dışında kalma, tembel yükleme |
+| g24_oneri | oneri.js: "Ne okusam?" — açıklanabilir skorlama (yazar/tür/seri/etiket/uzunluk/bekleme), çeşitlilik kotası, "Şimdi değil" ertelemesi, az-veri dürüstlüğü, neden-veri tutarlılığı, zar regresyonu |
 
 **Yeni kitap alanı eklerken:** `kitapNormalize`'a eklemeyi unutma — yoksa alan yenilemede
 sessizce silinir. Her yeni alan için "yenilemede korunur" vakası zorunlu (g15 deseni).
@@ -120,6 +121,11 @@ aynı sınıf ikinci bir yerde kullanıldığı anda strict-mode ihlaliyle kır�
 - **TR arama**: G19 M1'den beri `katla()` hem i-ailesini hem aksanları düzleştirir;
   "HEIDEGGER", "HEİDEGGER", "heidegger" hepsi bulur. Etiket mükerrer kontrolü ise
   `iKatla()` kullanır (yalnız i-ailesi) — "saç" ile "sac" ayrı etiket kalır.
+- **Senkron şema sürümü**: `kitapNormalize`'a alan eklendiğinde senkron.js
+  `ANLIK_SURUM` da artmalı (yoksa tüm kütüphane yeniden damgalanır, bayat cihaz
+  günceli ezer). Göç vakaları sürümü `window.__senkron.ANLIK_SURUM`'dan DİNAMİK
+  okur — yeni yükseltmede test elle değişmez, ama yeni bir göç vakası (s:eski→yeni)
+  eklemek zorunludur (g24'teki v4 vakası desen).
 - **Kapak fotoğrafları (G23, KARAR)**: kullanıcı çekimi kapaklar IndexedDB'de
   (`kk_kapak_v1`, anahtar = kitap id) durur; **cihaz yerelidir** — senkron PUT'una ve
   JSON yedeğine bilinçli olarak girmez (senkron tüm kütüphaneyi tek gövdede gönderiyor;
