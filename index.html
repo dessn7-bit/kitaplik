@@ -344,6 +344,26 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .on-rozet{font-size:.72rem;color:var(--brass);border:1px solid var(--brass);border-radius:999px;padding:3px 9px}
 .on-bolum-baslik{font-size:.8rem;font-weight:700;color:var(--muted);margin:16px 0 2px}
 .on-mesaj{font-size:.85rem;color:var(--muted);line-height:1.55;padding:10px 0}
+/* ---------- Aralıklı alıntı tekrarı (tk-) — mantık tekrar.js'te ---------- */
+#tkKutu:empty{display:none}
+#tkKutu{display:block;padding:14px 16px 0}
+.tk-kutu-ic{display:flex;flex-direction:column;gap:10px}
+.tk-baslik{font-size:.8rem;font-weight:700;color:var(--brass);letter-spacing:.04em;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tk-rozet-sayi{background:var(--brass);color:var(--uzeri);border-radius:999px;padding:1px 8px;font-size:.72rem}
+.tk-baslik-not{font-weight:400;color:var(--muted2);font-size:.72rem;letter-spacing:0}
+.tk-kart{background:var(--surface);border:1px solid var(--brass-dim);border-left:3px solid var(--brass);border-radius:10px;padding:13px 14px}
+.tk-metin{font-family:var(--serif);font-style:italic;font-size:.98rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:break-word}
+.tk-kaynak{font-size:.78rem;color:var(--muted);margin-top:9px}
+.tk-git{color:var(--brass);margin-left:6px;font-size:.78rem}
+.tk-eylem{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}
+.tk-btn{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--paper);font-size:.78rem;font-weight:600}
+.tk-btn-birincil{background:var(--brass);color:var(--uzeri);border-color:var(--brass)}
+.tk-btn-atla{margin-left:auto;color:var(--muted)}
+.tk-tamam{font-size:.88rem;color:var(--muted);padding:6px 0}
+.tk-ist{font-size:.72rem;color:var(--muted2)}
+.tk-sade{gap:0}
+.tk-durum{font-size:.7rem;color:var(--muted2);margin-top:7px}
+.tk-mini{color:var(--brass);font-size:.7rem;padding:2px 4px}
 </style>
 </head>
 <body>
@@ -399,6 +419,9 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 
 <!-- ===== ALINTILAR ===== -->
 <section class="panel" id="panel-alinti">
+  <!-- Aralıklı tekrar kutusu (tk-, tekrar.js): #alintiIcerik'in DIŞINDA çünkü
+       alintiCiz her çizimde innerHTML'i sıfırlar; içeride olsa her aramada silinirdi. -->
+  <div id="tkKutu"></div>
   <div class="alinti-wrap" id="alintiIcerik"></div>
 </section>
 
@@ -720,11 +743,24 @@ function kitapNormalize(k){
     seanslar: Array.isArray(k.seanslar) ? k.seanslar.filter(s => s && s.t) : [],
     oturumlar: Array.isArray(k.oturumlar) ? k.oturumlar.filter(o => o && o.b) : [],
     odunc: Array.isArray(k.odunc) ? k.odunc.filter(o => o && o.kisi) : [],
-    notlar: Array.isArray(k.notlar) ? k.notlar.filter(n => n && n.metin).map(n => ({
-      id: n.id || uid(), tip: n.tip === 'alinti' ? 'alinti' : 'not',
-      metin: String(n.metin), tarih: n.tarih || bugun(),
-      sayfa: parseInt(n.sayfa) || null,
-      fikir: Array.isArray(n.fikir) ? n.fikir.map(f => String(f)).filter(Boolean) : [] })) : []
+    notlar: Array.isArray(k.notlar) ? k.notlar.filter(n => n && n.metin).map(n => {
+      const tip = n.tip === 'alinti' ? 'alinti' : 'not';
+      return {
+        id: n.id || uid(), tip,
+        metin: String(n.metin), tarih: n.tarih || bugun(),
+        sayfa: parseInt(n.sayfa) || null,
+        fikir: Array.isArray(n.fikir) ? n.fikir.map(f => String(f)).filter(Boolean) : [],
+        /* tekrar*: aralıklı alıntı tekrarı (tekrar.js). Alıntılar varsayılan döngüde,
+           notlar dışında (kartından "tekrara al" ile açılır). tekrarSonraki=null =
+           henüz zamanlanmadı — yayılmayı tekrar.js yapar. Senkronla taşınır.
+           Şema değişti → ANLIK_SURUM 5 (senkron.js). */
+        tekrarSonraki: n.tekrarSonraki || null,
+        tekrarAralik: parseInt(n.tekrarAralik) || 3,
+        tekrarSayisi: parseInt(n.tekrarSayisi) || 0,
+        tekrarDurum: (n.tekrarDurum === 'aktif' || n.tekrarDurum === 'duraklatildi')
+          ? n.tekrarDurum : (tip === 'alinti' ? 'aktif' : 'duraklatildi')
+      };
+    }) : []
   };
 }
 /* Zaman damgası haritası (silinenler / hedefG): yalnız sayısal değerleri geçir.
@@ -2147,6 +2183,10 @@ temaDugmeleriCiz();
   }catch(e){}
 })();
 </script>
+<!-- tekrar.js senkron.js'ten ÖNCE: ilk açılıştaki yayılma zamanlaması senkron'un
+     göç/damga turundan önce yazılmalı ki toplu zamanlama kütüphaneyi yeniden
+     damgalamasın (v3 dersi: bayat cihaz günceli ezer). -->
+<script src="./tekrar.js"></script>
 <script src="./senkron.js"></script>
 <script src="./barkod.js"></script>
 <script src="./oturum.js"></script>
