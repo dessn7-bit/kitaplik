@@ -241,7 +241,7 @@
         const sb = k.sayfa ? Math.min(yeniSayfa, k.sayfa) : yeniSayfa;
         const sure = Date.now() - o.b;
         oturumEkle(k, { b:o.b, s:sure, sa:o.sa, sb: Math.max(o.sa, sb) });
-        if(sb > (k.guncelSayfa||0)) k.guncelSayfa = sb;
+        if(sb > (k.guncelSayfa||0)){ k.guncelSayfa = sb; k.gsG = Date.now(); } // kullanıcı ilerlemesi (senkron gsG)
         oturumYaz(null);
         depoKaydet();
         if(typeof hepsiniCiz === 'function') hepsiniCiz();

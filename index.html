@@ -725,6 +725,11 @@ function kitapNormalize(k){
     durum: DURUM_AD[k.durum] ? k.durum : 'okunacak',
     puan: (k.puan >= 1 && k.puan <= 10) ? Math.round(k.puan) : null,
     guncelSayfa: parseInt(k.guncelSayfa) || 0,
+    /* gsG: guncelSayfa alan damgası — yalnız KULLANICI ilerleme girişleri basar
+       (ilerleme-kaydet, oturum bitir, bitir, yeniden-oku, form/toplu durum).
+       Senkron birleşiminde yeni damga kazanır: 250→25 düzeltmesi geri ezilmez.
+       Şema değişti → ANLIK_SURUM 8, SEMA_SURUM 2 (senkron.js). */
+    gsG: parseInt(k.gsG) || 0,
     baslamaTarihi: k.baslamaTarihi || null, bitisTarihi: k.bitisTarihi || null,
     /* ertelemeTarihi: "Şimdi değil" (öneri motoru) — bu tarihten 30 gün boyunca
        önerilmez. Senkronla taşınır. Şema değişti → ANLIK_SURUM 4 (senkron.js). */
@@ -805,8 +810,10 @@ function depoYukle(){
   }catch(e){ return { kitaplar:[], hedef:{}, hedefG:{}, hedefSayfa:{}, hedefSayfaG:{}, silinenler:{} }; }
 }
 function depoKaydet(){
-  try{ localStorage.setItem(DEPO, JSON.stringify(veri)); kotaUyariGizle(); }
-  catch(e){ kotaUyariGoster(); }
+  /* dönüş: yazım başarılı mı — senkron sarmalayıcısı parmak izini yalnız
+     başarılı yazımdan sonra kalıcılaştırır (kota uyumsuzluğu, M4b) */
+  try{ localStorage.setItem(DEPO, JSON.stringify(veri)); kotaUyariGizle(); return true; }
+  catch(e){ kotaUyariGoster(); return false; }
 }
 /* Kota dolduğunda geçici toast yetmiyordu: kullanıcı uyarıyı kaçırınca
    sonraki tüm değişiklikler yalnız bellekte kalıp sekme kapanınca gidiyordu.
@@ -1200,9 +1207,11 @@ function formKaydet(){
   if(durum.formDuzenId){
     const k = kitapBul(durum.formDuzenId);
     if(k){
+      const eskiGS = k.guncelSayfa;
       Object.assign(k, ortak);
       if(k.durum === 'bitti' && k.sayfa) k.guncelSayfa = k.sayfa;
       if(k.durum === 'okunacak') k.guncelSayfa = 0;
+      if(k.guncelSayfa !== eskiGS) k.gsG = Date.now();   // kullanıcı eliyle sayfa değişti
     }
     kayitId = durum.formDuzenId;
     toast('Kitap güncellendi' + ikizUyari);
@@ -2022,7 +2031,9 @@ document.addEventListener('click', e => {
         k.okumalar = Array.isArray(k.okumalar) ? k.okumalar : [];
         k.okumalar.push({ bas: k.baslamaTarihi || null, bit: k.bitisTarihi || null,
           puan: (k.puan >= 1 && k.puan <= 10) ? k.puan : null, not: '' });
-        k.durum = 'okunuyor'; k.guncelSayfa = 0;
+        k.durum = 'okunuyor';
+        if(k.guncelSayfa !== 0) k.gsG = Date.now();   // sıfırlama da kasıtlı giriştir
+        k.guncelSayfa = 0;
         k.baslamaTarihi = bugun(); k.bitisTarihi = null; k.puan = null;
         depoKaydet(); hepsiniCiz(); detayAc(k.id);
         toast('Yeniden okumaya başladın — önceki okuman geçmişe kaydedildi');
@@ -2050,7 +2061,8 @@ document.addEventListener('click', e => {
     case 'bitir': {
       const k = kitapBul(durum.detayId);
       if(k){
-        if(k.sayfa){ seansEkle(k, k.guncelSayfa || 0, k.sayfa); k.guncelSayfa = k.sayfa; }
+        if(k.sayfa){ seansEkle(k, k.guncelSayfa || 0, k.sayfa);
+          if(k.guncelSayfa !== k.sayfa){ k.guncelSayfa = k.sayfa; k.gsG = Date.now(); } }
         k.durum = 'bitti'; k.bitisTarihi = bugun();
         depoKaydet(); hepsiniCiz();
         document.getElementById('ortuDetay').classList.remove('acik');
@@ -2062,7 +2074,7 @@ document.addEventListener('click', e => {
       if(k){
         const yeni = k.sayfa ? Math.min(g, k.sayfa) : g;
         seansEkle(k, k.guncelSayfa || 0, yeni);
-        k.guncelSayfa = yeni;
+        if(k.guncelSayfa !== yeni){ k.guncelSayfa = yeni; k.gsG = Date.now(); }
         depoKaydet(); hepsiniCiz(); detayAc(k.id); toast('İlerleme kaydedildi'); }
       break; }
     case 'odunc-ver': {

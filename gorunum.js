@@ -422,6 +422,7 @@
         const ks = secilenKitaplar();
         const bgn = typeof bugun === 'function' ? bugun() : null;
         ks.forEach(k => {
+          const eskiGS = k.guncelSayfa;
           k.durum = d;
           if(d === 'bitti'){
             if(!k.bitisTarihi) k.bitisTarihi = bgn;
@@ -429,6 +430,7 @@
           }
           if(d === 'okunuyor' && !k.baslamaTarihi) k.baslamaTarihi = bgn;
           if(d === 'okunacak'){ k.guncelSayfa = 0; k.baslamaTarihi = null; k.bitisTarihi = null; }
+          if(k.guncelSayfa !== eskiGS) k.gsG = Date.now();  // kullanıcı eliyle sayfa değişti (senkron gsG)
           k.g = Date.now();
         });
         kaydetVeTazele(ks.length + ' kitabın durumu değişti');

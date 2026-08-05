@@ -10,6 +10,9 @@
 
   let ayar = null, kimlik = null, zaman = null, calisiyor = false;
   let eskiSurum = false;   // odada daha yeni şema görüldü → bu oturumda senkron durur
+  let bekleyen = false;    // senkron uçuştayken kayıt yapıldı → bitince yeniden planla
+  let semaDustu = false;   // odaya eski istemci yazmış (şema geriledi) → uyarı satırı
+  let semaDusukGecis = false; // düşük şemada BİR tur atlanır; sonraki tur şemayı geri yazar
 
   const kurulu = () => SENKRON_URL.indexOf('__SYNC') !== 0;
   const kacir = s => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -23,13 +26,13 @@
   function bildir(m){ if(typeof toast === 'function') toast(m); }
 
   /* ---------- damgalama: depoKaydet sarmalayıcısı ---------- */
-  const ANLIK_SURUM = 7;
+  const ANLIK_SURUM = 8;
   /* SEMA_SURUM: PUT gövdesine yazılan VERİ şeması numarası (parmak izi deposu
      sürümü olan ANLIK_SURUM'dan ayrı — o iz biçimi için de artar). Odadaki sema
      yerelden BÜYÜKSE bu istemci eskidir: birleştirme + yazma tümüyle durur.
      "Salt-okur birleşme" bile güvensizdi — eski normalize bilmediği alanları
      budar, budanmış yerel kopya eşit damgada sonraki turda odayı ezerdi. */
-  const SEMA_SURUM = 1;
+  const SEMA_SURUM = 2;   // 2: gsG eklendi — v32 ve öncesi normalize gsG'yi budar
   /* v1'de her kitabın TAM JSON'u parmak izi olarak saklanıyordu: kütüphanenin
      ikinci bir kopyası kadar yer tutuyor, localStorage kotasını iki katına
      yakın hızda dolduruyordu. v2 kısa çift-hash tutar (~20 karakter/kitap).
@@ -42,7 +45,9 @@
      v6: kitapParmak notların tekrar* alanlarını dışlar (iz biçimi değişti) —
      otomatik zamanlama damga üretmesin, LWW zehirlenmesin diye.
      v7: notlara ng (not damgası) + kitaba silinenNotlar (not mezar taşı)
-     eklendi — dizi birleşimi ve not silme kalıcılığı için (SEMA_SURUM 1). */
+     eklendi — dizi birleşimi ve not silme kalıcılığı için (SEMA_SURUM 1).
+     v8: kitaba gsG (guncelSayfa damgası) eklendi — düzeltme/sıfırlama senkronda
+     korunur, damgalar eşitse koşullu max sürer (SEMA_SURUM 2). */
   function anlikYukle(){
     try{
       const h = JSON.parse(localStorage.getItem(ANLIK_ANAHTAR));
@@ -78,8 +83,11 @@
     }
     return s.length.toString(36) + '-' + h1.toString(36) + h2.toString(36);
   }
-  /* Değişen/yeni kitaba zaman damgası basar, silinenler için mezar taşı bırakır. */
-  function damgala(){
+  /* Değişen/yeni kitaba zaman damgası basar, silinenler için mezar taşı bırakır.
+     izleriYaz === false: parmak izleri KAYDEDİLMEZ, döndürülür — çağıran depo
+     yazımı başarılı olursa kendisi kaydeder (M4b: iz depodan önce kalıcılaşırsa
+     kota hatasında "değişiklik yok" sanılır, damga hiç basılmazdı). */
+  function damgala(izleriYaz){
     if(typeof veri !== 'object' || !veri || !Array.isArray(veri.kitaplar)) return;
     const t = Date.now();
     const { izler: onceki, goc } = anlikYukle();
@@ -102,7 +110,8 @@
     veri.hedefSayfaG = veri.hedefSayfaG || {};
     for(const yil of Object.keys(veri.hedefSayfa || {}))
       if(!veri.hedefSayfaG[yil]) veri.hedefSayfaG[yil] = t;
-    anlikKaydet(simdiki);
+    if(izleriYaz !== false) anlikKaydet(simdiki);
+    return simdiki;
   }
 
   /* ---------- kimlik ---------- */
@@ -209,17 +218,24 @@
   }
   function kitapCiftiBirlestir(kazanan, kaybeden){
     const k = { ...kazanan };
-    /* guncelSayfa: AYNI okuma döngüsünde (iki kopya da 'okunuyor', okumalar
-       arşiv boyu eşit) ilerleme geri gitmez → büyük kazanır (görev kuralı:
-       iki cihazda okuma yarışı). Aksi halde kazananın değeri geçerli —
-       koşulsuz max, "Yeniden oku"nun 0 sıfırlamasını her turda geri ezip
-       kalıcı kilit üretiyordu (yeniden okuma takibi tümden ölüyordu). */
-    const ayniDongu = kazanan.durum === 'okunuyor' && kaybeden.durum === 'okunuyor'
-      && (Array.isArray(kazanan.okumalar) ? kazanan.okumalar.length : 0) ===
-         (Array.isArray(kaybeden.okumalar) ? kaybeden.okumalar.length : 0);
-    k.guncelSayfa = ayniDongu
-      ? Math.max(parseInt(kazanan.guncelSayfa) || 0, parseInt(kaybeden.guncelSayfa) || 0)
-      : (parseInt(kazanan.guncelSayfa) || 0);
+    /* guncelSayfa: gsG (alan damgası — yalnız KULLANICI ilerleme girişleri basar)
+       farklıysa YENİ damgalı taraf kazanır: kasıtlı en son giriş, düzeltme
+       (250→25) dahil, senkronda korunur. Damgalar EŞİTSE (eski/damgasız veri)
+       geri uyumlu kural: aynı okuma döngüsünde (iki kopya da 'okunuyor',
+       okumalar arşiv boyu eşit) büyük kazanır, değilse kazananın değeri —
+       koşulsuz max "Yeniden oku" sıfırlamasını kalıcı kilitliyordu. */
+    const kGs = parseInt(kazanan.gsG) || 0, yGs = parseInt(kaybeden.gsG) || 0;
+    if(kGs !== yGs){
+      k.guncelSayfa = parseInt((kGs > yGs ? kazanan : kaybeden).guncelSayfa) || 0;
+    }else{
+      const ayniDongu = kazanan.durum === 'okunuyor' && kaybeden.durum === 'okunuyor'
+        && (Array.isArray(kazanan.okumalar) ? kazanan.okumalar.length : 0) ===
+           (Array.isArray(kaybeden.okumalar) ? kaybeden.okumalar.length : 0);
+      k.guncelSayfa = ayniDongu
+        ? Math.max(parseInt(kazanan.guncelSayfa) || 0, parseInt(kaybeden.guncelSayfa) || 0)
+        : (parseInt(kazanan.guncelSayfa) || 0);
+    }
+    k.gsG = Math.max(kGs, yGs);
     const nb = notlariBirlestir(kazanan, kaybeden);
     k.notlar = nb.notlar;
     k.silinenNotlar = nb.silinenNotlar;
@@ -293,48 +309,96 @@
 
   /* ---------- senkron ---------- */
   async function senkronEt(sessiz){
-    if(!ayar || !ayar.oda || calisiyor || !kurulu() || eskiSurum) return false;
+    if(!ayar || !ayar.oda || !kurulu() || eskiSurum) return false;
+    /* M4a: uçuş sırasındaki çağrı yutulmaz — bitince yeniden planlanır ki
+       senkron devam ederken yapılan kayıt bir sonraki kaydı beklemeden gitsin */
+    if(calisiyor){ bekleyen = true; return false; }
     calisiyor = true;
     const yol = SENKRON_URL.replace(/\/+$/, '') + '/odalar/' + encodeURIComponent(ayar.oda) + '.json';
     try{
       const tok = await kimlikAl();
-      const r = await fetch(yol + '?auth=' + tok);
-      if(!r.ok) throw new Error('okuma ' + r.status);
-      const uzak = (await r.json()) || {};
-      /* Şema koruması: odada daha yeni istemcinin verisi varsa bu istemci NE
-         birleştirir NE yazar — dokunmamak tek güvenli seçenek (üstteki not). */
-      if((parseInt(uzak.sema) || 0) > SEMA_SURUM){
-        eskiSurum = true;
+      /* M1 (TOCTOU): RTDB ETag/if-match — GERÇEK sunucuda doğrulandı
+         (X-Firebase-ETag → ETag; bayat if-match → 412). Araya yazan olursa
+         PUT 412 döner; GET-birleştir-PUT en fazla 3 kez tekrarlanır (kısa
+         rastgele bekleme) — araya girenin verisi taze GET'le birleşime girer,
+         kaybolmaz. ETag başlığı gelmezse (beklenmedik ara katman) korumasız
+         eski davranışa düşülür. */
+      for(let deneme = 0; deneme < 3; deneme++){
+        const r = await fetch(yol + '?auth=' + tok, { headers: { 'X-Firebase-ETag': 'true' } });
+        if(!r.ok) throw new Error('okuma ' + r.status);
+        const etag = r.headers.get('ETag');
+        const uzak = (await r.json()) || {};
+        const uzakSema = parseInt(uzak.sema) || 0;
+        /* Şema koruması: odada daha yeni istemcinin verisi varsa bu istemci NE
+           birleştirir NE yazar — dokunmamak tek güvenli seçenek (üstteki not). */
+        if(uzakSema > SEMA_SURUM){
+          eskiSurum = true;
+          durumCiz();
+          if(!sessiz) bildir('Bu cihaz eski sürümde — güncellemek için uygulamayı kapatıp aç');
+          return false;
+        }
+        /* M3: oda şeması daha önce görülenin ALTINDAYSA eski sürümlü bir cihaz
+           tam gövde yazıp sema alanını silmiş demektir. Bir tur atlanır (uyarı),
+           sonraki tur PUT şemayı geri yazar — pencere daraltma, tam çözüm değil:
+           eski istemci aktif kaldıkça dönüşümlü sürer. */
+        if(uzakSema < ((ayar && ayar.sonSema) || 0)){
+          if(!semaDusukGecis){
+            semaDusukGecis = true;
+            semaDustu = true;
+            durumCiz();
+            if(!sessiz) bildir('Odaya eski sürümlü bir cihaz yazmış — bu tur atlandı');
+            return false;
+          }
+          semaDusukGecis = false;   // ikinci tur: yaz ve şemayı geri koy
+        }
+        const bir = birlestir(veri, uzak);
+        const basliklar = { 'Content-Type': 'application/json' };
+        if(etag) basliklar['if-match'] = etag;
+        const y = await fetch(yol + '?auth=' + tok, {
+          method:'PUT', headers: basliklar,
+          body: JSON.stringify({ ...bir, sema: SEMA_SURUM,
+            cihazlar: { ...(uzak.cihazlar||{}), [ayar.cihaz || 'cihaz']: Date.now() } }) });
+        if(y.status === 412){   // araya yazan oldu: taze gövdeyle yeniden birleştirilecek
+          await new Promise(c => setTimeout(c, 120 + Math.random() * 280));
+          continue;
+        }
+        if(!y.ok) throw new Error('yazma ' + y.status);
+
+        veri.kitaplar = bir.kitaplar; veri.hedef = bir.hedef;
+        veri.hedefG = bir.hedefG; veri.silinenler = bir.silinenler;
+        veri.hedefSayfa = bir.hedefSayfa; veri.hedefSayfaG = bir.hedefSayfaG;
+        /* M4b: önce depo, başarılıysa parmak izi — ters sıra kota hatasında
+           taze iz + bayat depo uyumsuzluğu bırakıyordu */
+        let depoTamam = true;
+        try{ localStorage.setItem('kk_kitaplik_v1', JSON.stringify(veri)); }
+        catch(e){ depoTamam = false; if(typeof kotaUyariGoster === 'function') kotaUyariGoster(); }
+        if(depoTamam){
+          const anlik = {};
+          veri.kitaplar.forEach(k => { anlik[k.id] = kitapParmak(k); });
+          anlikKaydet(anlik);
+        }
+
+        semaDustu = false;
+        ayarKaydet({ ...ayar, sonSenkron: Date.now(),
+          sonSema: Math.max(uzakSema, SEMA_SURUM, (ayar && ayar.sonSema) || 0) });
+        if(typeof hepsiniCiz === 'function') hepsiniCiz();
         durumCiz();
-        if(!sessiz) bildir('Bu cihaz eski sürümde — güncellemek için uygulamayı kapatıp aç');
-        return false;
+        if(!sessiz) bildir('Senkron tamam — ' + veri.kitaplar.length + ' kitap');
+        return true;
       }
-      const bir = birlestir(veri, uzak);
-      const y = await fetch(yol + '?auth=' + tok, {
-        method:'PUT', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ ...bir, sema: SEMA_SURUM,
-          cihazlar: { ...(uzak.cihazlar||{}), [ayar.cihaz || 'cihaz']: Date.now() } }) });
-      if(!y.ok) throw new Error('yazma ' + y.status);
-
-      veri.kitaplar = bir.kitaplar; veri.hedef = bir.hedef;
-      veri.hedefG = bir.hedefG; veri.silinenler = bir.silinenler;
-      veri.hedefSayfa = bir.hedefSayfa; veri.hedefSayfaG = bir.hedefSayfaG;
-      const anlik = {};
-      veri.kitaplar.forEach(k => { anlik[k.id] = kitapParmak(k); });
-      anlikKaydet(anlik);
-      try{ localStorage.setItem('kk_kitaplik_v1', JSON.stringify(veri)); }
-      catch(e){ if(typeof kotaUyariGoster === 'function') kotaUyariGoster(); }
-
-      ayarKaydet({ ...ayar, sonSenkron: Date.now() });
-      if(typeof hepsiniCiz === 'function') hepsiniCiz();
+      // 3 denemede de çakışma: veri yerelde güvende, dürüstçe söyle, yeniden dene
       durumCiz();
-      if(!sessiz) bildir('Senkron tamam — ' + veri.kitaplar.length + ' kitap');
-      return true;
+      if(!sessiz) bildir('Senkron çakışması — birazdan yeniden denenecek');
+      planla();
+      return false;
     }catch(e){
       durumCiz();
       if(!sessiz) bildir('Senkron başarısız — bağlantını ve oda adını kontrol et');
       return false;
-    }finally{ calisiyor = false; }
+    }finally{
+      calisiyor = false;
+      if(bekleyen){ bekleyen = false; planla(); }   // M4a: uçuştaki kayıt gönderilsin
+    }
   }
   function planla(){
     if(!ayar || !ayar.oda) return;
@@ -389,7 +453,11 @@
       const ne = ayar.sonSenkron
         ? new Date(ayar.sonSenkron).toLocaleString('tr-TR', { dateStyle:'short', timeStyle:'short' })
         : 'henüz yok';
-      dEl.innerHTML = 'Bağlı — oda <b>' + kacir(ayar.oda) + '</b>, bu cihaz: <b>' + kacir(ayar.cihaz || '-') +
+      dEl.innerHTML = (semaDustu
+          ? '⚠️ Odaya <b>eski sürümlü</b> bir cihaz yazmış — o cihazda uygulamayı kapatıp açmalısın. ' +
+            'Koruma için bir senkron turu atlandı.<br>'
+          : '') +
+        'Bağlı — oda <b>' + kacir(ayar.oda) + '</b>, bu cihaz: <b>' + kacir(ayar.cihaz || '-') +
         '</b>.<br>Son senkron: ' + ne + '. Değişiklikler birkaç saniye içinde kendiliğinden gönderilir.';
     }else{
       form.style.display = 'block'; bagli.style.display = 'none';
@@ -406,11 +474,13 @@
     if(typeof window.depoKaydet === 'function' && !window.depoKaydet.__senkron){
       const asil = window.depoKaydet;
       const sarmal = function(){
-        // Damgayı ÖNCE bas, sonra tek yazım yap: eskiden kütüphane aynı çağrıda
-        // iki kez serileştirilip yazılıyordu ve ikinci yazım depoKaydet'in kota
-        // yakalamasını atlıyordu (kota uyarısı görünmüyordu).
-        try{ damgala(); }catch(e){}
+        // Damgayı ÖNCE bas (g değerleri yazılacak JSON'a girer), izleri SONRA
+        // kaydet: depo yazımı kota yüzünden düşerse parmak izi de kalıcılaşmaz
+        // (M4b) — aksi halde bayat depo taze iz tabanıyla "değişmemiş" sayılırdı.
+        let izler = null;
+        try{ izler = damgala(false); }catch(e){}
         const s = asil.apply(this, arguments);
+        if(s !== false && izler) anlikKaydet(izler);
         planla();
         return s;
       };
