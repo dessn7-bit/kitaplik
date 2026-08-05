@@ -130,18 +130,24 @@
      Skalerler: KİTAP bazında en yeni damga kazanır (alan başına damga tutmak
      depo + karmaşıklık maliyeti; kazanç sınırlı — KARAR). İstisna guncelSayfa:
      okuma ilerlemesi geri gitmez, büyük olan kazanır.
-     DİZİLER (notlar/oturumlar/okumalar/odunc/seanslar/etiketler): toplanabilir
-     veridir, ezilmez — kimlik bazlı BİRLEŞİM. Silinen not, not mezar taşıyla
+     DİZİLER (notlar/oturumlar/okumalar/odunc/seanslar): toplanabilir veridir,
+     ezilmez — kimlik bazlı BİRLEŞİM. Etiket/fikir listeleri İSTİSNA: kazanan
+     kopyadan aynen alınır (LWW) — bkz. kumeTekil notu. Silinen not, not mezar taşıyla
      (kitap kaydındaki silinenNotlar) ölü kalır; mezardan SONRA düzenlenen not
      (ng damgası) yeniden yaşar. Hepsi saf: yan etkisiz, testte doğrudan çağrılır. */
   function iKat(s){
     return (typeof iKatla === 'function') ? iKatla(s)
       : String(s == null ? '' : s).toLocaleLowerCase('tr');
   }
-  /* etiket / fikir: küme birleşimi, TR (i-ailesi) mükerrersiz; kazanan sırası önde */
-  function kumeBirlesim(a, b){
+  /* etiket / fikir: verilen liste(ler)i TR (i-ailesi) mükerrersiz süz.
+     Birleşimde KAZANANIN listesi AYNEN alınır (tek argüman = LWW) — küme
+     birleşimi silinen etiketi karşı kopyadan diriltiyordu ve etiket bir daha
+     silinemiyordu (kanıtlı kusur). Bedel: iki cihazda EŞ ZAMANLI eklenen
+     farklı etiketlerden biri kaybolur — bilinçli KARAR (tek kullanıcı; kalıcı
+     dirilme çok daha kötü). Tam çözüm etiket mezar taşı (OR-set) — rapor. */
+  function kumeTekil(){
     const c = [], gor = new Set();
-    for(const x of [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])]){
+    for(const liste of arguments) for(const x of (Array.isArray(liste) ? liste : [])){
       const anahtar = iKat(x);
       if(!anahtar || gor.has(anahtar)) continue;
       gor.add(anahtar); c.push(x);
@@ -187,11 +193,11 @@
       if(!n.id){ idsiz.push(n); return; }
       const v = h.get(n.id);
       if(!v){ h.set(n.id, n); return; }
-      /* aynı not iki tarafta: not damgası (ng) yeni olan bütünüyle kazanır,
-         eşitlikte kitap-kazananı tarafı; fikir etiketleri KÜME BİRLEŞİMİ
-         (görev kuralı: toplanabilir veri — bkz. rapor ŞÜPHE: silme/birleşim gerilimi) */
+      /* aynı not iki tarafta: not damgası (ng) yeni olan BÜTÜNÜYLE kazanır
+         (fikir listesi dahil — LWW), eşitlikte kitap-kazananı tarafı.
+         fikir-sil ng bastığı için silen kopya yeni sayılır, silinen dirilmez. */
       const secilen = ((n.ng || 0) > (v.ng || 0)) ? n : v;
-      h.set(n.id, { ...secilen, fikir: kumeBirlesim(v.fikir, n.fikir) });
+      h.set(n.id, { ...secilen, fikir: kumeTekil(secilen.fikir) });
     });
     const notlar = [];
     for(const [id, n] of h){
@@ -230,7 +236,7 @@
         ...(((parseInt(b.b) || 0) > (parseInt(a.b) || 0)) ? b : a),
         a: Math.min(parseInt(a.a) || 0, parseInt(b.a) || 0),
         b: Math.max(parseInt(a.b) || 0, parseInt(b.b) || 0) }));
-    k.etiketler = kumeBirlesim(kazanan.etiketler, kaybeden.etiketler);
+    k.etiketler = kumeTekil(kazanan.etiketler);   // LWW: kazanan kitabın listesi, TR-mükerrersiz
     /* Birleşim sırası kronolojik DEĞİLDİ (kaybedene özgü eski kayıt sona
        geliyordu): seansEkle "son eleman = bugün" varsayar, hız analizi sıraya
        bakar. Birleşimden sonra sırala; oturumda uygulama tavanı (400, oturumEkle)

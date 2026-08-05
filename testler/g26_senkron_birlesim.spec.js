@@ -78,17 +78,27 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
     expect(b.notlar.length).toBe(0);              // silme düzenlemeden yeni → ölü (tutarlı kural)
   });
 
-  test('aynı not iki tarafta: ng yeni olan kazanır, eşitlikte kitap-kazananı; fikir birleşir', async ({ page }) => {
+  test('aynı not iki tarafta: ng yeni olan fikir listesi DAHİL bütünüyle kazanır', async ({ page }) => {
+    // DAVRANIŞ DEĞİŞTİ (bilinçli): fikir küme birleşimi silinen etiketi diriltiyordu → LWW
     await page.goto('/');
     const a = await birlestirilmis(page,
       kitap('x', { g: 200, notlar: [not('n1', { metin: 'Yerel hali', ng: 1000, fikir: ['özgürlük'] })] }),
       kitap('x', { g: 100, notlar: [not('n1', { metin: 'Uzak hali', ng: 2000, fikir: ['ahlak'] })] }));
-    expect(a.notlar[0].metin).toBe('Uzak hali'); // ng 2000 > 1000: kitap-kazananına rağmen not-uzak
-    expect(a.notlar[0].fikir.sort()).toEqual(['ahlak', 'özgürlük']); // fikir küme birleşimi
+    expect(a.notlar[0].metin).toBe('Uzak hali');  // ng 2000 > 1000: kitap-kazananına rağmen not-uzak
+    expect(a.notlar[0].fikir).toEqual(['ahlak']); // kazanan notun listesi AYNEN (birleşim yok)
     const b = await birlestirilmis(page,
       kitap('x', { g: 200, notlar: [not('n1', { metin: 'Yerel hali', ng: 0 })] }),
       kitap('x', { g: 100, notlar: [not('n1', { metin: 'Uzak hali', ng: 0 })] }));
     expect(b.notlar[0].metin).toBe('Yerel hali'); // ng eşit → kitap-kazananı tarafı
+  });
+
+  test('silinen not fikir etiketi senkronda GERİ GELMEZ (kanıt senaryosu birebir)', async ({ page }) => {
+    await page.goto('/');
+    // fikir-sil ng basar: yerel ng=3000 ['olus'] vs uzak ng=1000 ['olus','surec']
+    const k = await birlestirilmis(page,
+      kitap('x', { g: 3000, notlar: [not('n1', { ng: 3000, fikir: ['olus'] })] }),
+      kitap('x', { g: 1000, notlar: [not('n1', { ng: 1000, fikir: ['olus', 'surec'] })] }));
+    expect(k.notlar[0].fikir).toEqual(['olus']);  // 'surec' dirilmedi
   });
 
   test('oturumlar birleşir, aynı b mükerrer olmaz, tamamlanmış (uzun) hali kazanır', async ({ page }) => {
@@ -183,14 +193,19 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
     expect(k.oturumlar[399].b).toBe(10398);
   });
 
-  test('etiketler birleşir, TR mükerrer olmaz (Islam/İslam tek)', async ({ page }) => {
+  test('silinen kitap etiketi GERİ GELMEZ: kazanan LWW, içi TR-mükerrersiz', async ({ page }) => {
+    // DAVRANIŞ DEĞİŞTİ (bilinçli): küme birleşimi silinen etiketi diriltiyordu → kazanan listesi aynen
     await page.goto('/');
-    const k = await birlestirilmis(page,
-      kitap('x', { g: 200, etiketler: ['İslam', 'tarih'] }),
-      kitap('x', { g: 100, etiketler: ['Islam', 'felsefe'] }));
-    expect(k.etiketler.length).toBe(3);            // İslam/Islam tek (iKatla), felsefe eklendi
-    expect(k.etiketler).toContain('İslam');        // kazanan tarafın yazımı korunur
-    expect(k.etiketler).toContain('felsefe');
+    // kanıt senaryosu birebir: yerel g=3000 ['felsefe'] vs uzak g=1000 ['felsefe','silinecek']
+    const a = await birlestirilmis(page,
+      kitap('x', { g: 3000, etiketler: ['felsefe'] }),
+      kitap('x', { g: 1000, etiketler: ['felsefe', 'silinecek'] }));
+    expect(a.etiketler).toEqual(['felsefe']);      // 'silinecek' dirilmedi
+    // kazanan tarafın listesi aynen korunur + kendi içinde TR (i-ailesi) mükerrer tek
+    const b = await birlestirilmis(page,
+      kitap('x', { g: 200, etiketler: ['İslam', 'Islam', 'tarih'] }),
+      kitap('x', { g: 100, etiketler: ['felsefe'] }));
+    expect(b.etiketler).toEqual(['İslam', 'tarih']); // Islam katlandı, 'felsefe' EKLENMEDİ (LWW)
   });
 
   test('skaler alanlar: daha yeni damgalı kitap kazanır (mevcut davranış korunur)', async ({ page }) => {
