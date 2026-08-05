@@ -401,8 +401,10 @@
         if(depoTamam){ anlikKaydet(anlik); bekleyenIzler = null; }
         else bekleyenIzler = anlik;   // bellek tabanı: damga enflasyonu önlenir
 
-        semaDustu = false;
-        semaDusukGecis = false;   // olay kapandı — bayat bayrak sonraki gerilemenin uyarısını yutmasın
+        /* semaDustu bilerek SIFIRLANMAZ: şema geri yazılsa da eski sürümlü cihaz
+           dışarıda durur, uyarı o cihaz güncellenene dek (bu oturum boyu) kalmalı.
+           semaDusukGecis ise olay-başına: sonraki gerileme yine bir tur atlasın. */
+        semaDusukGecis = false;
         ayarKaydet({ ...ayar, sonSenkron: Date.now(),
           sonSema: Math.max(uzakSema, SEMA_SURUM, (ayar && ayar.sonSema) || 0) });
         if(typeof hepsiniCiz === 'function') hepsiniCiz();
