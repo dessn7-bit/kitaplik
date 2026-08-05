@@ -21,7 +21,7 @@ async function birlestirilmis(page, yerelK, uzakK) {
 /* ETag'li sahte oda sunucusu: c412 kadar PUT'a 412 döner (araya yazan taklidi),
    arayaGiren verilirse 412 sonrası odaya o kitap eklenir. */
 async function odaKur(page, ayarlar) {
-  const s = Object.assign({ c412: 0, arayaGiren: null, oda: {} }, ayarlar || {});
+  const s = Object.assign({ c412: 0, arayaGiren: null, oda: {}, putGecikme: 0 }, ayarlar || {});
   const durum = { get: 0, put: 0, ifMatch: [], govdeler: [], etiket: 1 };
   await page.route('**/identitytoolkit.googleapis.com/**', route =>
     route.fulfill({ status: 200, contentType: 'application/json',
@@ -37,6 +37,12 @@ async function odaKur(page, ayarlar) {
     if (istek.method() === 'PUT') {
       durum.put++;
       durum.ifMatch.push(istek.headers()['if-match'] || null);
+      if (s.putGecikme) return new Promise(coz => setTimeout(coz, s.putGecikme)).then(() => {
+        durum.govdeler.push(istek.postData());
+        s.oda = JSON.parse(istek.postData());
+        durum.etiket++;
+        return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+      });
       if (durum.put <= s.c412) {
         durum.etiket++;                                  // araya giren yazdı: içerik + etag değişti
         if (s.arayaGiren) s.oda = { ...s.oda,
@@ -50,6 +56,7 @@ async function odaKur(page, ayarlar) {
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
+  durum.odaYaz = yeni => { s.oda = yeni; };   // test: odayı dışarıdan ez (eski istemci taklidi)
   return durum;
 }
 async function baglanVeSenkronla(page, sessiz) {
@@ -207,6 +214,72 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
     });
     expect(sonuclar).toEqual([true, false]);         // ikincisi ertelendi (yutulmadı)
     await expect.poll(() => durum.put, { timeout: 8000 }).toBeGreaterThanOrEqual(2); // ~4 sn sonra gönderildi
+  });
+
+  test('KRİTİK: PUT uçuşu sırasındaki kayıt başarı yolunda EZİLMEZ ve sonraki turda odaya gider', async ({ page }) => {
+    // PUT gecikmeli: uçuş penceresi içinde kullanıcı kaydı simüle edilir
+    const durum = await odaKur(page, { oda: {}, putGecikme: 600 });
+    await tohumla(page, [sahteKitap({ ad: 'Eski Ad' })]);
+    await page.goto('/');
+    await page.evaluate(() => {
+      window.__senkron.ayarKaydet({ oda: 'g27-test-odasi', cihaz: 'testcihaz', sonSenkron: null });
+      window.__ucus = window.__senkron.senkronEt(true);   // beklenmeden başlat
+    });
+    await page.waitForTimeout(250);                       // PUT uçuştayken...
+    await page.evaluate(() => {                           // ...kullanıcı kayıt yapar
+      veri.kitaplar[0].ad = 'Uçuşta Değişti';
+      depoKaydet();
+    });
+    expect(await page.evaluate(() => window.__ucus)).toBe(true);
+    // eski davranış: başarı yolu veri+depoyu PUT-öncesi görüntüyle ezer, ad kaybolurdu
+    expect(await page.evaluate(() => veri.kitaplar[0].ad)).toBe('Uçuşta Değişti');
+    expect(await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('kk_kitaplik_v1')).kitaplar[0].ad)).toBe('Uçuşta Değişti');
+    // bekleyen bayrağı sonraki turu planlar; o tur taze adı odaya taşır
+    await expect.poll(() => durum.put, { timeout: 8000 }).toBeGreaterThanOrEqual(2);
+    const son = JSON.parse(durum.govdeler[durum.govdeler.length - 1]);
+    expect(son.kitaplar[0].ad).toBe('Uçuşta Değişti');
+  });
+
+  test('şema atlama turu kendini yeniden planlar; başarı bayrağı sıfırlar, ikinci gerileme yine korunur', async ({ page }) => {
+    const durum = await odaKur(page, { oda: { kitaplar: [] } });   // odada sema yok
+    await tohumla(page, [sahteKitap({ ad: 'Yerel Kitap' })],
+      { kk_senkron_v1: { oda: 'g27-test-odasi', cihaz: 'testcihaz', sonSenkron: 1, sonSema: 2 } });
+    await page.goto('/');
+    // açılış sessiz senkronu atlama turudur; planla sayesinde ~4 sn içinde yazma turu KENDİLİĞİNDEN gelir
+    await expect.poll(() => durum.put, { timeout: 8000 }).toBeGreaterThanOrEqual(1);
+    const ilkGovde = JSON.parse(durum.govdeler[0]);
+    expect(ilkGovde.sema).toBe(await page.evaluate(() => window.__senkron.SEMA_SURUM)); // şema geri yazıldı
+    // İKİNCİ gerileme olayı: eski istemci odayı yine ezmiş gibi sema'yı düşür
+    durum.odaYaz({ kitaplar: [] });              // sema alanı yine yok
+    const atlandi = await page.evaluate(() => window.__senkron.senkronEt(true));
+    expect(atlandi).toBe(false);                 // bayrak başarıda sıfırlanmıştı → koruma yine çalıştı
+    const putOnce = durum.put;
+    expect(await page.evaluate(() => window.__senkron.senkronEt(true))).toBe(true); // ikinci tur yazar
+    expect(durum.put).toBe(putOnce + 1);
+  });
+
+  test('damga enflasyonu yok: kota turunda değişen kitap, sonraki sağlıklı kayıtta yeniden damgalanmaz', async ({ page }) => {
+    await tohumla(page, [sahteKitap({ ad: 'Kitap A' }), sahteKitap({ ad: 'Kitap B' })]);
+    await page.goto('/');
+    await page.evaluate(() => depoKaydet());   // sağlıklı taban
+    const sonuc = await page.evaluate(async () => {
+      const asilSet = Storage.prototype.setItem;
+      Storage.prototype.setItem = function(anahtar, deger){
+        if (anahtar === 'kk_kitaplik_v1') throw new Error('kota doldu (taklit)');
+        return asilSet.apply(this, arguments);
+      };
+      veri.kitaplar[0].ad = 'A değişti (kota dolu)';
+      depoKaydet();                             // düşer; izler bellekte bekler
+      const gA1 = veri.kitaplar[0].g;
+      Storage.prototype.setItem = asilSet;      // kota açıldı
+      await new Promise(c => setTimeout(c, 10)); // damga zamanı ayrışsın
+      veri.kitaplar[1].ad = 'B değişti';
+      depoKaydet();                             // sağlıklı tur
+      return { gA1, gA2: veri.kitaplar[0].g };
+    });
+    // bellek tabanı olmasa A "değişmiş" sanılıp taze damga alırdı → bayat içerik LWW kazanırdı
+    expect(sonuc.gA2).toBe(sonuc.gA1);
   });
 
   test('depo yazımı başarısızsa parmak izi güncellenmez (kota uyumsuzluğu kapandı)', async ({ page }) => {

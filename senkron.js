@@ -13,6 +13,10 @@
   let bekleyen = false;    // senkron uçuştayken kayıt yapıldı → bitince yeniden planla
   let semaDustu = false;   // odaya eski istemci yazmış (şema geriledi) → uyarı satırı
   let semaDusukGecis = false; // düşük şemada BİR tur atlanır; sonraki tur şemayı geri yazar
+  let yazimSayaci = 0;     // her depoKaydet'te artar — PUT uçuşunda kayıt yapıldığını yakalar
+  let bekleyenIzler = null;// depo yazımı düşen turun izleri: bellek tabanı — bayat disk
+                           // tabanı sonraki damgala'da değişmemiş kitapları taze damgalayıp
+                           // LWW'de bayat içeriği kazandırırdı (damga enflasyonu)
 
   const kurulu = () => SENKRON_URL.indexOf('__SYNC') !== 0;
   const kacir = s => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -90,7 +94,9 @@
   function damgala(izleriYaz){
     if(typeof veri !== 'object' || !veri || !Array.isArray(veri.kitaplar)) return;
     const t = Date.now();
-    const { izler: onceki, goc } = anlikYukle();
+    const { izler: diskIzler, goc } = anlikYukle();
+    // bellekteki bekleyen izler disk tabanının üstüne biner (kota turu telafisi)
+    const onceki = bekleyenIzler ? { ...diskIzler, ...bekleyenIzler } : diskIzler;
     const simdiki = {};
     veri.silinenler = veri.silinenler || {};
     for(const k of veri.kitaplar){
@@ -314,6 +320,7 @@
        senkron devam ederken yapılan kayıt bir sonraki kaydı beklemeden gitsin */
     if(calisiyor){ bekleyen = true; return false; }
     calisiyor = true;
+    const odaBasta = ayar.oda;   // uçuş sırasında kes/oda-değiştir yarışına karşı
     const yol = SENKRON_URL.replace(/\/+$/, '') + '/odalar/' + encodeURIComponent(ayar.oda) + '.json';
     try{
       const tok = await kimlikAl();
@@ -347,10 +354,12 @@
             semaDustu = true;
             durumCiz();
             if(!sessiz) bildir('Odaya eski sürümlü bir cihaz yazmış — bu tur atlandı');
+            planla();   // salt-okur oturumda da sonraki tur gelsin, şema geri yazılsın
             return false;
           }
           semaDusukGecis = false;   // ikinci tur: yaz ve şemayı geri koy
         }
+        const sayacOnce = yazimSayaci;   // birleşim bu andaki verinin görüntüsü
         const bir = birlestir(veri, uzak);
         const basliklar = { 'Content-Type': 'application/json' };
         if(etag) basliklar['if-match'] = etag;
@@ -364,6 +373,21 @@
         }
         if(!y.ok) throw new Error('yazma ' + y.status);
 
+        /* KRİTİK koruma: PUT uçuşu sırasında kullanıcı kayıt yaptıysa (sayaç
+           ilerledi) ya da oda değişti/kesildiyse birleşim görüntüsü BAYATTIR —
+           yerele uygulamak uçuştaki düzenlemeyi bellek+depo+iz tabanından birden
+           silerdi (kanıtlı senaryo). Yerele DOKUNMA: oda birleşik gövdeyi aldı,
+           bir sonraki tur taze yerelle yeniden birleştirir. */
+        if(yazimSayaci !== sayacOnce || !ayar || ayar.oda !== odaBasta){
+          if(ayar && ayar.oda === odaBasta){
+            bekleyen = true;
+            ayarKaydet({ ...ayar, sonSenkron: Date.now(),
+              sonSema: Math.max(uzakSema, SEMA_SURUM, ayar.sonSema || 0) });
+          }
+          durumCiz();
+          return true;
+        }
+
         veri.kitaplar = bir.kitaplar; veri.hedef = bir.hedef;
         veri.hedefG = bir.hedefG; veri.silinenler = bir.silinenler;
         veri.hedefSayfa = bir.hedefSayfa; veri.hedefSayfaG = bir.hedefSayfaG;
@@ -372,13 +396,13 @@
         let depoTamam = true;
         try{ localStorage.setItem('kk_kitaplik_v1', JSON.stringify(veri)); }
         catch(e){ depoTamam = false; if(typeof kotaUyariGoster === 'function') kotaUyariGoster(); }
-        if(depoTamam){
-          const anlik = {};
-          veri.kitaplar.forEach(k => { anlik[k.id] = kitapParmak(k); });
-          anlikKaydet(anlik);
-        }
+        const anlik = {};
+        veri.kitaplar.forEach(k => { anlik[k.id] = kitapParmak(k); });
+        if(depoTamam){ anlikKaydet(anlik); bekleyenIzler = null; }
+        else bekleyenIzler = anlik;   // bellek tabanı: damga enflasyonu önlenir
 
         semaDustu = false;
+        semaDusukGecis = false;   // olay kapandı — bayat bayrak sonraki gerilemenin uyarısını yutmasın
         ayarKaydet({ ...ayar, sonSenkron: Date.now(),
           sonSema: Math.max(uzakSema, SEMA_SURUM, (ayar && ayar.sonSema) || 0) });
         if(typeof hepsiniCiz === 'function') hepsiniCiz();
@@ -394,16 +418,17 @@
     }catch(e){
       durumCiz();
       if(!sessiz) bildir('Senkron başarısız — bağlantını ve oda adını kontrol et');
+      planla(30000);   // geçici ağ hatası kendiliğinden telafi edilsin (seyrek: 30 sn)
       return false;
     }finally{
       calisiyor = false;
       if(bekleyen){ bekleyen = false; planla(); }   // M4a: uçuştaki kayıt gönderilsin
     }
   }
-  function planla(){
+  function planla(gecikme){
     if(!ayar || !ayar.oda) return;
     clearTimeout(zaman);
-    zaman = setTimeout(() => senkronEt(true), 4000);
+    zaman = setTimeout(() => senkronEt(true), gecikme || 4000);
   }
 
   /* ---------- arayüz ---------- */
@@ -474,13 +499,15 @@
     if(typeof window.depoKaydet === 'function' && !window.depoKaydet.__senkron){
       const asil = window.depoKaydet;
       const sarmal = function(){
+        yazimSayaci++;   // PUT uçuşundaki kayıtları senkron başarı yolu fark etsin
         // Damgayı ÖNCE bas (g değerleri yazılacak JSON'a girer), izleri SONRA
         // kaydet: depo yazımı kota yüzünden düşerse parmak izi de kalıcılaşmaz
         // (M4b) — aksi halde bayat depo taze iz tabanıyla "değişmemiş" sayılırdı.
         let izler = null;
         try{ izler = damgala(false); }catch(e){}
         const s = asil.apply(this, arguments);
-        if(s !== false && izler) anlikKaydet(izler);
+        if(s !== false && izler){ anlikKaydet(izler); bekleyenIzler = null; }
+        else if(izler) bekleyenIzler = izler;   // bellek tabanı: damga enflasyonu önlenir
         planla();
         return s;
       };
