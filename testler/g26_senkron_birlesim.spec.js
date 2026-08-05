@@ -130,14 +130,57 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
     expect(k.seanslar.find(s => s.t === '2026-08-01').b).toBe(65); // ilerlemiş olan
   });
 
-  test('guncelSayfa: 120 ve 80 → 120 kazanır (damgadan bağımsız)', async ({ page }) => {
+  test('guncelSayfa: aynı okuma döngüsünde 120 ve 80 → 120 kazanır (damgadan bağımsız)', async ({ page }) => {
     await page.goto('/');
     const a = await birlestirilmis(page,
-      kitap('x', { g: 200, guncelSayfa: 80 }), kitap('x', { g: 100, guncelSayfa: 120 }));
+      kitap('x', { g: 200, durum: 'okunuyor', guncelSayfa: 80 }),
+      kitap('x', { g: 100, durum: 'okunuyor', guncelSayfa: 120 }));
     expect(a.guncelSayfa).toBe(120);   // kazanan kitapta 80 olsa bile ilerleme geri gitmez
     const b = await birlestirilmis(page,
-      kitap('x', { g: 200, guncelSayfa: 120 }), kitap('x', { g: 100, guncelSayfa: 80 }));
+      kitap('x', { g: 200, durum: 'okunuyor', guncelSayfa: 120 }),
+      kitap('x', { g: 100, durum: 'okunuyor', guncelSayfa: 80 }));
     expect(b.guncelSayfa).toBe(120);
+  });
+
+  test('kasıtlı sıfırlama korunur: yeniden-oku / okunacak sıfırlaması max ile geri gelmez', async ({ page }) => {
+    await page.goto('/');
+    // "Yeniden oku": arşiv boyu değişti (okumalar +1) → aynı döngü değil → 0 korunur
+    const a = await birlestirilmis(page,
+      kitap('x', { g: 200, durum: 'okunuyor', guncelSayfa: 0,
+        okumalar: [{ bas: '2025-01-01', bit: '2025-02-01', puan: 8, not: '' }] }),
+      kitap('x', { g: 100, durum: 'bitti', guncelSayfa: 300, okumalar: [] }));
+    expect(a.guncelSayfa).toBe(0);     // koşulsuz max 300'ü geri basıyordu (kalıcı kilit)
+    // durumu "okunacak"a çevirme sıfırlaması da korunur
+    const b = await birlestirilmis(page,
+      kitap('x', { g: 200, durum: 'okunacak', guncelSayfa: 0 }),
+      kitap('x', { g: 100, durum: 'okunuyor', guncelSayfa: 250 }));
+    expect(b.guncelSayfa).toBe(0);
+  });
+
+  test('aynı gün iki seans dilimi aralık-birleşimiyle korunur, sıra kronolojik', async ({ page }) => {
+    await page.goto('/');
+    // taraf-İÇİ mükerrer gün (bozuk sıra sonrası seansEkle'nin doğurduğu vaka): yutulmaz, birleşir
+    const k = await birlestirilmis(page,
+      kitap('x', { g: 200, seanslar: [{ t: '2026-08-05', a: 10, b: 40 },
+        { t: '2026-07-30', a: 1, b: 9 }, { t: '2026-08-05', a: 40, b: 60 }] }),
+      kitap('x', { g: 100, seanslar: [] }));
+    expect(k.seanslar.length).toBe(2);
+    const gun = k.seanslar.find(s => s.t === '2026-08-05');
+    expect(gun.a).toBe(10);            // ilk dilimin başlangıcı kaybolmadı
+    expect(gun.b).toBe(60);            // günün toplam aralığı: 10→60
+    expect(k.seanslar.map(s => s.t)).toEqual(['2026-07-30', '2026-08-05']); // kronolojik
+  });
+
+  test('oturumlar kronolojik sıralanır, 400 tavanı birleşimde korunur', async ({ page }) => {
+    await page.goto('/');
+    const coklu = Array.from({ length: 399 }, (_, i) => ({ b: 10000 + i, s: 1000, sa: i, sb: i + 1 }));
+    const k = await birlestirilmis(page,
+      kitap('x', { g: 200, oturumlar: coklu }),
+      kitap('x', { g: 100, oturumlar: [{ b: 5, s: 1000, sa: 0, sb: 1 },
+        { b: 6, s: 1000, sa: 1, sb: 2 }, { b: 7, s: 1000, sa: 2, sb: 3 }] }));
+    expect(k.oturumlar.length).toBe(400);              // 402 değil: uygulama tavanı birleşimde de tutar
+    expect(k.oturumlar[0].b).toBe(7);                  // en eski ikisi (5,6) düştü, sıra kronolojik
+    expect(k.oturumlar[399].b).toBe(10398);
   });
 
   test('etiketler birleşir, TR mükerrer olmaz (Islam/İslam tek)', async ({ page }) => {

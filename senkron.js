@@ -153,19 +153,19 @@
      Anahtarsız eleman (çok eski kayıt) birleştirilemez ama KAYBOLMAZ da. */
   function anahtarliBirlesim(kazanan, kaybeden, anahtar, sec){
     const h = new Map(), anahtarsiz = [];
-    (Array.isArray(kazanan) ? kazanan : []).forEach(e => {
-      if(!e) return;
-      const key = anahtar(e);
-      if(key) h.set(key, e); else anahtarsiz.push(e);
-    });
-    (Array.isArray(kaybeden) ? kaybeden : []).forEach(e => {
+    /* sec HER çakışmada uygulanır — taraflar ARASI ve taraf İÇİ (birleşim
+       bozuk sıra bırakmışsa aynı güne iki seans doğabiliyordu; ilki sessizce
+       yutulmasın). sec yoksa ilk gelen (kazanan tarafı) kalır. */
+    const koy = e => {
       if(!e) return;
       const key = anahtar(e);
       if(!key){ anahtarsiz.push(e); return; }
       const mevcut = h.get(key);
       if(mevcut === undefined) h.set(key, e);
-      else if(sec && sec(mevcut, e) === e) h.set(key, e);
-    });
+      else if(sec) h.set(key, sec(mevcut, e));
+    };
+    (Array.isArray(kazanan) ? kazanan : []).forEach(koy);
+    (Array.isArray(kaybeden) ? kaybeden : []).forEach(koy);
     return [...h.values(), ...anahtarsiz];
   }
   function notlariBirlestir(kazanan, kaybeden){
@@ -203,7 +203,17 @@
   }
   function kitapCiftiBirlestir(kazanan, kaybeden){
     const k = { ...kazanan };
-    k.guncelSayfa = Math.max(parseInt(kazanan.guncelSayfa) || 0, parseInt(kaybeden.guncelSayfa) || 0);
+    /* guncelSayfa: AYNI okuma döngüsünde (iki kopya da 'okunuyor', okumalar
+       arşiv boyu eşit) ilerleme geri gitmez → büyük kazanır (görev kuralı:
+       iki cihazda okuma yarışı). Aksi halde kazananın değeri geçerli —
+       koşulsuz max, "Yeniden oku"nun 0 sıfırlamasını her turda geri ezip
+       kalıcı kilit üretiyordu (yeniden okuma takibi tümden ölüyordu). */
+    const ayniDongu = kazanan.durum === 'okunuyor' && kaybeden.durum === 'okunuyor'
+      && (Array.isArray(kazanan.okumalar) ? kazanan.okumalar.length : 0) ===
+         (Array.isArray(kaybeden.okumalar) ? kaybeden.okumalar.length : 0);
+    k.guncelSayfa = ayniDongu
+      ? Math.max(parseInt(kazanan.guncelSayfa) || 0, parseInt(kaybeden.guncelSayfa) || 0)
+      : (parseInt(kazanan.guncelSayfa) || 0);
     const nb = notlariBirlestir(kazanan, kaybeden);
     k.notlar = nb.notlar;
     k.silinenNotlar = nb.silinenNotlar;
@@ -213,9 +223,23 @@
       o => (o.bas || '') + '|' + (o.bit || ''), null);
     k.odunc = anahtarliBirlesim(kazanan.odunc, kaybeden.odunc,
       o => (o.kisi || '') + '|' + (o.verilis || ''), (a, b) => (!a.donus && b.donus) ? b : a); // iade kaydı ileridedir
+    /* aynı gün seansları: iki dilim tek aralığa BİRLEŞİR (min a, max b) —
+       taraf seçimi ilk dilimin sayfalarını yutuyordu */
     k.seanslar = anahtarliBirlesim(kazanan.seanslar, kaybeden.seanslar,
-      s => String(s.t || ''), (a, b) => ((parseInt(b.b) || 0) > (parseInt(a.b) || 0)) ? b : a); // aynı gün: ilerlemiş sayfa
+      s => String(s.t || ''), (a, b) => ({
+        ...(((parseInt(b.b) || 0) > (parseInt(a.b) || 0)) ? b : a),
+        a: Math.min(parseInt(a.a) || 0, parseInt(b.a) || 0),
+        b: Math.max(parseInt(a.b) || 0, parseInt(b.b) || 0) }));
     k.etiketler = kumeBirlesim(kazanan.etiketler, kaybeden.etiketler);
+    /* Birleşim sırası kronolojik DEĞİLDİ (kaybedene özgü eski kayıt sona
+       geliyordu): seansEkle "son eleman = bugün" varsayar, hız analizi sıraya
+       bakar. Birleşimden sonra sırala; oturumda uygulama tavanı (400, oturumEkle)
+       burada da uygulanır — yoksa budanan girişler odadan sonsuza dek dirilirdi. */
+    k.oturumlar.sort((x, y) => (x.b || 0) - (y.b || 0));
+    if(k.oturumlar.length > 400) k.oturumlar = k.oturumlar.slice(-400);
+    k.seanslar.sort((x, y) => String(x.t || '').localeCompare(String(y.t || '')));
+    k.okumalar.sort((x, y) => String(x.bas || x.bit || '').localeCompare(String(y.bas || y.bit || '')));
+    k.odunc.sort((x, y) => String(x.verilis || '').localeCompare(String(y.verilis || '')));
     return k;
   }
   function birlestir(yerel, uzak){
