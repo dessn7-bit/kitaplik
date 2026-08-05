@@ -128,6 +128,7 @@
       bildir('Duraklatıldı — alıntı kartından yeniden başlatabilirsin');
     }
     sayacArtir();
+    n.ng = Date.now();   // kasıtlı not düzenlemesi: senkron not birleşiminde bu kopya kazansın
     damgaBas(b.k);
     if(typeof depoKaydet === 'function') depoKaydet();
     ciz();
@@ -142,6 +143,7 @@
     b.n.tekrarAralik = aralikOf(b.n);
     b.n.tekrarSonraki = gunIso(b.n.tekrarAralik);
     b.n.tekrarSayisi = parseInt(b.n.tekrarSayisi) || 0;
+    b.n.ng = Date.now();   // kasıtlı not düzenlemesi (yeniden başlatma)
     damgaBas(b.k);
     if(typeof depoKaydet === 'function') depoKaydet();
     bildir(b.n.tekrarAralik + ' gün sonra karşına çıkar');

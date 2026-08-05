@@ -9,6 +9,7 @@
   const ANLIK_ANAHTAR = 'kk_senkron_anlik_v1';
 
   let ayar = null, kimlik = null, zaman = null, calisiyor = false;
+  let eskiSurum = false;   // odada daha yeni şema görüldü → bu oturumda senkron durur
 
   const kurulu = () => SENKRON_URL.indexOf('__SYNC') !== 0;
   const kacir = s => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -22,7 +23,13 @@
   function bildir(m){ if(typeof toast === 'function') toast(m); }
 
   /* ---------- damgalama: depoKaydet sarmalayıcısı ---------- */
-  const ANLIK_SURUM = 6;
+  const ANLIK_SURUM = 7;
+  /* SEMA_SURUM: PUT gövdesine yazılan VERİ şeması numarası (parmak izi deposu
+     sürümü olan ANLIK_SURUM'dan ayrı — o iz biçimi için de artar). Odadaki sema
+     yerelden BÜYÜKSE bu istemci eskidir: birleştirme + yazma tümüyle durur.
+     "Salt-okur birleşme" bile güvensizdi — eski normalize bilmediği alanları
+     budar, budanmış yerel kopya eşit damgada sonraki turda odayı ezerdi. */
+  const SEMA_SURUM = 1;
   /* v1'de her kitabın TAM JSON'u parmak izi olarak saklanıyordu: kütüphanenin
      ikinci bir kopyası kadar yer tutuyor, localStorage kotasını iki katına
      yakın hızda dolduruyordu. v2 kısa çift-hash tutar (~20 karakter/kitap).
@@ -33,7 +40,9 @@
      v4: ertelemeTarihi eklendi (öneri motoru "Şimdi değil").
      v5: notlara tekrar* alanları eklendi (aralıklı alıntı tekrarı, tekrar.js).
      v6: kitapParmak notların tekrar* alanlarını dışlar (iz biçimi değişti) —
-     otomatik zamanlama damga üretmesin, LWW zehirlenmesin diye. */
+     otomatik zamanlama damga üretmesin, LWW zehirlenmesin diye.
+     v7: notlara ng (not damgası) + kitaba silinenNotlar (not mezar taşı)
+     eklendi — dizi birleşimi ve not silme kalıcılığı için (SEMA_SURUM 1). */
   function anlikYukle(){
     try{
       const h = JSON.parse(localStorage.getItem(ANLIK_ANAHTAR));
@@ -117,23 +126,118 @@
     return j.idToken;
   }
 
-  /* ---------- birleştirme: kitap bazında en yeni kazanır ---------- */
+  /* ---------- birleştirme ----------
+     Skalerler: KİTAP bazında en yeni damga kazanır (alan başına damga tutmak
+     depo + karmaşıklık maliyeti; kazanç sınırlı — KARAR). İstisna guncelSayfa:
+     okuma ilerlemesi geri gitmez, büyük olan kazanır.
+     DİZİLER (notlar/oturumlar/okumalar/odunc/seanslar/etiketler): toplanabilir
+     veridir, ezilmez — kimlik bazlı BİRLEŞİM. Silinen not, not mezar taşıyla
+     (kitap kaydındaki silinenNotlar) ölü kalır; mezardan SONRA düzenlenen not
+     (ng damgası) yeniden yaşar. Hepsi saf: yan etkisiz, testte doğrudan çağrılır. */
+  function iKat(s){
+    return (typeof iKatla === 'function') ? iKatla(s)
+      : String(s == null ? '' : s).toLocaleLowerCase('tr');
+  }
+  /* etiket / fikir: küme birleşimi, TR (i-ailesi) mükerrersiz; kazanan sırası önde */
+  function kumeBirlesim(a, b){
+    const c = [], gor = new Set();
+    for(const x of [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])]){
+      const anahtar = iKat(x);
+      if(!anahtar || gor.has(anahtar)) continue;
+      gor.add(anahtar); c.push(x);
+    }
+    return c;
+  }
+  /* doğal anahtarlı dizi birleşimi: kazanan sırası korunur, kaybedene özgüler
+     sona eklenir; aynı anahtarda sec() karar verir (yoksa kazanan kalır).
+     Anahtarsız eleman (çok eski kayıt) birleştirilemez ama KAYBOLMAZ da. */
+  function anahtarliBirlesim(kazanan, kaybeden, anahtar, sec){
+    const h = new Map(), anahtarsiz = [];
+    (Array.isArray(kazanan) ? kazanan : []).forEach(e => {
+      if(!e) return;
+      const key = anahtar(e);
+      if(key) h.set(key, e); else anahtarsiz.push(e);
+    });
+    (Array.isArray(kaybeden) ? kaybeden : []).forEach(e => {
+      if(!e) return;
+      const key = anahtar(e);
+      if(!key){ anahtarsiz.push(e); return; }
+      const mevcut = h.get(key);
+      if(mevcut === undefined) h.set(key, e);
+      else if(sec && sec(mevcut, e) === e) h.set(key, e);
+    });
+    return [...h.values(), ...anahtarsiz];
+  }
+  function notlariBirlestir(kazanan, kaybeden){
+    // not mezar taşları: iki tarafın birleşimi, en yeni silme zamanı kazanır
+    const mezar = {};
+    for(const kaynak of [kazanan.silinenNotlar, kaybeden.silinenNotlar])
+      if(kaynak && typeof kaynak === 'object')
+        for(const [id, t] of Object.entries(kaynak)){
+          const n = Number(t);
+          if(Number.isFinite(n) && n > 0 && (!mezar[id] || n > mezar[id])) mezar[id] = n;
+        }
+    const h = new Map(), idsiz = [];
+    (Array.isArray(kazanan.notlar) ? kazanan.notlar : []).forEach(n => {
+      if(!n) return;
+      if(n.id) h.set(n.id, n); else idsiz.push(n);
+    });
+    (Array.isArray(kaybeden.notlar) ? kaybeden.notlar : []).forEach(n => {
+      if(!n) return;
+      if(!n.id){ idsiz.push(n); return; }
+      const v = h.get(n.id);
+      if(!v){ h.set(n.id, n); return; }
+      /* aynı not iki tarafta: not damgası (ng) yeni olan bütünüyle kazanır,
+         eşitlikte kitap-kazananı tarafı; fikir etiketleri KÜME BİRLEŞİMİ
+         (görev kuralı: toplanabilir veri — bkz. rapor ŞÜPHE: silme/birleşim gerilimi) */
+      const secilen = ((n.ng || 0) > (v.ng || 0)) ? n : v;
+      h.set(n.id, { ...secilen, fikir: kumeBirlesim(v.fikir, n.fikir) });
+    });
+    const notlar = [];
+    for(const [id, n] of h){
+      if(mezar[id] && mezar[id] >= (n.ng || 0)) continue;  // silme daha yeni → not ölü
+      if(mezar[id]) delete mezar[id];  // silmeden SONRA düzenlenmiş → yaşar, mezar kalkar
+      notlar.push(n);
+    }
+    return { notlar: [...notlar, ...idsiz], silinenNotlar: mezar };
+  }
+  function kitapCiftiBirlestir(kazanan, kaybeden){
+    const k = { ...kazanan };
+    k.guncelSayfa = Math.max(parseInt(kazanan.guncelSayfa) || 0, parseInt(kaybeden.guncelSayfa) || 0);
+    const nb = notlariBirlestir(kazanan, kaybeden);
+    k.notlar = nb.notlar;
+    k.silinenNotlar = nb.silinenNotlar;
+    k.oturumlar = anahtarliBirlesim(kazanan.oturumlar, kaybeden.oturumlar,
+      o => String(o.b || ''), (a, b) => ((b.s || 0) > (a.s || 0)) ? b : a);   // aynı oturum: tamamlanmış (uzun) hali
+    k.okumalar = anahtarliBirlesim(kazanan.okumalar, kaybeden.okumalar,
+      o => (o.bas || '') + '|' + (o.bit || ''), null);
+    k.odunc = anahtarliBirlesim(kazanan.odunc, kaybeden.odunc,
+      o => (o.kisi || '') + '|' + (o.verilis || ''), (a, b) => (!a.donus && b.donus) ? b : a); // iade kaydı ileridedir
+    k.seanslar = anahtarliBirlesim(kazanan.seanslar, kaybeden.seanslar,
+      s => String(s.t || ''), (a, b) => ((parseInt(b.b) || 0) > (parseInt(a.b) || 0)) ? b : a); // aynı gün: ilerlemiş sayfa
+    k.etiketler = kumeBirlesim(kazanan.etiketler, kaybeden.etiketler);
+    return k;
+  }
   function birlestir(yerel, uzak){
     const silinenler = { ...((uzak && uzak.silinenler) || {}) };
     for(const [id, t] of Object.entries((yerel && yerel.silinenler) || {}))
       if(!silinenler[id] || t > silinenler[id]) silinenler[id] = t;
 
-    const harita = new Map();
-    const koy = k => {
+    const ciftler = new Map();   // id → { u: uzak kopya, y: yerel kopya }
+    ((uzak && uzak.kitaplar) || []).forEach(k => { if(k && k.id) ciftler.set(k.id, { u: k }); });
+    ((yerel && yerel.kitaplar) || []).forEach(k => {
       if(!k || !k.id) return;
-      const eski = harita.get(k.id);
-      if(!eski || (k.g||0) >= (eski.g||0)) harita.set(k.id, k);
-    };
-    ((uzak && uzak.kitaplar) || []).forEach(koy);
-    ((yerel && yerel.kitaplar) || []).forEach(koy);
+      const c = ciftler.get(k.id);
+      if(c) c.y = k; else ciftler.set(k.id, { y: k });
+    });
 
     const kitaplar = [];
-    for(const [id, k] of harita){
+    for(const [id, c] of ciftler){
+      let k;
+      if(c.u && c.y){
+        const kazanan = ((c.y.g || 0) >= (c.u.g || 0)) ? c.y : c.u;   // eşitlikte yerel (mevcut kural)
+        k = kitapCiftiBirlestir(kazanan, kazanan === c.y ? c.u : c.y);
+      }else k = c.u || c.y;
       const mezar = silinenler[id];
       if(mezar && mezar >= (k.g||0)) continue;
       const kayit = (typeof kitapNormalize === 'function') ? kitapNormalize(k) : k;
@@ -159,7 +263,7 @@
 
   /* ---------- senkron ---------- */
   async function senkronEt(sessiz){
-    if(!ayar || !ayar.oda || calisiyor || !kurulu()) return false;
+    if(!ayar || !ayar.oda || calisiyor || !kurulu() || eskiSurum) return false;
     calisiyor = true;
     const yol = SENKRON_URL.replace(/\/+$/, '') + '/odalar/' + encodeURIComponent(ayar.oda) + '.json';
     try{
@@ -167,10 +271,19 @@
       const r = await fetch(yol + '?auth=' + tok);
       if(!r.ok) throw new Error('okuma ' + r.status);
       const uzak = (await r.json()) || {};
+      /* Şema koruması: odada daha yeni istemcinin verisi varsa bu istemci NE
+         birleştirir NE yazar — dokunmamak tek güvenli seçenek (üstteki not). */
+      if((parseInt(uzak.sema) || 0) > SEMA_SURUM){
+        eskiSurum = true;
+        durumCiz();
+        if(!sessiz) bildir('Bu cihaz eski sürümde — güncellemek için uygulamayı kapatıp aç');
+        return false;
+      }
       const bir = birlestir(veri, uzak);
       const y = await fetch(yol + '?auth=' + tok, {
         method:'PUT', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ ...bir, cihazlar: { ...(uzak.cihazlar||{}), [ayar.cihaz || 'cihaz']: Date.now() } }) });
+        body: JSON.stringify({ ...bir, sema: SEMA_SURUM,
+          cihazlar: { ...(uzak.cihazlar||{}), [ayar.cihaz || 'cihaz']: Date.now() } }) });
       if(!y.ok) throw new Error('yazma ' + y.status);
 
       veri.kitaplar = bir.kitaplar; veri.hedef = bir.hedef;
@@ -231,6 +344,14 @@
     if(!kurulu()){
       form.style.display = 'none'; bagli.style.display = 'none';
       dEl.textContent = 'Senkron bu sürümde henüz yapılandırılmamış.';
+      return;
+    }
+    if(eskiSurum){
+      form.style.display = 'none';
+      if(bagli) bagli.style.display = 'none';
+      dEl.innerHTML = '⚠️ <b>Bu cihaz eski sürümde</b> — odadaki veri daha yeni bir uygulama ' +
+        'sürümüyle yazılmış. Veri kaybını önlemek için senkron duraklatıldı. ' +
+        'Güncellemek için uygulamayı kapatıp yeniden aç.';
       return;
     }
     if(ayar && ayar.oda){
@@ -295,5 +416,6 @@
   else document.addEventListener('DOMContentLoaded', baslat);
 
   // test kancaları
-  window.__senkron = { birlestir, damgala, senkronEt, durumCiz, ayarKaydet, kurulu, ANLIK_SURUM };
+  window.__senkron = { birlestir, damgala, senkronEt, durumCiz, ayarKaydet, kurulu,
+    ANLIK_SURUM, SEMA_SURUM };
 })();

@@ -740,6 +740,11 @@ function kitapNormalize(k){
     cevirmen: String(k.cevirmen || ''), dil: String(k.dil || '').trim().toLowerCase().slice(0, 8),
     seri: String(k.seri || ''), ciltNo: parseInt(k.ciltNo) || null,
     sahiplik: k.sahiplik === 'istek' ? 'istek' : 'sahip',   // eski kayıt = sahip (varsayılan)
+    /* silinenNotlar: NOT mezar taşları {notId: silmeZamani}. Senkron dizileri
+       birleştirdiği için mezar olmadan silinen not karşı cihazın kopyasından
+       geri dirilirdi. Kitap mezarı (silinenler) deseninin not düzeyi eşi.
+       Şema değişti → ANLIK_SURUM 7 (senkron.js). */
+    silinenNotlar: damgaSuz(k.silinenNotlar),
     okumalar: Array.isArray(k.okumalar) ? k.okumalar.filter(o => o && (o.bas || o.bit)).map(o => ({
       bas: o.bas || null, bit: o.bit || null,
       puan: (o.puan >= 1 && o.puan <= 10) ? Math.round(o.puan) : null,
@@ -751,6 +756,11 @@ function kitapNormalize(k){
       const tip = n.tip === 'alinti' ? 'alinti' : 'not';
       return {
         id: n.id || uid(), tip,
+        /* ng: not damgası — notun son KASITLI düzenlenme zamanı (ekleme, fikir
+           etiketi, tekrar eylemi). Senkron not birleşiminde "aynı id, hangisi
+           yeni" ve "silmeden sonra düzenlendi mi" kararlarını taşır. 0 = eski
+           kayıt (hiç damgalanmamış). */
+        ng: parseInt(n.ng) || 0,
         metin: String(n.metin), tarih: n.tarih || bugun(),
         sayfa: parseInt(n.sayfa) || null,
         fikir: Array.isArray(n.fikir) ? n.fikir.map(f => String(f)).filter(Boolean) : [],
@@ -2080,7 +2090,7 @@ document.addEventListener('click', e => {
       if(!metin){ toast('Boş not eklenemez'); break; }
       if(k){
         k.notlar = k.notlar || [];
-        k.notlar.push({ id: uid(), tip: durum.notTip, metin, tarih: bugun(), sayfa: sf });
+        k.notlar.push({ id: uid(), tip: durum.notTip, metin, tarih: bugun(), sayfa: sf, ng: Date.now() });
         depoKaydet(); detayAc(k.id); listeCiz();
       }
       break; }
@@ -2088,6 +2098,9 @@ document.addEventListener('click', e => {
       const k = kitapBul(durum.detayId);
       if(k && confirm('Bu not silinsin mi?')){
         k.notlar = (k.notlar||[]).filter(n => n.id !== el.dataset.nid);
+        // not mezar taşı: senkron birleşimi karşı cihazın kopyasını geri getirmesin
+        k.silinenNotlar = k.silinenNotlar || {};
+        k.silinenNotlar[el.dataset.nid] = Date.now();
         depoKaydet(); detayAc(k.id); listeCiz();
       }
       break; }

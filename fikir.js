@@ -88,14 +88,17 @@
     var iKat = function(s){ return (typeof iKatla === 'function') ? iKatla(s)
       : String(s == null ? '' : s).toLocaleLowerCase('tr'); };
     var varMi = b.n.fikir.some(function(x){ return iKat(x) === iKat(e); });
-    if(!varMi) b.n.fikir.push(e);
+    // ng: kasıtlı not düzenlemesi — senkron not birleşiminde bu kopya yeni sayılır
+    if(!varMi){ b.n.fikir.push(e); b.n.ng = Date.now(); }
     if(typeof depoKaydet === 'function') depoKaydet();
     return !varMi;
   }
   function fikirSilNottan(notId, etiket, kitapId){
     var b = notBul(notId, kitapId);
     if(!b || !Array.isArray(b.n.fikir)) return;
+    var once = b.n.fikir.length;
     b.n.fikir = b.n.fikir.filter(function(x){ return x !== etiket; });
+    if(b.n.fikir.length !== once) b.n.ng = Date.now();   // kasıtlı düzenleme damgası
     if(typeof depoKaydet === 'function') depoKaydet();
   }
 
