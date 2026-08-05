@@ -22,7 +22,7 @@
   function bildir(m){ if(typeof toast === 'function') toast(m); }
 
   /* ---------- damgalama: depoKaydet sarmalayıcısı ---------- */
-  const ANLIK_SURUM = 5;
+  const ANLIK_SURUM = 6;
   /* v1'de her kitabın TAM JSON'u parmak izi olarak saklanıyordu: kütüphanenin
      ikinci bir kopyası kadar yer tutuyor, localStorage kotasını iki katına
      yakın hızda dolduruyordu. v2 kısa çift-hash tutar (~20 karakter/kitap).
@@ -31,7 +31,9 @@
      taze damgalar, bayat cihaz güncel düzenlemeleri ezerdi. KURAL: kitapNormalize
      şeması her değiştiğinde bu sürüm de artmalı (göç turu damga basmaz).
      v4: ertelemeTarihi eklendi (öneri motoru "Şimdi değil").
-     v5: notlara tekrar* alanları eklendi (aralıklı alıntı tekrarı, tekrar.js). */
+     v5: notlara tekrar* alanları eklendi (aralıklı alıntı tekrarı, tekrar.js).
+     v6: kitapParmak notların tekrar* alanlarını dışlar (iz biçimi değişti) —
+     otomatik zamanlama damga üretmesin, LWW zehirlenmesin diye. */
   function anlikYukle(){
     try{
       const h = JSON.parse(localStorage.getItem(ANLIK_ANAHTAR));
@@ -45,6 +47,19 @@
   }
   function kitapParmak(k){
     const kopya = { ...k }; delete kopya.g;
+    /* Notların tekrar* alanları parmak izine GİRMEZ: yayılma zamanlaması
+       (tekrar.js planlamaYap) her cihazda kendi kendine koşan türetilmiş bir
+       defter kaydıdır — parmak izini değiştirseydi salt-render yapan cihaz
+       kitabı taze damgalar, LWW birleşmesinde gerçek düzenlemeyi ezerdi
+       (kanıtlanmış senaryo: karşı cihazın yeni eklediği alıntı kalıcı silinir).
+       Kasıtlı tekrar eylemleri (Devam/Daha sık/Yeter/başlat) damgayı tekrar.js
+       içinde k.g'ye AÇIKÇA basar. */
+    if(Array.isArray(kopya.notlar)) kopya.notlar = kopya.notlar.map(n => {
+      const t = { ...n };
+      delete t.tekrarSonraki; delete t.tekrarAralik;
+      delete t.tekrarSayisi; delete t.tekrarDurum;
+      return t;
+    });
     const s = JSON.stringify(kopya);
     let h1 = 0x811c9dc5, h2 = 0x01000193;   // iki bağımsız karma → çakışma olasılığı ihmal edilebilir
     for(let i = 0; i < s.length; i++){

@@ -37,7 +37,13 @@
     if(n.tekrarDurum === 'aktif' || n.tekrarDurum === 'duraklatildi') return n.tekrarDurum;
     return n.tip === 'alinti' ? 'aktif' : 'duraklatildi';
   }
-  function aralikOf(n){ return parseInt(n.tekrarAralik) || ILK_GUN; }
+  function aralikOf(n){
+    return Math.min(MAX_ARALIK, Math.max(MIN_ARALIK, parseInt(n.tekrarAralik) || ILK_GUN));
+  }
+  /* Kasıtlı tekrar eylemi = gerçek kullanıcı düzenlemesi: LWW damgasını açıkça
+     basarız. Otomatik zamanlama basmaz — kitapParmak tekrar* alanlarını dışlar
+     (senkron.js), yoksa salt-render cihaz birleşmede gerçek düzenlemeyi ezerdi. */
+  function damgaBas(k){ k.g = Date.now(); }
 
   function aralikBuyut(a){ return Math.min(MAX_ARALIK, Math.round(a * CARPAN)); }
   function aralikKucult(a){ return Math.max(MIN_ARALIK, Math.round(a / CARPAN)); }
@@ -122,6 +128,7 @@
       bildir('Duraklatıldı — alıntı kartından yeniden başlatabilirsin');
     }
     sayacArtir();
+    damgaBas(b.k);
     if(typeof depoKaydet === 'function') depoKaydet();
     ciz();
   }
@@ -135,6 +142,7 @@
     b.n.tekrarAralik = aralikOf(b.n);
     b.n.tekrarSonraki = gunIso(b.n.tekrarAralik);
     b.n.tekrarSayisi = parseInt(b.n.tekrarSayisi) || 0;
+    damgaBas(b.k);
     if(typeof depoKaydet === 'function') depoKaydet();
     bildir(b.n.tekrarAralik + ' gün sonra karşına çıkar');
     ciz();
@@ -182,23 +190,35 @@
         + (tumKuyruk.length ? ' — kalan ' + tumKuyruk.length + ' alıntı yarına' : '')
         + '</div>';
     }
+    /* innerHTML yazımı odaklanılan düğmeyi yok eder; klavye akışı (günde 10 karta
+       kadar ardışık eylem) kopmasın diye odak kutunun içindeyse yeni karta taşınır. */
+    const odakIcerideydi = kap.contains(document.activeElement);
     kap.innerHTML = govde ? ('<div class="tk-kutu-ic">' + govde + ist + '</div>')
       : ('<div class="tk-kutu-ic tk-sade">' + ist + '</div>');
+    if(odakIcerideydi){
+      const hedef = kap.querySelector('.tk-btn-birincil') || kap.querySelector('.tk-tamam') || kap.querySelector('button');
+      if(hedef){ if(!hedef.hasAttribute('tabindex') && hedef.tagName !== 'BUTTON') hedef.setAttribute('tabindex', '-1'); hedef.focus(); }
+    }
   }
 
   /* Liste kartlarına küçük durum göstergesi — fikir.js/kart.js gibi render SONRASI
-     zenginleştirme (çekirdek alintiCiz'e dokunulmaz), kart başına damga ile idempotent. */
+     zenginleştirme (çekirdek alintiCiz'e dokunulmaz). Gösterge her geçişte
+     GÜNCELLENİR (yalnız ilk seferde eklenip bırakılmaz): "Yeter"/"tekrara al"
+     sonrası kart bayat kalmasın. İçerik yazımı kartın childList'ini değiştirmez,
+     gözlemci döngüsü oluşmaz. */
   function kartlariZenginlestir(){
     const kap = document.getElementById('alintiIcerik');
     if(!kap) return;
     kap.querySelectorAll('.not-kart[data-nid]').forEach(kart => {
-      if(kart.dataset.tkHazir === '1') return;
       const b = notBul(kart.dataset.nid);
       if(!b) return;
-      kart.dataset.tkHazir = '1';
+      let d = kart.querySelector('.tk-durum');
+      if(!d){
+        d = document.createElement('div');
+        d.className = 'tk-durum';
+        kart.appendChild(d);
+      }
       const n = b.n;
-      const d = document.createElement('div');
-      d.className = 'tk-durum';
       if(durumOf(n) === 'aktif' && n.tekrarSonraki){
         const kalanGun = (typeof gunFarki === 'function') ? gunFarki(gunIso(0), n.tekrarSonraki) : 0;
         d.textContent = '🔁 ' + (kalanGun <= 0 ? 'bugün' : kalanGun + ' gün sonra');
@@ -210,7 +230,6 @@
           + '<button class="tk-mini" data-act="tk-baslat" data-nid="' + escAttr(n.id) + '">'
           + (hicGirmedi ? '🔁 tekrara al' : '▶ başlat') + '</button>';
       }
-      kart.appendChild(d);
     });
   }
 
@@ -238,6 +257,13 @@
           break;
         case 'sekme':
           if(el.dataset.v === 'alinti') setTimeout(ciz, 0);
+          break;
+        /* Çekirdeğin not ekleme/silme yolları alintiCiz çağırmaz (yalnız detay +
+           liste çizer) — kutu bayat kalır ve yeni alıntı zamanlanmadan senkrona
+           giderdi. fikir.js emsali: çekirdek aksiyonlarını gözlemek serbest. */
+        case 'not-ekle':
+        case 'not-sil':
+          setTimeout(ciz, 0);
           break;
       }
     });

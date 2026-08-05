@@ -363,7 +363,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .tk-ist{font-size:.72rem;color:var(--muted2)}
 .tk-sade{gap:0}
 .tk-durum{font-size:.7rem;color:var(--muted2);margin-top:7px}
-.tk-mini{color:var(--brass);font-size:.7rem;padding:2px 4px}
+/* Dokunma hedefi genişletme (a11y, fikir-sil emsali): görsel küçük kalır, hedef büyür */
+.tk-mini{color:var(--brass);font-size:.7rem;padding:2px 4px;position:relative}
+.tk-mini::after{content:"";position:absolute;inset:-12px}
+.tk-git{position:relative}
+.tk-git::after{content:"";position:absolute;inset:-10px}
 </style>
 </head>
 <body>
@@ -754,8 +758,8 @@ function kitapNormalize(k){
            notlar dışında (kartından "tekrara al" ile açılır). tekrarSonraki=null =
            henüz zamanlanmadı — yayılmayı tekrar.js yapar. Senkronla taşınır.
            Şema değişti → ANLIK_SURUM 5 (senkron.js). */
-        tekrarSonraki: n.tekrarSonraki || null,
-        tekrarAralik: parseInt(n.tekrarAralik) || 3,
+        tekrarSonraki: /^\d{4}-\d{2}-\d{2}$/.test(n.tekrarSonraki || '') ? n.tekrarSonraki : null,
+        tekrarAralik: Math.min(365, Math.max(1, parseInt(n.tekrarAralik) || 3)),
         tekrarSayisi: parseInt(n.tekrarSayisi) || 0,
         tekrarDurum: (n.tekrarDurum === 'aktif' || n.tekrarDurum === 'duraklatildi')
           ? n.tekrarDurum : (tip === 'alinti' ? 'aktif' : 'duraklatildi')
@@ -2183,9 +2187,10 @@ temaDugmeleriCiz();
   }catch(e){}
 })();
 </script>
-<!-- tekrar.js senkron.js'ten ÖNCE: ilk açılıştaki yayılma zamanlaması senkron'un
-     göç/damga turundan önce yazılmalı ki toplu zamanlama kütüphaneyi yeniden
-     damgalamasın (v3 dersi: bayat cihaz günceli ezer). -->
+<!-- tekrar.js senkron.js'ten ÖNCE yüklenir. Asıl koruma kitapParmak'ın tekrar*
+     alanlarını dışlaması (senkron.js v6): otomatik zamanlama hiçbir yolda damga
+     üretmez (v3 dersi: bayat cihaz günceli ezer). Sıra, açılış zamanlamasının
+     senkronun ilk damga turundan önce bitmesi için korunur. -->
 <script src="./tekrar.js"></script>
 <script src="./senkron.js"></script>
 <script src="./barkod.js"></script>

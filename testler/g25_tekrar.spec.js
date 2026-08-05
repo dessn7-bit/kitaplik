@@ -5,7 +5,7 @@
    kitapNormalize beyaz listesi + ANLIK_SURUM 5 göçü burada doğrulanır.
    TÜM seçiciler kapsamlı: #panel-alinti / #tkKutu / #alintiIcerik altında. */
 'use strict';
-const { test, expect, tohumla, sahteKitap, bugunISO } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, bugunISO, onaylariKabulEt } = require('./yardim');
 
 let notSayac = 0;
 function notYap(ek) {
@@ -37,8 +37,10 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     await page.click('[data-act="not-tip"][data-v="alinti"]');
     await page.fill('#d-not', 'Yeni eklenen alıntı');
     await page.click('[data-act="not-ekle"]');
-    // oturum içi zamanlama: reload beklemeden varsayılanlar üretilir
-    const n1 = await page.evaluate(() => { window.__tekrar.planlamaYap(); return veri.kitaplar[0].notlar[0]; });
+    // zamanlama OTOMATİK: tekrar.js not-ekle aksiyonunu gözler, elle tetik gerekmez
+    await page.waitForFunction(() =>
+      veri.kitaplar[0].notlar[0] && !!veri.kitaplar[0].notlar[0].tekrarSonraki);
+    const n1 = await page.evaluate(() => veri.kitaplar[0].notlar[0]);
     expect(n1.tekrarDurum).toBe('aktif');
     expect(n1.tekrarAralik).toBe(3);
     expect(n1.tekrarSayisi).toBe(0);
@@ -95,6 +97,9 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     await page.click('#tkKutu [data-act="tk-yeter"]');
     expect(await page.evaluate(id =>
       veri.kitaplar[0].notlar.find(x => x.id === id).tekrarDurum, n.id)).toBe('duraklatildi');
+    // liste kartındaki gösterge AYNI OTURUMDA tazelenir (bayat "bugün" kalmaz)
+    await expect(page.locator(`#alintiIcerik .not-kart[data-nid="${n.id}"] .tk-durum`))
+      .toContainText('duraklatıldı');
     await page.reload();
     await page.click('[data-act="sekme"][data-v="alinti"]');
     await expect(page.locator('#tkKutu .tk-kart')).toHaveCount(0);
@@ -213,7 +218,7 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     expect(putNot.tekrarDurum).toBe('aktif');
   });
 
-  test('senkron göçü v5: sürüm atlaması kütüphaneyi yeniden damgalamaz', async ({ page }) => {
+  test('senkron göçü: sürüm atlaması kütüphaneyi yeniden damgalamaz', async ({ page }) => {
     const k = kitapla([notYap()], { g: 9 });
     await tohumla(page, [k], { kk_senkron_anlik_v1: { s: 4, p: { eskiId: 'x-yz' } } });
     await page.goto('/');
@@ -298,5 +303,71 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     await alintiAc(page);
     await expect(page.locator(`#alintiIcerik .not-kart[data-nid="${n.id}"] .tk-durum`))
       .toContainText('12 gün sonra');
+  });
+
+  test('KRİTİK: otomatik zamanlama damga BASMAZ, kasıtlı tekrar eylemi basar', async ({ page }) => {
+    // Zamanlama türetilmiş defter kaydıdır: kitapParmak tekrar* alanlarını dışlar.
+    // Aksi halde salt-render yapan cihaz kitabı taze damgalar, kitap-bazlı LWW
+    // birleşmesinde karşı cihazın gerçek düzenlemesini (yeni alıntı) kalıcı ezerdi.
+    const nA = notYap();                             // zamanlanmamış — otomatik zamanlanır
+    const nB = dunkuAktif();                         // bugün bekleyen — kasıtlı eylem
+    const kA = kitapla([nA], { g: 9 }), kB = kitapla([nB], { g: 9 });
+    await tohumla(page, [kA, kB]);
+    await page.goto('/');                            // anlik tabanı kurulur
+    await page.reload();                             // kararlı durum (göç turu bitti)
+    const oto = await page.evaluate(id => {
+      const k = veri.kitaplar.find(x => x.id === id);
+      k.notlar[0].tekrarSonraki = null;              // birleşmeden zamanlanmamış kopya gelmiş gibi
+      window.__tekrar.planlamaYap();                 // depoKaydet → damgala (göç DIŞI tur)
+      return { g: k.g, sonraki: k.notlar[0].tekrarSonraki };
+    }, kA.id);
+    expect(oto.g).toBe(9);                           // salt-zamanlama LWW damgası üretmedi
+    expect(oto.sonraki).toBe(bugunISO(3));
+    await page.click('[data-act="sekme"][data-v="alinti"]');
+    await page.click('#tkKutu [data-act="tk-devam"]');
+    expect(await page.evaluate(id => veri.kitaplar.find(x => x.id === id).g, kB.id))
+      .toBeGreaterThan(9);                           // kasıtlı eylem damgayı bastı
+    expect(await page.evaluate(id => veri.kitaplar.find(x => x.id === id).g, kA.id))
+      .toBe(9);                                      // öbür kitap etkilenmedi
+  });
+
+  test('detaydan not silinince tekrar kutusu tazelenir (bayat kart kalmaz)', async ({ page }) => {
+    const n = dunkuAktif({ metin: 'Silinecek alıntı' });
+    await tohumla(page, [kitapla([n])]);
+    onaylariKabulEt(page);
+    await alintiAc(page);
+    await expect(page.locator('#tkKutu .tk-kart')).toContainText('Silinecek alıntı');
+    await page.click('#tkKutu [data-act="tk-git"]');
+    await page.click('#detayIcerik [data-act="not-sil"]');
+    await expect(page.locator('#tkKutu .tk-kart')).toHaveCount(0); // kutu silinen kaydı göstermez
+  });
+
+  test('"tekrara al" düğmesi tıklanınca aynı oturumda göstergeye dönüşür', async ({ page }) => {
+    const n = notYap({ tip: 'not', metin: 'Opt-in not' });
+    await tohumla(page, [kitapla([n])]);
+    await alintiAc(page);
+    const kart = page.locator(`#alintiIcerik .not-kart[data-nid="${n.id}"]`);
+    await kart.locator('[data-act="tk-baslat"]').click();
+    await expect(kart.locator('.tk-durum')).toContainText('3 gün sonra'); // rozet tazelendi
+    await expect(kart.locator('[data-act="tk-baslat"]')).toHaveCount(0);  // bayat düğme kalmadı
+  });
+
+  test('bozuk tekrar verisi normalize\'da kırpılır: negatif aralık, biçimsiz tarih', async ({ page }) => {
+    const n = notYap({ tekrarDurum: 'aktif', tekrarAralik: -5, tekrarSayisi: 1,
+      tekrarSonraki: '9999' });
+    await tohumla(page, [kitapla([n])]);
+    await page.goto('/');
+    const s = await page.evaluate(() => veri.kitaplar[0].notlar[0]);
+    expect(s.tekrarAralik).toBe(1);            // [1,365] aralığına kırpıldı
+    expect(s.tekrarSonraki).toBe(bugunISO(3)); // '9999' düştü, zamanlayıcı yeniden atadı
+  });
+
+  test('klavye odağı eylem sonrası kutuda kalır (ardışık akış kopmaz)', async ({ page }) => {
+    const n1 = dunkuAktif(), n2 = dunkuAktif();
+    await tohumla(page, [kitapla([n1, n2])]);
+    await alintiAc(page);
+    await page.click('#tkKutu [data-act="tk-devam"]');
+    expect(await page.evaluate(() =>
+      document.getElementById('tkKutu').contains(document.activeElement))).toBe(true);
   });
 });
