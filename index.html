@@ -56,9 +56,12 @@
   --muted:#74674C; --muted2:#736650;
   --ok:#586E3D; --drop:#A25232; --mavi:#556A86;
   --uzeri:#FFFDF7; --toast-zemin:#2E2618; --toast-metin:#FDFAF3;
-  --ortu-perde:var(--ortu-perde); --nav-zemin:var(--nav-zemin);
-  --header-fade:var(--header-fade); --golge:var(--golge);
-  --golge-orta:var(--golge-orta); --golge-guclu:var(--golge-guclu);
+  /* KUSUR ONARIMI: bu 6 değişken kendine referanslıydı (a81f31d'den beri) —
+     CSS'te döngü = geçersiz; açık temada örtü perdesi, nav zemini ve gölgeler
+     fiilen yoktu. Değerler karanlık-tema öncesi sabitlerden geri alındı. */
+  --ortu-perde:rgba(62,52,36,.45); --nav-zemin:rgba(253,250,243,.97);
+  --header-fade:rgba(245,239,227,.92); --golge:rgba(90,75,50,.08);
+  --golge-orta:rgba(90,75,50,.18); --golge-guclu:rgba(120,90,40,.35);
   --kamera-zemin:#000; --kamera-cerceve:rgba(255,253,247,.85);
   --radius:12px; --serif:'Iowan Old Style',Georgia,'Times New Roman',serif;
   --sans:-apple-system,'Segoe UI',Roboto,system-ui,sans-serif;
@@ -204,6 +207,29 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .detay-yazar{color:var(--muted);font-size:.9rem;margin-top:4px}
 .detay-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .detay-satir{margin-top:16px}
+/* Detay hiyerarşisi: d-eylem = duruma göre TEK birincil blok, d-sessiz = sessiz
+   ikincil durum eylemleri, d-katla = nadir bölümler (seri/geçmiş/ödünç/düzenle). */
+.d-eylem{margin-top:20px}
+.d-durum-sec{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+.d-sessiz{font-size:.8rem;color:var(--muted);padding:10px 10px;border-radius:8px;
+  text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--muted2)}
+.d-katla{margin-top:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.d-katla summary{list-style:none;cursor:pointer;padding:13px 14px;font-size:.82rem;
+  color:var(--muted);letter-spacing:.03em;display:flex;align-items:center;
+  justify-content:space-between;gap:8px}
+.d-katla summary::-webkit-details-marker{display:none}
+.d-katla summary::after{content:'▾';color:var(--muted2);flex:0 0 auto;transition:transform .15s}
+.d-katla[open] summary::after{transform:rotate(180deg)}
+.d-katla-ic{padding:0 14px 14px}
+.d-kapak-sutun{display:flex;flex-direction:column;gap:6px;flex:0 0 84px}
+.d-kapak-sutun .kp-kucuk-btn{color:var(--paper);text-align:center}
+.d-kapak-yok{width:84px;height:124px;border:1px dashed var(--border);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;font-size:1.5rem;
+  background:var(--surface2);color:var(--muted2)}
+.d-tarih{font-size:.78rem;color:var(--muted2);margin-top:10px}
+.d-puan-blok{margin-top:14px}
+.d-link{color:var(--brass);text-decoration:underline;text-underline-offset:3px;
+  font-size:inherit;padding:4px}
 .form-iki{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .durum-secim{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:5px}
 .durum-btn{padding:9px 4px;border-radius:9px;border:1px solid var(--border);font-size:.76rem;
@@ -401,6 +427,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <button class="chip" data-act="filtre" data-v="bitti">Bitti</button>
     <button class="chip" data-act="filtre" data-v="yarim">Yarım kaldı</button>
     <button class="chip" data-act="filtre" data-v="odunc">Ödünçte</button>
+    <button class="chip" data-act="filtre" data-v="puansiz">Puansız</button>
   </div>
   <div class="vm-chips" id="vmSahiplikChips">
     <button class="vm-chip vm-secili" data-act="vm-sahiplik" data-v="hepsi">Tüm raf</button>
@@ -907,6 +934,7 @@ function listeCiz(){
   let ks = veri.kitaplar.filter(k => {
     const durumUy = durum.filtre === 'hepsi' ? true
       : durum.filtre === 'odunc' ? !!aktifOdunc(k)
+      : durum.filtre === 'puansiz' ? (k.durum === 'bitti' && !k.puan)
       : k.durum === durum.filtre;
     const etiketUy = !durum.etiket || (k.etiketler||[]).includes(durum.etiket);
     const metin = katla(k.ad + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.raf||'')
@@ -964,7 +992,7 @@ function listeCiz(){
           <span class="rozet ${rSinif}">${DURUM_AD[k.durum]}</span>
           ${od ? `<span class="rozet r-odunc">Ödünçte: ${esc(od.kisi)}</span>` : ''}
           ${k.sahiplik === 'istek' ? `<span class="vm-rozet">İstek listesi</span>` : ''}
-          ${(k.durum === 'bitti' && k.puan) ? `<span class="puan-mini">★ ${k.puan}/10</span>` : ''}
+          ${((k.durum === 'bitti' || k.durum === 'yarim') && k.puan) ? `<span class="puan-mini">★ ${k.puan}/10</span>` : ''}
           ${notSayi ? `<span class="etiket-mini">✎ ${notSayi}</span>` : ''}
           ${(k.etiketler||[]).slice(0,3).map(e => `<span class="etiket-mini">#${esc(e)}</span>`).join('')}
         </div>
@@ -1156,7 +1184,8 @@ function formAc(id){
 function formDurumCiz(){
   document.querySelectorAll('#fDurum .durum-btn').forEach(b =>
     b.classList.toggle('secili', b.dataset.v === durum.formDurum));
-  document.getElementById('fPuanBlok').style.display = durum.formDurum === 'bitti' ? 'block' : 'none';
+  document.getElementById('fPuanBlok').style.display =
+    (durum.formDurum === 'bitti' || durum.formDurum === 'yarim') ? 'block' : 'none';
   document.getElementById('fBasBlok').style.display = durum.formDurum === 'okunacak' ? 'none' : 'block';
   document.getElementById('fBitBlok').style.display =
     (durum.formDurum === 'bitti' || durum.formDurum === 'yarim') ? 'block' : 'none';
@@ -1198,7 +1227,9 @@ function formKaydet(){
     ciltNo: parseInt(document.getElementById('f-cilt').value) || null,
     isbn, sahiplik: document.getElementById('f-sahiplik').value === 'istek' ? 'istek' : 'sahip',
     durum: durum.formDurum,
-    puan: durum.formDurum === 'bitti' ? durum.formPuan : null,
+    // Puan bitti VE yarim'da korunur (detay şeridiyle aynı kural): yarım bırakılan
+    // kitabın puanını form kaydetmek sessizce silmesin.
+    puan: (durum.formDurum === 'bitti' || durum.formDurum === 'yarim') ? durum.formPuan : null,
     baslamaTarihi: bas, bitisTarihi: bit,
     etiketler, kapak: durum.formKapak
   };
@@ -1239,6 +1270,19 @@ function detayAc(id){
   const od = aktifOdunc(k);
   const hz = hizAnaliz(k);
 
+  /* Puan şeridi — form açmadan doğrudan puanlama. bitti + yarim'da görünür:
+     yarım bırakılan kitap hakkındaki kanaat de gerçek veridir (Goodreads DNF
+     puanına denk); okunuyor/okunacak'ta kanaat henüz oluşmadığı için yok. */
+  const puanHtml = () => `<div class="d-puan-blok">
+      <label>Puanın</label>
+      ${k.puan ? '' : `<div class="mini-not" style="margin-top:0">${k.durum === 'yarim'
+        ? 'Yarım bıraktığın kitaba da puan verebilirsin — dokun, kaydedilsin.'
+        : 'Dokun, kaydedilsin — form açılmaz.'}</div>`}
+      <div class="puan-secim" id="dPuan">${Array.from({length:10}, (_,i) =>
+        `<button class="puan-btn ${k.puan === i+1 ? 'secili' : ''}" data-act="d-puan" data-v="${i+1}">${i+1}</button>`).join('')}</div>
+      ${k.puan ? `<button class="d-sessiz" data-act="d-puan-sil">Puanı kaldır</button>` : ''}
+    </div>`;
+
   let eylemHtml = '';
   if(k.durum === 'okunuyor'){
     const p = k.sayfa > 0 ? Math.min(100, Math.round((k.guncelSayfa||0)/k.sayfa*100)) : 0;
@@ -1248,7 +1292,7 @@ function detayAc(id){
         + (hz.tahmin ? `<br>Bu tempoyla tahmini bitiş: <b>${trTarih(hz.tahmin.tarih)}</b> (~${hz.tahmin.gun} gün)` : '')
         + `</div>`;
     }
-    eylemHtml = `<div class="detay-satir">
+    eylemHtml = `<div class="detay-satir d-eylem">
       <div id="dIlerlemeKutu">
         <label>Neredesin?</label>
         <div class="ilerleme-guncelle">
@@ -1261,30 +1305,44 @@ function detayAc(id){
       <div class="ilerleme-txt">%${p} tamamlandı</div>` : ''}
       ${hizHtml}
       <button class="btn btn-brass" style="margin-top:12px" data-act="bitir">Kitabı bitirdim ✓</button>
+      <div class="d-durum-sec">
+        <button class="d-sessiz" data-act="yarim-birak">Yarım bıraktım</button>
+        <button class="d-sessiz" data-act="okunacak-al">Okunacağa geri al</button>
+      </div>
     </div>`;
   }
   if(k.durum === 'okunacak'){
-    eylemHtml = `<div class="detay-satir"><button class="btn btn-brass" data-act="baslat">Okumaya başla</button></div>`;
+    eylemHtml = `<div class="detay-satir d-eylem"><button class="btn btn-brass" data-act="baslat">Okumaya başla</button></div>`;
   }
   if(k.durum === 'yarim'){
-    eylemHtml = `<div class="detay-satir"><button class="btn btn-cerceve" data-act="baslat">Tekrar başla</button></div>`;
+    eylemHtml = `<div class="detay-satir d-eylem">
+      ${k.guncelSayfa ? `<div class="mini-not" style="margin-top:0">Kaldığın yer: sf. ${k.guncelSayfa}${k.sayfa ? ' / ' + k.sayfa : ''} — ilerlemen duruyor.</div>` : ''}
+      <button class="btn btn-brass" data-act="baslat">${k.guncelSayfa ? 'Devam et' : 'Tekrar başla'}</button>
+      <div class="d-durum-sec">
+        <button class="d-sessiz" data-act="okunacak-al">Okunacağa geri al</button>
+      </div>
+      ${puanHtml()}
+    </div>`;
   }
   if(k.durum === 'bitti'){
-    eylemHtml = `<div class="detay-satir"><button class="btn btn-cerceve" data-act="yeniden-oku">Yeniden oku</button>
-      <div class="mini-not">Bu okuman geçmişe kaydedilir; tarihlerin ve puanın korunur.</div></div>`;
+    eylemHtml = `<div class="detay-satir d-eylem">
+      ${puanHtml()}
+      <button class="btn btn-cerceve" style="margin-top:14px" data-act="yeniden-oku">Yeniden oku</button>
+      <div class="mini-not">Bu okuman geçmişe kaydedilir; tarihlerin ve puanın korunur.</div>
+    </div>`;
   }
 
-  // okuma geçmişi (arşivlenmiş okumalar)
+  // okuma geçmişi (arşivlenmiş okumalar) — nadir bölüm: katlanabilir
   let gecmisHtml = '';
   if((k.okumalar||[]).length){
-    gecmisHtml = `<div class="detay-satir"><label>Okuma geçmişi</label>` +
+    gecmisHtml = `<details class="d-katla" id="dGecmisKatla"><summary><span>Okuma geçmişi · ${k.okumalar.length+1} okuma</span></summary><div class="d-katla-ic">` +
       k.okumalar.map((o, i) => `<div class="vm-okuma-satir">
         <span>${i+1}. okuma${o.bas || o.bit ? ' · ' + [trTarih(o.bas), trTarih(o.bit)].filter(Boolean).join(' – ') : ''}</span>
         <span>${o.puan ? '★ ' + o.puan : ''}</span></div>`).join('') +
       `<div class="vm-okuma-satir"><span>${k.okumalar.length+1}. okuma${
         k.baslamaTarihi || k.bitisTarihi ? ' · ' + [trTarih(k.baslamaTarihi), trTarih(k.bitisTarihi)].filter(Boolean).join(' – ') : ''
       }${k.durum === 'okunuyor' ? ' (sürüyor)' : ''}</span>
-        <span>${k.puan ? '★ ' + k.puan : ''}</span></div></div>`;
+        <span>${k.puan ? '★ ' + k.puan : ''}</span></div></div></details>`;
   }
 
   // seri kutusu: aynı serideki kitaplar + eksik cilt tespiti
@@ -1300,24 +1358,24 @@ function detayAc(id){
       const enK = Math.min(...ciltler), enB = Math.max(...ciltler);
       for(let i = enK + 1; i < enB; i++) if(!ciltler.includes(i)) eksikler.push(i);
     }
-    seriHtml = `<div class="detay-satir"><label>Seri</label>
+    seriHtml = `<details class="d-katla" id="dSeriKatla"><summary><span>Seri · ${esc(k.seri)}${k.ciltNo ? ' · ' + k.ciltNo + '. cilt' : ''}${eksikler.length ? ' · eksik var' : ''}</span></summary><div class="d-katla-ic">
       <div class="vm-seri-kutu"><b>${esc(k.seri)}</b>${k.ciltNo ? ' · ' + k.ciltNo + '. cilt' : ''}
         ${eksikler.length ? `<div class="vm-eksik">Eksik cilt: ${eksikler.join(', ')}</div>` : ''}
         <div class="vm-seri-liste">${seridekiler.map(x => `<button class="vm-seri-oge${x.id === k.id ? ' vm-bu' : ''}"
           data-act="detay" data-id="${escAttr(x.id)}">${x.ciltNo ? x.ciltNo + '. ' : ''}${esc(x.ad)}</button>`).join('')}</div>
         <button class="btn btn-cerceve" style="margin-top:10px" data-act="vm-seri-filtre" data-v="${escAttr(k.seri)}">Bu seriyi rafta göster</button>
-      </div></div>`;
+      </div></div></details>`;
   }
 
-  // ödünç
-  let oduncHtml = '';
+  // ödünç — nadir bölüm: katlanabilir; aktif ödünç varsa özet başlıkta görünür
+  let oduncHtml = `<details class="d-katla" id="dOduncKatla"><summary><span>${od
+    ? `Ödünçte: ${esc(od.kisi)} · ${gunFarki(od.verilis, bugun())} gün`
+    : 'Ödünç'}</span></summary><div class="d-katla-ic">`;
   if(od){
-    oduncHtml = `<div class="detay-satir"><label>Ödünç</label>
-      <div class="odunc-aktif"><b>${esc(od.kisi)}</b>'de — ${trTarih(od.verilis)} tarihinden beri (${gunFarki(od.verilis, bugun())} gün)
+    oduncHtml += `<div class="odunc-aktif"><b>${esc(od.kisi)}</b>'de — ${trTarih(od.verilis)} tarihinden beri (${gunFarki(od.verilis, bugun())} gün)
       <button class="btn btn-cerceve" style="margin-top:10px" data-act="odunc-al">Geri aldım</button></div>`;
   }else{
-    oduncHtml = `<div class="detay-satir"><label>Ödünç</label>
-      <div class="ilerleme-guncelle">
+    oduncHtml += `<div class="ilerleme-guncelle">
         <input id="d-odunc-kisi" placeholder="Kime verdin?" style="flex:1;width:auto">
         <button class="btn btn-cerceve" style="width:auto;padding:9px 14px" data-act="odunc-ver">Ödünç ver</button>
       </div>`;
@@ -1327,11 +1385,11 @@ function detayAc(id){
     oduncHtml += `<div class="odunc-gecmis">Geçmiş: ` +
       gecmisOdunc.map(o => `${esc(o.kisi)} (${trTarih(o.verilis)}–${trTarih(o.donus)})`).join(' · ') + `</div>`;
   }
-  oduncHtml += `</div>`;
+  oduncHtml += `</div></details>`;
 
   const tarihHtml = [
     k.baslamaTarihi ? `Başlama: ${trTarih(k.baslamaTarihi)}` : '',
-    k.bitisTarihi ? `Bitiş: ${trTarih(k.bitisTarihi)}` : '',
+    k.bitisTarihi ? `${k.durum === 'yarim' ? 'Bırakma' : 'Bitiş'}: ${trTarih(k.bitisTarihi)}` : '',
     (k.baslamaTarihi && k.bitisTarihi) ? `(${Math.max(1, gunFarki(k.baslamaTarihi, k.bitisTarihi))} gün)` : ''
   ].filter(Boolean).join(' · ');
 
@@ -1343,19 +1401,29 @@ function detayAc(id){
       <button class="not-sil" data-act="not-sil" data-nid="${n.id}" aria-label="Notu sil">✕</button>
     </div>`).join('');
 
+  /* Katman sırası: KÜNYE (kapak+kimlik+tarih tek blok, kapak eylemi künyenin
+     parçası) → BİRİNCİL eylem (duruma göre tek blok, ilerleme çubuğu yalnız
+     burada) → İKİNCİL not/alıntı → NADİR katlanabilir bölümler (seri, geçmiş,
+     ödünç, düzenle+sil). Sil ana yüzeyde değil. */
   kap.innerHTML = `
     <div class="tutamac"></div>
     <button class="sheet-kapat" data-act="detay-kapat" aria-label="Kapat">✕</button>
     <div class="detay-ust">
-      ${k.kapakYerel && window.__kapak
-        ? `<img class="detay-kapak kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt="" onerror="this.style.display='none'">`
-        : k.kapak ? `<img class="detay-kapak" src="${escAttr(k.kapak)}" alt="" onerror="this.style.display='none'">` : ''}
+      <div class="d-kapak-sutun">
+        ${k.kapakYerel && window.__kapak
+          ? `<img class="detay-kapak kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt="" onerror="this.style.display='none'">`
+          : k.kapak ? `<img class="detay-kapak" src="${escAttr(k.kapak)}" alt="" onerror="this.style.display='none'">`
+          : `<div class="d-kapak-yok" aria-hidden="true">📖</div>`}
+        <button class="kp-kucuk-btn" data-act="kp-cek">📷 Kapak</button>
+        ${k.kapakYerel ? `<button class="kp-kucuk-btn" data-act="kp-detay-kaldir">Kaldır</button>` : ''}
+      </div>
       <div style="min-width:0">
         <div class="sheet-baslik">${esc(k.ad)}</div>
         ${k.yazar ? `<div class="detay-yazar">${esc(k.yazar)}</div>` : ''}
         <div class="detay-meta">
           <span class="rozet ${rSinif}">${DURUM_AD[k.durum]}</span>
-          ${(k.durum === 'bitti' && k.puan) ? `<span class="puan-mini">★ ${k.puan}/10</span>` : ''}
+          ${((k.durum === 'bitti' || k.durum === 'yarim') && k.puan) ? `<span class="puan-mini">★ ${k.puan}/10</span>` : ''}
+          ${od ? `<span class="rozet r-odunc">Ödünçte: ${esc(od.kisi)}</span>` : ''}
           ${k.tur ? `<span style="font-size:.75rem;color:var(--muted)">${esc(k.tur)}</span>` : ''}
           ${k.sayfa ? `<span style="font-size:.75rem;color:var(--muted)">${k.sayfa} sayfa</span>` : ''}
           ${k.yayinevi ? `<span style="font-size:.75rem;color:var(--muted)">${esc(k.yayinevi)}${k.yil ? ' · ' + k.yil : ''}</span>` : (k.yil ? `<span style="font-size:.75rem;color:var(--muted)">${k.yil}</span>` : '')}
@@ -1364,18 +1432,11 @@ function detayAc(id){
           ${(k.sahiplik === 'istek') ? `<span class="vm-rozet">İstek listesi</span>` : ''}
         </div>
         ${(k.etiketler||[]).length ? `<div style="margin-top:7px">${k.etiketler.map(e => `<span class="etiket-mini">#${esc(e)} </span>`).join('')}</div>` : ''}
+        ${tarihHtml ? `<div class="d-tarih">${tarihHtml}</div>` : ''}
       </div>
     </div>
-    <div class="kp-detay-satir">
-      <button class="kp-kucuk-btn" data-act="kp-cek">📷 Kapak fotoğrafı çek/seç</button>
-      ${k.kapakYerel ? `<button class="kp-kucuk-btn" data-act="kp-detay-kaldir">Fotoğrafı kaldır</button>
-      <div class="kp-cihaz-notu">Kapak fotoğrafı yalnız bu cihazda saklanır — senkrona girmez.</div>` : ''}
-    </div>
-    ${tarihHtml ? `<div style="font-size:.78rem;color:var(--muted2);margin-top:10px">${tarihHtml}</div>` : ''}
+    ${k.kapakYerel ? `<div class="kp-cihaz-notu">Kapak fotoğrafı yalnız bu cihazda saklanır — senkrona girmez.</div>` : ''}
     ${eylemHtml}
-    ${seriHtml}
-    ${gecmisHtml}
-    ${oduncHtml}
     <div class="detay-satir">
       <label>Notlar &amp; alıntılar</label>
       <div class="not-tip-sec">
@@ -1389,10 +1450,15 @@ function detayAc(id){
       </div>
       ${notHtml || '<div style="font-size:.82rem;color:var(--muted2);margin-top:10px">Henüz not yok.</div>'}
     </div>
-    <div class="form-alt">
-      <button class="btn btn-cerceve" data-act="duzenle" style="flex:1">Düzenle</button>
-      <button class="btn btn-tehlike" data-act="kitap-sil" style="flex:1">Sil</button>
-    </div>`;
+    ${seriHtml}
+    ${gecmisHtml}
+    ${oduncHtml}
+    <details class="d-katla" id="dDigerKatla"><summary><span>Düzenle &amp; diğer</span></summary><div class="d-katla-ic">
+      <div class="form-alt" style="margin-top:0">
+        <button class="btn btn-cerceve" data-act="duzenle" style="flex:1">Düzenle</button>
+        <button class="btn btn-tehlike" data-act="kitap-sil" style="flex:1">Sil</button>
+      </div>
+    </div></details>`;
   document.getElementById('ortuDetay').classList.add('acik');
   // içerik her açılışta yeniden üretiliyor: başlık id'si ve dialog nitelikleri tazelenmeli
   ortuAriaKur(document.getElementById('ortuDetay'));
@@ -1484,12 +1550,19 @@ function istCiz(){
     <button class="btn btn-cerceve" style="width:auto" data-act="hedef-kaydet">Hedefi kaydet</button>
   </div></div>`;
 
+  // Ortalama puanın TABANI görünür: kaç kitaptan hesaplandı; puansız bitmişler
+  // görünmez kalmasın diye rafa köprü (puansiz filtresi) verilir.
+  const puansizBitmis = bittiler.filter(k => !k.puan).length;
   let html = hedefHtml + `<div class="ist-grid">
     <div class="ist-kart"><div class="ist-sayi">${bittiler.length}</div><div class="ist-etiket">Bitirilen kitap</div></div>
     <div class="ist-kart"><div class="ist-sayi">${buYil.length}</div><div class="ist-etiket">${yil} içinde bitirilen</div></div>
     <div class="ist-kart"><div class="ist-sayi">${toplamSayfa.toLocaleString('tr')}</div><div class="ist-etiket">Okunan toplam sayfa</div></div>
-    <div class="ist-kart"><div class="ist-sayi">${ortPuan}</div><div class="ist-etiket">Ortalama puan</div></div>
+    <div class="ist-kart"><div class="ist-sayi">${ortPuan}</div><div class="ist-etiket">Ortalama puan${puanlilar.length ? ` (${puanlilar.length} kitaptan)` : ''}</div></div>
   </div>`;
+  if(puansizBitmis){
+    html += `<div class="ist-kart" id="istPuansiz"><div class="mini-not" style="margin-top:0">${puansizBitmis} bitmiş kitap henüz puansız —
+      <button class="d-link" data-act="puansiz-git">rafta göster, puanla</button></div></div>`;
+  }
 
   // ortalama bitirme süresi
   const sureli = bittiler.filter(k => k.baslamaTarihi && k.bitisTarihi);
@@ -1981,6 +2054,12 @@ document.addEventListener('click', e => {
       document.querySelectorAll('#durumChips .chip').forEach(c =>
         c.classList.toggle('active', c.dataset.v === v));
       listeCiz(); break;
+    case 'puansiz-git':
+      // istatistikteki "puansız bitmişler" köprüsü: rafa geç + puansiz filtresini kur
+      durum.filtre = 'puansiz';
+      document.querySelectorAll('#durumChips .chip').forEach(c =>
+        c.classList.toggle('active', c.dataset.v === 'puansiz'));
+      sekmeGec('raf'); listeCiz(); break;
     case 'zar': {
       const adaylar = veri.kitaplar.filter(k => k.durum === 'okunacak');
       if(!adaylar.length){ toast('Okunacak listen boş — önce kitap ekle'); break; }
@@ -2002,7 +2081,7 @@ document.addEventListener('click', e => {
       if(gir.value.trim().length >= 3) canliAra(gir.value.trim());
       break; }
     case 'kapak-kaldir': durum.formKapak = null; kapakOnizleCiz(); break;
-    case 'f-durum': durum.formDurum = v; if(v !== 'bitti') durum.formPuan = null; formDurumCiz(); puanCiz(); break;
+    case 'f-durum': durum.formDurum = v; if(v !== 'bitti' && v !== 'yarim') durum.formPuan = null; formDurumCiz(); puanCiz(); break;
     case 'f-puan': durum.formPuan = parseInt(v); puanCiz(); break;
     case 'form-kaydet': formKaydet(); break;
     case 'detay': detayAc(el.dataset.id); break;
@@ -2035,6 +2114,9 @@ document.addEventListener('click', e => {
         if(k.guncelSayfa !== 0) k.gsG = Date.now();   // sıfırlama da kasıtlı giriştir
         k.guncelSayfa = 0;
         k.baslamaTarihi = bugun(); k.bitisTarihi = null; k.puan = null;
+        k.g = Date.now();
+        // önceki okumadan açık oturum kaldıysa o okumaya ait sayılır: kaydederek kapat
+        if(window.__oturum && window.__oturum.durumKapat) window.__oturum.durumKapat(k.id, true);
         depoKaydet(); hepsiniCiz(); detayAc(k.id);
         toast('Yeniden okumaya başladın — önceki okuman geçmişe kaydedildi');
       }
@@ -2056,6 +2138,7 @@ document.addEventListener('click', e => {
     case 'baslat': {
       const k = kitapBul(durum.detayId);
       if(k){ k.durum = 'okunuyor'; k.baslamaTarihi = k.baslamaTarihi || bugun(); k.bitisTarihi = null;
+        k.g = Date.now();
         depoKaydet(); hepsiniCiz(); detayAc(k.id); toast('İyi okumalar'); }
       break; }
     case 'bitir': {
@@ -2064,9 +2147,58 @@ document.addEventListener('click', e => {
         if(k.sayfa){ seansEkle(k, k.guncelSayfa || 0, k.sayfa);
           if(k.guncelSayfa !== k.sayfa){ k.guncelSayfa = k.sayfa; k.gsG = Date.now(); } }
         k.durum = 'bitti'; k.bitisTarihi = bugun();
+        k.g = Date.now();
+        // Açık oturum varsa gerçek oturum olarak kapat: okunan süre yaşandı, atılmaz.
+        if(window.__oturum && window.__oturum.durumKapat) window.__oturum.durumKapat(k.id, true);
         depoKaydet(); hepsiniCiz();
-        document.getElementById('ortuDetay').classList.remove('acik');
-        formAc(k.id); toast('Tebrikler — puanını da verebilirsin'); }
+        // Detayda kal: puan sorusu artık formda değil, birincil blokta (puan şeridi).
+        detayAc(k.id); toast('Tebrikler 🎉 — puanını üstteki şeritten verebilirsin'); }
+      break; }
+    case 'yarim-birak': {
+      const k = kitapBul(durum.detayId);
+      if(k && k.durum === 'okunuyor'){
+        k.durum = 'yarim';
+        // guncelSayfa BİLEREK korunur: nerede bıraktığı kaybolmaz (gsG basılmaz, değer değişmedi)
+        if(!k.bitisTarihi) k.bitisTarihi = bugun();   // bırakma tarihi
+        k.g = Date.now();
+        if(window.__oturum && window.__oturum.durumKapat) window.__oturum.durumKapat(k.id, true);
+        depoKaydet(); hepsiniCiz(); detayAc(k.id);
+        toast(k.guncelSayfa ? `Yarım bırakıldı — kaldığın yer: sf. ${k.guncelSayfa}` : 'Yarım bırakıldı');
+      }
+      break; }
+    case 'okunacak-al': {
+      const k = kitapBul(durum.detayId);
+      if(k && (k.durum === 'okunuyor' || k.durum === 'yarim')){
+        const silinecek = [
+          k.guncelSayfa > 0 ? `ilerleme (sf. ${k.guncelSayfa})` : '',
+          (k.baslamaTarihi || k.bitisTarihi) ? 'tarihler' : '',
+          k.puan ? 'puan' : ''
+        ].filter(Boolean).join(', ');
+        if(!confirm(`"${k.ad}" okunacaklara dönsün mü?${silinecek ? ` Şunlar silinir: ${silinecek}.` : ''}`)) break;
+        if(k.guncelSayfa !== 0){ k.guncelSayfa = 0; k.gsG = Date.now(); }  // sıfırlama da kasıtlı giriştir
+        k.durum = 'okunacak'; k.baslamaTarihi = null; k.bitisTarihi = null; k.puan = null;
+        k.g = Date.now();
+        // Geri alma "bu okuma sayılmasın" jestidir: açık oturum kaydedilmeden atılır.
+        if(window.__oturum && window.__oturum.durumKapat) window.__oturum.durumKapat(k.id, false);
+        depoKaydet(); hepsiniCiz(); detayAc(k.id); toast('Okunacaklara alındı');
+      }
+      break; }
+    case 'd-puan': {
+      const k = kitapBul(durum.detayId);
+      const p = parseInt(v);
+      if(k && p >= 1 && p <= 10 && (k.durum === 'bitti' || k.durum === 'yarim')){
+        if(k.puan !== p){
+          k.puan = p; k.g = Date.now();
+          depoKaydet(); hepsiniCiz(); detayAc(k.id); toast(`Puanın kaydedildi: ★ ${p}/10`);
+        }
+      }
+      break; }
+    case 'd-puan-sil': {
+      const k = kitapBul(durum.detayId);
+      if(k && k.puan){
+        k.puan = null; k.g = Date.now();
+        depoKaydet(); hepsiniCiz(); detayAc(k.id); toast('Puan kaldırıldı');
+      }
       break; }
     case 'ilerleme-kaydet': {
       const k = kitapBul(durum.detayId);

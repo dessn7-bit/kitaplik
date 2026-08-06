@@ -197,6 +197,7 @@ test.describe('G15 M4 — seri ve cilt takibi', () => {
       sahteKitap({ ad: 'Alakasız Kitap' })]);
     await page.goto('/');
     await page.click('#liste .kart[data-id="' + await page.evaluate(() => veri.kitaplar[0].id) + '"]');
+    await page.click('#dSeriKatla summary');   // seri nadir bölümde katlı
     await expect(page.locator('#detayIcerik .vm-seri-liste .vm-seri-oge')).toHaveCount(2);
     await expect(page.locator('#detayIcerik .vm-seri-oge.vm-bu')).toContainText('Birinci Cilt');
     await page.click('#detayIcerik .vm-seri-oge:not(.vm-bu)');
@@ -214,6 +215,7 @@ test.describe('G15 M4 — seri ve cilt takibi', () => {
     await tohumla(page, [seriKitap('Tek Cilt', 1)]);
     await page.goto('/');
     await page.click('#liste .kart');
+    await page.click('#dSeriKatla summary');   // seri nadir bölümde katlı
     await expect(page.locator('#detayIcerik .vm-seri-kutu')).toBeVisible();
     expect(await page.locator('#detayIcerik .vm-eksik').count()).toBe(0);
   });
@@ -223,6 +225,7 @@ test.describe('G15 M4 — seri ve cilt takibi', () => {
     await tohumla(page, kitaplar);
     await page.goto('/');
     await page.click(`#liste .kart[data-id="${kitaplar[0].id}"]`);   // seri kartı olan kitabı aç
+    await page.click('#dSeriKatla summary');   // seri nadir bölümde katlı
     await page.click('[data-act="vm-seri-filtre"]');
     await expect(page.locator('#liste .kart')).toHaveCount(2);
     await expect(page.locator('#arama')).toHaveValue('Kayıp Zamanın İzinde');

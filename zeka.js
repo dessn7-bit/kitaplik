@@ -181,8 +181,10 @@
       kovalar[i].adet++; kovalar[i].sure += (o.s || 0);
     });
     const zirve = kovalar.slice().sort((a,b) => b.sure - a.sure || b.adet - a.adet)[0];
+    /* "En çok okuduğun zaman" iddiası tek oturumluk dilimle kurulmaz (rapor.js
+       enUst >=2 eşiğiyle aynı ilke); dilim <2 oturumsa cümle susar, barlar kalır. */
     return { kovalar, toplamOturum: hepsi.length, yeterli: hepsi.length >= SAAT_ESIK,
-      zirve: (zirve && zirve.adet) ? zirve : null };
+      zirve: (zirve && zirve.adet >= 2) ? zirve : null };
   }
   function saatKartHtml(){
     const s = saatDagilimi();
@@ -194,9 +196,11 @@
       return h + '</div>';
     }
     const enB = Math.max.apply(null, s.kovalar.map(k => k.sure).concat([1]));
-    h += '<div class="zk-not" id="zkSaatOzet">En çok okuduğun zaman: <b>' + kacir(s.zirve.ad)
-      + ' (' + s.zirve.etiket + ')</b> — toplam ' + sureMetni(s.zirve.sure) + ', ' + s.zirve.adet + ' oturum.</div>'
-      + s.kovalar.map(k =>
+    if(s.zirve){
+      h += '<div class="zk-not" id="zkSaatOzet">En çok okuduğun zaman: <b>' + kacir(s.zirve.ad)
+        + ' (' + s.zirve.etiket + ')</b> — toplam ' + sureMetni(s.zirve.sure) + ', ' + s.zirve.adet + ' oturum.</div>';
+    }
+    h += s.kovalar.map(k =>
         '<div class="zk-bar-satir"><div class="zk-bar-ad">' + kacir(k.ad) + '</div>'
         + '<div class="zk-bar-govde"><div style="width:' + Math.round(k.sure / enB * 100) + '%"></div></div>'
         + '<div class="zk-bar-deger">' + (k.adet || '—') + '</div></div>').join('');
@@ -219,7 +223,9 @@
     const gunNo = Math.floor((new Date() - new Date(yil, 0, 0)) / 86400000);
     return {
       yil, hedef, ilerleme,
-      kitapSayisi: bitenler.length,
+      // payda dürüstlüğü: metin "N kitabın sayfa toplamı" diyor — N, toplama
+      // fiilen katılan (sayfası girilmiş) kitapları saymalı, tümünü değil
+      kitapSayisi: bitenler.filter(k => k.sayfa > 0).length,
       yuzde: hedef > 0 ? Math.min(100, Math.round(ilerleme / hedef * 100)) : null,
       projeksiyon: gunNo > 0 ? Math.round(ilerleme / gunNo * 365) : 0
     };

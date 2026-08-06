@@ -98,7 +98,12 @@
       if(o.k.yazar) yazarSay.set(o.k.yazar, (yazarSay.get(o.k.yazar) || 0) + 1);
       if(o.k.tur) turSay.set(o.k.tur, (turSay.get(o.k.tur) || 0) + 1);
     });
-    const enUst = h => [...h.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'tr'))[0] || null;
+    /* "En çok" iddiası tek kitapla kurulmaz: n>=2 değilse null döner, satır hiç
+       gösterilmez (zeka.js yazar kartının >=2 eşiğiyle aynı — iki kart çelişmesin). */
+    const enUst = h => {
+      const t = [...h.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'tr'))[0];
+      return (t && t[1] >= 2) ? t : null;
+    };
 
     const tarihSirali = benzersiz.slice().sort((a, b) => String(a.bit).localeCompare(String(b.bit)));
     const enIyi = puanlilar.slice()
@@ -109,6 +114,7 @@
 
     return {
       yil, kitap: benzersiz.length, yenidenSayisi, sayfa, ortPuan,
+      puanliSayisi: puanlilar.length,
       sure, oturumluGun: gunler.size, enUzunSeri: enUzun,
       aylik, enIyi: enIyi.map(o => ({ ad: o.k.ad, yazar: o.k.yazar || '', puan: o.puan })),
       enCokYazar: enUst(yazarSay), enCokTur: enUst(turSay),
@@ -166,7 +172,8 @@
     satirlar.push([String(ozet.kitap), ozet.kitap === 1 ? 'kitap bitirdin' : 'kitap bitirdin']);
     if(ozet.sayfa) satirlar.push([ozet.sayfa.toLocaleString('tr'), 'sayfa okudun']);
     if(ozet.sure) satirlar.push([sureMetni(ozet.sure), 'kitapla geçirdiğin süre']);
-    if(ozet.ortPuan !== null) satirlar.push([String(ozet.ortPuan), 'ortalama puanın']);
+    if(ozet.ortPuan !== null) satirlar.push([String(ozet.ortPuan),
+      'ortalama puanın (' + ozet.puanliSayisi + ' kitaptan)']);
     if(ozet.enUzunSeri > 1) satirlar.push([String(ozet.enUzunSeri), 'gün üst üste okudun']);
 
     c.fillStyle = RENK.murekkep;
@@ -193,11 +200,12 @@
       }
     }
 
-    // alt bilgi: en çok yazar/tür (yer kaldıysa)
-    if(ozet.enCokYazar && y < H - 190){
+    // alt bilgi: en çok yazar/tür (yer kaldıysa) — sayaç PNG'de de basılır:
+    // ekranda "(n)" varken PNG'de çıplak iddia kalıyordu (dayanaksız görünüm)
+    if((ozet.enCokYazar || ozet.enCokTur) && y < H - 190){
       c.fillStyle = RENK.soluk; c.font = '30px ' + SANS;
-      const alt = [ozet.enCokYazar ? 'En çok: ' + ozet.enCokYazar[0] : '',
-        ozet.enCokTur ? ozet.enCokTur[0] : ''].filter(Boolean).join(' · ');
+      const alt = [ozet.enCokYazar ? 'En çok: ' + ozet.enCokYazar[0] + ' (' + ozet.enCokYazar[1] + ')' : '',
+        ozet.enCokTur ? ozet.enCokTur[0] + ' (' + ozet.enCokTur[1] + ')' : ''].filter(Boolean).join(' · ');
       c.fillText(kirp(c, alt, enG), kenar, H - 150);
     }
     c.fillStyle = RENK.pirinc; c.fillRect(kenar, H - 96, 72, 5);
@@ -265,7 +273,8 @@
       + '<div class="rp-kutu"><div class="rp-sayi">' + o.kitap + '</div><div class="rp-etiket">kitap bitirdin</div></div>'
       + '<div class="rp-kutu"><div class="rp-sayi">' + o.sayfa.toLocaleString('tr') + '</div><div class="rp-etiket">sayfa</div></div>';
     if(o.sure) h += '<div class="rp-kutu"><div class="rp-sayi">' + sureMetni(o.sure) + '</div><div class="rp-etiket">okuma süresi</div></div>';
-    if(o.ortPuan !== null) h += '<div class="rp-kutu"><div class="rp-sayi">' + o.ortPuan + '</div><div class="rp-etiket">ortalama puan</div></div>';
+    if(o.ortPuan !== null) h += '<div class="rp-kutu"><div class="rp-sayi">' + o.ortPuan
+      + '</div><div class="rp-etiket">ortalama puan (' + o.puanliSayisi + ' kitaptan)</div></div>';
     if(o.enUzunSeri > 1) h += '<div class="rp-kutu"><div class="rp-sayi">' + o.enUzunSeri + '</div><div class="rp-etiket">gün üst üste</div></div>';
     h += '</div>';
 

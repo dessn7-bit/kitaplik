@@ -143,6 +143,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     await blobEk(page, k.id);
     expect(await idbAnahtarlari(page)).toEqual([k.id]);
     await page.click('#liste .kart');
+    await page.click('#dDigerKatla summary');  // Sil nadir bölümde katlı
     await page.click('#detayIcerik [data-act="kitap-sil"]');
     await expect(page.locator('#toast')).toContainText('Kitap silindi');
     await expect.poll(() => idbAnahtarlari(page)).toEqual([]);
@@ -345,6 +346,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     await expect(page.locator('#toast')).toContainText('Fotoğraf bu cihazda değil');
     expect(await page.evaluate(() => veri.kitaplar[0].kapakYerel)).toBe(true); // işaret KORUNDU
     // formda da "fotoğrafı var" şeridi çıkmaz (Kaldır sunulmaz)
+    await page.click('#dDigerKatla summary');  // Düzenle nadir bölümde katlı
     await page.click('#detayIcerik [data-act="duzenle"]');
     await page.waitForTimeout(150); // blob denetimi otursun
     await expect(page.locator('#kpFormDurum')).toBeHidden();

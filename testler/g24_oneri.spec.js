@@ -337,32 +337,36 @@ test.describe('G24 öneri motoru', () => {
     await expect(page.locator('#oneriIcerik')).toContainText('Kötü İstek'); // istek bölümü hâlâ duruyor
   });
 
-  test('panelden detaya geçip form açınca form ÜSTTE: panel gömmez, bayat düğme veri bozmaz', async ({ page }) => {
+  test('panelden detaya geçip bitirince detayda kalınır: puan şeridi çıkar, panel tazelenir', async ({ page }) => {
+    // Detay tasarımı sprintinden beri "bitir" form AÇMAZ: detayda kalınır,
+    // puan sorusu birincil bloktaki şerittir (d-puan). Bu vaka yeni akışı kilitler.
     const k = okunacak({ ad: 'Panelden Bitirilecek' });
     await tohumla(page, [...taban(), k]);
     await page.goto('/');
     await panelAc(page);
-    // panel → detay → okumaya başla → bitir (puan formu açılır)
+    // panel → detay → okumaya başla → bitir (detayda kal, puan şeridi)
     await page.click(`#oneriIcerik [data-act="on-detay"][data-id="${k.id}"]`);
     await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
     await page.click('#detayIcerik [data-act="baslat"]');
     await page.click('#detayIcerik [data-act="bitir"]');
-    // form öneri panelinin altına gömülmemeli: panel kapandı, form açık ve etkileşimli
-    await expect(page.locator('#ortuForm')).toHaveClass(/acik/);
-    await expect(page.locator('#ortuOneri')).not.toHaveClass(/acik/);
-    expect(await page.evaluate(() =>
-      document.getElementById('ortuForm').hasAttribute('inert'))).toBe(false);
-    // bayat "Okumaya başla" düğmesi kalsa bile bitmiş kitabın tarihini SİLEMEZ
-    await page.click('#ortuForm [data-act="form-kaydet"]');
+    // form açılmadı, detay açık ve puan şeridi görünür (panel altta kalsa da detay üstte)
+    await expect(page.locator('#ortuForm')).not.toHaveClass(/acik/);
+    await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
+    await expect(page.locator('#detayIcerik #dPuan')).toBeVisible();
     const d1 = await page.evaluate(id => {
       const x = veri.kitaplar.find(b => b.id === id);
       return { durum: x.durum, bit: x.bitisTarihi };
     }, k.id);
     expect(d1.durum).toBe('bitti');
     expect(d1.bit).toBe(bugunISO(0));
-    // form-kaydet detayı yeniden açar (çekirdek davranış) — kapat, paneli tazele
+    // şeritten puan ver: form hâlâ yok, puan yazıldı
+    await page.click('#detayIcerik #dPuan [data-act="d-puan"][data-v="8"]');
+    await expect(page.locator('#ortuForm')).not.toHaveClass(/acik/);
+    expect(await page.evaluate(id => veri.kitaplar.find(b => b.id === id).puan, k.id)).toBe(8);
+    // kapat: panel bu akışta hiç kapanmadı (form açılmadı) ve veri değişince
+    // kendini tazeledi — bitmiş kitap artık öneri listesinde değil
     await page.click('#detayIcerik [data-act="detay-kapat"]');
-    await panelAc(page); // panel tazelendi: bitmiş kitap artık listede değil
+    await expect(page.locator('#ortuOneri')).toHaveClass(/acik/);
     await expect(page.locator('#oneriIcerik')).not.toContainText('Panelden Bitirilecek');
   });
 

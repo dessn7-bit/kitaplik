@@ -59,6 +59,7 @@ test.describe('G12 M2 — mezar taşları yenilemede korunur', () => {
     await tohumla(page, [k]);
     await page.goto('/');
     await page.click('#liste .kart');
+    await page.click('#dDigerKatla summary');  // Sil nadir bölümde katlı
     await page.click('[data-act="kitap-sil"]');
     await expect(page.locator('#toast')).toContainText('Kitap silindi');
     await page.reload();
@@ -72,6 +73,7 @@ test.describe('G12 M2 — mezar taşları yenilemede korunur', () => {
     await tohumla(page, [k]);
     await page.goto('/');
     await page.click('#liste .kart');
+    await page.click('#dDigerKatla summary');  // Sil nadir bölümde katlı
     await page.click('[data-act="kitap-sil"]');
     await expect(page.locator('#toast')).toContainText('Kitap silindi');
     await page.reload();
@@ -107,6 +109,7 @@ test.describe('G12 M3 — detaydan Düzenle formu görünür', () => {
     await tohumla(page, [sahteKitap({ ad: 'Düzenlenecek', yazar: 'Yazar A' })]);
     await page.goto('/');
     await page.click('#liste .kart');
+    await page.click('#dDigerKatla summary');  // Düzenle nadir bölümde katlı
     await page.click('[data-act="duzenle"]');
     await expect(page.locator('#ortuForm')).toHaveClass(/acik/);
     await expect(page.locator('#f-ad')).toHaveValue('Düzenlenecek');

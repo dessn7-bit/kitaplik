@@ -86,6 +86,25 @@
     return en;
   }
 
+  /* ---------- durum değişiminde oturumu kapat ----------
+     Çekirdeğin durum eylemleri (bitir / yarım bırak / okunacağa al / yeniden oku)
+     bu kitaptaki açık oturumu ele alsın diye: kaydet=true geçen süreyi GERÇEK
+     oturum olarak yazar (okuma yaşandı, atılmaz); kaydet=false kaydetmeden atar
+     (geri alma "bu okuma sayılmasın" jestidir). guncelSayfa/gsG'ye DOKUNMAZ —
+     sayfanın sahibi çağıran durum eylemidir; depoKaydet de çağıranda kalır. */
+  function durumKapat(kitapId, kaydet){
+    const o = acikOturum();
+    if(!o || o.kitapId !== kitapId) return false;
+    if(kaydet){
+      const k = (veri.kitaplar||[]).find(x => x.id === kitapId);
+      if(k) oturumEkle(k, { b: o.b, s: Date.now() - o.b, sa: o.sa,
+        sb: Math.max(o.sa, k.guncelSayfa || 0) });
+    }
+    oturumYaz(null);
+    sayacDurdur();
+    return true;
+  }
+
   /* ---------- unutulan oturumu kapat ---------- */
   function unutulanKontrol(){
     const o = acikOturum();
@@ -258,7 +277,8 @@
       }
       // detay/sekme etkileşimlerinden sonra şeridi tazele
       if(['detay','duzenle','bitir','baslat','ilerleme-kaydet','not-ekle','not-sil',
-          'odunc-ver','odunc-al','alinti-git'].indexOf(act) >= 0){
+          'odunc-ver','odunc-al','alinti-git',
+          'yarim-birak','okunacak-al','yeniden-oku','d-puan','d-puan-sil'].indexOf(act) >= 0){
         setTimeout(detayGuncelle, 0);
       }
       if(act === 'sekme' && el.dataset.v === 'ist') setTimeout(istatistikEkle, 0);
@@ -281,5 +301,5 @@
 
   window.__oturum = { acikOturum, oturumYaz, sureMetni, hizSayfaSaat, genelHiz,
     gunlukDakikalar, seriHesapla, enUzunSeri, toplamSure, toplamSayfa, detayGuncelle,
-    istatistikEkle, unutulanKontrol, UNUTMA_SINIRI };
+    istatistikEkle, unutulanKontrol, durumKapat, UNUTMA_SINIRI };
 })();

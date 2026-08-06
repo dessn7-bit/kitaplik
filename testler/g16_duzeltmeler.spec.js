@@ -89,6 +89,7 @@ async function seriDetayAc(page, kitaplar) {
   await tohumla(page, kitaplar);
   await page.goto('/');
   await page.click(`#liste .kart[data-id="${kitaplar[0].id}"]`);
+  await page.click('#dSeriKatla summary');   // seri nadir bölümde katlı
   await expect(page.locator('#detayIcerik .vm-seri-kutu')).toBeVisible();
 }
 

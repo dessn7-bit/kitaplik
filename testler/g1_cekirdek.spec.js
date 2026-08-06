@@ -48,6 +48,7 @@ test.describe('G1 çekirdek', () => {
     await tohumla(page, [k]);
     await page.goto('/');
     await page.click('#liste .kart');
+    await page.click('#dDigerKatla summary');  // Düzenle/Sil nadir bölümde katlı
     await page.click('[data-act="duzenle"]');
     // M3'ten beri 'duzenle' detay örtüsünü kapatıyor; form doğrudan erişilebilir.
     await expect(page.locator('#f-ad')).toHaveValue('Eski Ad');
@@ -65,6 +66,7 @@ test.describe('G1 çekirdek', () => {
     await tohumla(page, [sahteKitap({ ad: 'Silinecek' })]);
     await page.goto('/');
     await page.click('#liste .kart');
+    await page.click('#dDigerKatla summary');  // Sil nadir bölümde katlı
     await page.click('[data-act="kitap-sil"]');
     await expect(page.locator('#toast')).toContainText('Kitap silindi');
     await expect(page.locator('#liste')).toContainText('Raf henüz boş.');

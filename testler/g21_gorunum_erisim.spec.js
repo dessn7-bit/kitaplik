@@ -302,6 +302,7 @@ test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
     await tohumla(page, [sahteKitap({ ad: 'İç içe' })]);
     await page.goto('/');
     await page.click('#liste .kart');          // detay
+    await page.click('#dDigerKatla summary');  // Düzenle nadir bölümde katlı
     await page.click('[data-act="duzenle"]');  // form (detay kapanır)
     await page.click('[data-act="barkod-ac"]');// barkod (form üstünde)
     await expect(page.locator('#barkodOrtu')).toHaveClass(/acik/);
