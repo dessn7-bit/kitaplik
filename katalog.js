@@ -269,7 +269,7 @@
     kart.className = 'yedek-kart'; kart.id = 'katalogKart';
     kart.innerHTML = '<h3>Toplu katalog (seri tarama)</h3>'
       + '<p>Fiziksel rafını sisteme geçir: kamera açık kalır, kitapları arka arkaya okutursun. Her kitap için form açılmaz, raf konumu hepsine birden yazılır.</p>'
-      + '<button class="btn btn-brass" data-act="seri-ac">📚 Seri taramayı başlat</button>';
+      + '<button class="btn btn-cerceve" data-act="seri-ac">📚 Seri taramayı başlat</button>';
     kap.insertBefore(kart, kap.firstChild);
   }
 

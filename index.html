@@ -483,14 +483,14 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <div class="yedek-kart">
       <h3>Alıntı ve notları dışa aktar</h3>
       <p>Bütün alıntıların ve notların, kitaplara göre gruplanmış tek bir Markdown (.md) dosyası olarak iner — yazı çalışmanda doğrudan kullanabilirsin.</p>
-      <button class="btn btn-brass" data-act="md-alinti">Sadece alıntılar (.md)</button>
+      <button class="btn btn-cerceve" data-act="md-alinti">Sadece alıntılar (.md)</button>
       <div style="height:8px"></div>
       <button class="btn btn-cerceve" data-act="md-hepsi">Alıntılar + notlar (.md)</button>
     </div>
     <div class="yedek-kart">
       <h3>Goodreads'ten aktar</h3>
       <p>Goodreads → My Books → sol menüde <b>Import and export</b> → <b>Export Library</b> ile CSV indir, buraya yükle. Kitaplar rafları (okundu/okunuyor/okunacak), puanların (5'lik → 10'luğa çevrilir), tarihler, yorumların ve kapaklarıyla gelir.</p>
-      <button class="btn btn-brass" data-act="gr-aktar">Goodreads CSV yükle</button>
+      <button class="btn btn-cerceve" data-act="gr-aktar">Goodreads CSV yükle</button>
       <input type="file" id="grDosya" accept=".csv,text/csv" hidden>
     </div>
     <div class="yedek-kart">
@@ -1304,7 +1304,7 @@ function detayAc(id){
       ${k.sayfa ? `<div class="ilerleme" style="margin-top:10px"><div style="width:${p}%"></div></div>
       <div class="ilerleme-txt">%${p} tamamlandı</div>` : ''}
       ${hizHtml}
-      <button class="btn btn-brass" style="margin-top:12px" data-act="bitir">Kitabı bitirdim ✓</button>
+      <button class="btn btn-cerceve" style="margin-top:12px" data-act="bitir">Kitabı bitirdim ✓</button>
       <div class="d-durum-sec">
         <button class="d-sessiz" data-act="yarim-birak">Yarım bıraktım</button>
         <button class="d-sessiz" data-act="okunacak-al">Okunacağa geri al</button>
@@ -1446,7 +1446,7 @@ function detayAc(id){
       </div>
       <div class="not-ekle-satir">
         <textarea id="d-not" placeholder="${durum.notTip === 'alinti' ? 'Alıntıyı yaz…' : 'Notunu yaz…'}" rows="2" style="min-height:52px"></textarea>
-        <button class="btn btn-brass" style="width:auto;padding:11px 16px" data-act="not-ekle">Ekle</button>
+        <button class="btn btn-cerceve" style="width:auto;padding:11px 16px" data-act="not-ekle">Ekle</button>
       </div>
       ${notHtml || '<div style="font-size:.82rem;color:var(--muted2);margin-top:10px">Henüz not yok.</div>'}
     </div>

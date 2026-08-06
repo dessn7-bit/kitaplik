@@ -171,7 +171,11 @@
       blok.innerHTML = '<label>Okuma oturumu</label>'
         + (baskaKitap
             ? '<div class="hiz-kutu">Başka bir kitapta açık oturum var. Önce onu bitir.</div>'
-            : '<button class="btn btn-brass" data-act="oturum-basla">▶ Okumaya başla (süre tut)</button>')
+            /* Birincil eylem tekliği: okunuyor'da günlük eylem oturuma oturmaktır →
+               pirinç; okunacak/yarim'da birincil çekirdeğin durum düğmesi, bitti'de
+               puan şeridi → burada çerçeveli kalır. Ekranda aynı anda ≤1 .btn-brass. */
+            : '<button class="btn ' + (k.durum === 'okunuyor' ? 'btn-brass' : 'btn-cerceve')
+              + '" data-act="oturum-basla">▶ Okumaya başla (süre tut)</button>')
         + ozet;
       sayacDurdur();
     }

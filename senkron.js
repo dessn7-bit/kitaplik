@@ -449,10 +449,10 @@
         '<label for="s-cihaz">Bu cihazın adı</label>' +
         '<input id="s-cihaz" placeholder="ör. Telefon" autocomplete="off">' +
         '<div style="height:12px"></div>' +
-        '<button class="btn btn-brass" data-act="senkron-bagla">Bağlan ve senkronize et</button>' +
+        '<button class="btn btn-cerceve" data-act="senkron-bagla">Bağlan ve senkronize et</button>' +
       '</div>' +
       '<div id="senkronBagli" style="display:none">' +
-        '<button class="btn btn-brass" data-act="senkron-simdi">Şimdi senkronize et</button>' +
+        '<button class="btn btn-cerceve" data-act="senkron-simdi">Şimdi senkronize et</button>' +
         '<div style="height:8px"></div>' +
         '<button class="btn btn-cerceve" data-act="senkron-kes">Bağlantıyı kes</button>' +
       '</div>';
