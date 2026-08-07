@@ -1,5 +1,6 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap, onaylariKabulEt } = require('./yardim');
+const { test, expect, tohumla, sahteKitap,
+  onaylariKabulEt, rafAc, rafYenile, ayarlarAc } = require('./yardim');
 
 /* G23 — kendi kapak fotoğrafı (kapak.js, kp- ad alanı)
    Fotoğraflar IndexedDB'de (kk_kapak_v1), localStorage ve senkron gövdesine girmez;
@@ -52,10 +53,10 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     const eski = sahteKitap({ ad: 'Eski Kayıt' });
     delete eski.kapakYerel; // alanı hiç görmemiş eski kayıt
     await tohumla(page, [a, eski]);
-    await page.goto('/');
+    await rafAc(page);
     let d = await page.evaluate(() => veri.kitaplar.map(k => k.kapakYerel));
     expect(d).toEqual([true, false]);
-    await page.reload();
+    await rafYenile(page);
     d = await page.evaluate(() => veri.kitaplar.map(k => k.kapakYerel)); // kitapNormalize elemedi
     expect(d).toEqual([true, false]);
   });
@@ -63,7 +64,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
   test('fotoğraf IndexedDB\'ye yazılır, localStorage BÜYÜMEZ (ölçümle)', async ({ page }) => {
     const k = sahteKitap({ ad: 'Barkodsuz Eski Baskı' });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     // ölçümden önce bir kayıt turu: normalize edilmiş halin uzunluğu taban olsun
     await page.evaluate(() => depoKaydet());
     const ls1 = await page.evaluate(() => localStorage.getItem('kk_kitaplik_v1').length);
@@ -86,7 +87,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
 
   test('işlenmiş fotoğraf 60 KB altında ve en uzun kenar ≤600px (3000×2000 girdi)', async ({ page }) => {
     await tohumla(page, []);
-    await page.goto('/');
+    await rafAc(page);
     const b64 = await buyukGorselB64(page, 3000, 2000);
     const s = await page.evaluate(async veriB64 => {
       const cevap = await fetch('data:image/jpeg;base64,' + veriB64);
@@ -110,7 +111,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     const b = sahteKitap({ ad: 'Yalnız Uzak', kapak: UZAK_KAPAK });
     const c = sahteKitap({ ad: 'Kapaksız Sırtlı' });
     await tohumla(page, [a, b, c], { kk_gorunum_v1: { izgara: true, rafGrupla: false } });
-    await page.goto('/');
+    await rafAc(page);
     await blobEk(page, a.id);
     await page.evaluate(() => hepsiniCiz()); // blob artık hazır — kartları tazele
     // A: yerel blob kazanır (uzak URL'si de olduğu hâlde)
@@ -127,7 +128,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     const d = sahteKitap({ ad: 'İşaretli Uzaklı', kapakYerel: true, kapak: UZAK_KAPAK });
     const e = sahteKitap({ ad: 'İşaretli Çıplak', kapakYerel: true });
     await tohumla(page, [d, e], { kk_gorunum_v1: { izgara: true, rafGrupla: false } });
-    await page.goto('/');
+    await rafAc(page);
     // D: IndexedDB boş → data-kp-yedek (uzak) devreye girer
     await expect(page.locator(`#liste .kart[data-id="${d.id}"] img[data-kp-id]`))
       .toHaveAttribute('src', /covers\.openlibrary\.org/);
@@ -139,7 +140,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     onaylariKabulEt(page);
     const k = sahteKitap({ ad: 'Silinecek Fotoğraflı', kapakYerel: true });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     await blobEk(page, k.id);
     expect(await idbAnahtarlari(page)).toEqual([k.id]);
     await page.click('#liste .kart');
@@ -154,7 +155,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     const a = sahteKitap({ ad: 'Toplu Silinen A', kapakYerel: true });
     const b = sahteKitap({ ad: 'Toplu Silinen B', kapakYerel: true });
     await tohumla(page, [a, b]);
-    await page.goto('/');
+    await rafAc(page);
     await blobEk(page, a.id);
     await blobEk(page, b.id);
     expect((await idbAnahtarlari(page)).length).toBe(2);
@@ -177,7 +178,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     });
     const k = sahteKitap({ ad: 'Senkronlu Fotoğraflı', kapakYerel: true, g: 5 });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     await blobEk(page, k.id);
     const sonuc = await page.evaluate(() => {
       window.__senkron.ayarKaydet({ oda: 'g23-test-odasi', cihaz: 'testcihaz', sonSenkron: null });
@@ -201,12 +202,14 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     });
     const k = sahteKitap({ ad: 'Depo Bozukken Kitap' });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#liste .kart')).toHaveCount(1); // uygulama ayakta
     // yedek sekmesi: sayaç yerine net durum
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await ayarlarAc(page);
     await expect(page.locator('#kpDepoBilgi')).toContainText('Fotoğraf deposu açılamadı');
     // çekim akışı: işleme çalışır, kayıt anında net hata; uygulama yaşamaya devam eder
+    await page.keyboard.press('Escape');   // Ayarlar penceresi: sekmeye dönmeden önce kapat
+    await expect(page.locator('#ortuAyar')).not.toHaveClass(/acik/);
     await page.click('[data-act="sekme"][data-v="raf"]');
     await page.click('#liste .kart');
     const b64 = await buyukGorselB64(page, 800, 1200);
@@ -222,18 +225,18 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     const a = sahteKitap({ ad: 'Temizlenecek A', kapakYerel: true });
     const b = sahteKitap({ ad: 'Temizlenecek B', kapakYerel: true });
     await tohumla(page, [a, b]);
-    await page.goto('/');
+    await rafAc(page);
     await blobEk(page, a.id);
     await blobEk(page, b.id);
-    await page.click('[data-act="sekme"][data-v="yedek"]'); // sekmeye geçiş sayacı tazeler
+    await ayarlarAc(page); // sekmeye geçiş sayacı tazeler
     await expect(page.locator('#kpDepoBilgi')).toContainText('2 fotoğraf');
-    await page.click('#panel-yedek [data-act="kp-tum-sil"]');
+    await page.click('#ortuAyar [data-act="kp-tum-sil"]');
     await expect(page.locator('#toast')).toContainText('Tüm kapak fotoğrafları silindi');
     await expect(page.locator('#kpDepoBilgi')).toContainText('0 fotoğraf');
     expect(await idbAnahtarlari(page)).toEqual([]);
     expect(await page.evaluate(() => veri.kitaplar.map(k => k.kapakYerel))).toEqual([false, false]);
     // işaret düşüşü kalıcı (localStorage'a da yazıldı)
-    await page.reload();
+    await rafYenile(page);
     expect(await page.evaluate(() => veri.kitaplar.map(k => k.kapakYerel))).toEqual([false, false]);
   });
 
@@ -241,7 +244,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     const uzakli = sahteKitap({ ad: 'Uzak Kapaklı', kapak: UZAK_KAPAK });
     const ciplak = sahteKitap({ ad: 'Kapaksız Kitap' });
     await tohumla(page, [uzakli, ciplak]);
-    await page.goto('/');
+    await rafAc(page);
     // liste görünümü: uzak kapak <img>, kapaksız sırt şeridi — kp izi YOK
     const uzakImg = page.locator(`#liste .kart[data-id="${uzakli.id}"] img.kapak-mini`);
     await expect(uzakImg).toHaveAttribute('src', /covers\.openlibrary\.org/);
@@ -257,12 +260,12 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     const fs = require('fs');
     const k = sahteKitap({ ad: 'Yedekli Fotoğraflı', kapakYerel: true });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     await blobEk(page, k.id);
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await ayarlarAc(page);
     const [indirme] = await Promise.all([
       page.waitForEvent('download'),
-      page.click('#panel-yedek .yedek-kart [data-act="disa-aktar"]')
+      page.click('#ortuAyar .yedek-kart [data-act="disa-aktar"]')
     ]);
     const metin = fs.readFileSync(await indirme.path(), 'utf8');
     const icerik = JSON.parse(metin);
@@ -273,8 +276,8 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
 
   test('formdan fotoğraf: önizleme → onay → kayıtla birlikte yeni kitaba bağlanır', async ({ page }) => {
     await tohumla(page, []);
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     await page.fill('#f-ad', 'Formdan Fotoğraflı');
     const b64 = await buyukGorselB64(page, 1600, 2400);
     await fotoSec(page, '#ortuForm [data-act="kp-form-cek"]', b64);
@@ -295,7 +298,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
   test('önizlemede Vazgeç hiçbir şey kaydetmez', async ({ page }) => {
     const k = sahteKitap({ ad: 'Vazgeçilen Kitap' });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     const b64 = await buyukGorselB64(page, 800, 1200);
     await fotoSec(page, '#detayIcerik [data-act="kp-cek"]', b64);
@@ -309,21 +312,21 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     onaylariKabulEt(page);
     const k = sahteKitap({ ad: 'Kaldırılacak Fotoğraflı', kapakYerel: true });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     await blobEk(page, k.id);
     await page.click('#liste .kart');
     await page.click('#detayIcerik [data-act="kp-detay-kaldir"]');
     await expect(page.locator('#toast')).toContainText('Kapak fotoğrafı silindi');
     await expect.poll(() => idbAnahtarlari(page)).toEqual([]);
     expect(await page.evaluate(() => veri.kitaplar[0].kapakYerel)).toBe(false);
-    await page.reload();
+    await rafYenile(page);
     expect(await page.evaluate(() => veri.kitaplar[0].kapakYerel)).toBe(false); // kalıcı
   });
 
   test('liste ve detay görünümünde yerel kapak blob olarak yüklenir', async ({ page }) => {
     const k = sahteKitap({ ad: 'Liste Detay Yerel', kapakYerel: true, kapak: UZAK_KAPAK });
     await tohumla(page, [k]); // varsayılan LİSTE görünümü (ızgara değil)
-    await page.goto('/');
+    await rafAc(page);
     await blobEk(page, k.id);
     await page.evaluate(() => hepsiniCiz());
     // liste kartı: yerel blob uzak URL'yi yener
@@ -340,7 +343,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     // senkrondan gelmiş durum: işaret true ama blob BU cihazda yok
     const k = sahteKitap({ ad: 'Uzak Cihaz Fotoğraflı', kapakYerel: true });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click('#detayIcerik [data-act="kp-detay-kaldir"]');
     await expect(page.locator('#toast')).toContainText('Fotoğraf bu cihazda değil');
@@ -357,13 +360,13 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     // yoksa bayat cihaz g=şimdi ile güncel cihazın düzenlemelerini ezerdi
     const k = sahteKitap({ ad: 'Göç Kitabı', g: 5 });
     await tohumla(page, [k], { kk_senkron_anlik_v1: { s: 2, p: { eskiId: 'x-yz' } } });
-    await page.goto('/');
+    await rafAc(page);
     await page.evaluate(() => depoKaydet()); // damgala göç turunda koşsun
     expect(await page.evaluate(() => veri.kitaplar[0].g)).toBe(5); // damga korundu
     const anlik = await page.evaluate(() => JSON.parse(localStorage.getItem('kk_senkron_anlik_v1')));
     expect(anlik.s).toBe(await page.evaluate(() => window.__senkron.ANLIK_SURUM)); // yeni sürümle yazıldı
     // ikinci tur (aynı sürüm): içerik değişmedi → damga yine değişmez
-    await page.reload();
+    await rafYenile(page);
     await page.evaluate(() => depoKaydet());
     expect(await page.evaluate(() => veri.kitaplar[0].g)).toBe(5);
   });
@@ -373,7 +376,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     const kitaplar = [];
     for (let i = 0; i < 500; i++) kitaplar.push(sahteKitap({ ad: 'Raf Kitabı ' + (i + 1), kapakYerel: true }));
     await tohumla(page, kitaplar, { kk_gorunum_v1: { izgara: true, rafGrupla: false } });
-    await page.goto('/');
+    await rafAc(page);
     // hepsine aynı küçük blobu yaz (tek tuval, 500 put)
     await page.evaluate(async idler => {
       const c = document.createElement('canvas'); c.width = 40; c.height = 60;

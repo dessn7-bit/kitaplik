@@ -1,5 +1,6 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap, kameraTaklit } = require('./yardim');
+const { test, expect, tohumla, sahteKitap,
+  kameraTaklit, rafAc, ayarlarAc } = require('./yardim');
 
 const YIL = new Date().getFullYear();
 const gun = (yil, ay, g) => `${yil}-${String(ay).padStart(2, '0')}-${String(g).padStart(2, '0')}`;
@@ -28,8 +29,8 @@ async function pencereDurumu(page, ortuId) {
 test.describe('G22 M1 — ARIA dialog semantiği', () => {
 
   test('form penceresi: role, aria-modal, aria-labelledby doğru', async ({ page }) => {
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     const d = await pencereDurumu(page, 'ortuForm');
     expect(d.rol).toBe('dialog');
     expect(d.modal).toBe('true');
@@ -39,7 +40,7 @@ test.describe('G22 M1 — ARIA dialog semantiği', () => {
 
   test('detay penceresi: başlık kitap adını gösterir', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Etiketli Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     const d = await pencereDurumu(page, 'ortuDetay');
     expect(d.rol).toBe('dialog');
@@ -51,9 +52,9 @@ test.describe('G22 M1 — ARIA dialog semantiği', () => {
     await kameraTaklit(page);
     await tohumla(page, [sahteKitap({ ad: 'K', notlar: [
       { id: 'n1', tip: 'alinti', metin: 'Alıntı', tarih: '2026-08-01', sayfa: null, fikir: [] }] })]);
-    await page.goto('/');
+    await rafAc(page);
     // barkod
-    await page.click('[data-act="yeni"]');
+    await page.click('.fab[data-act="yeni"]');
     await page.click('[data-act="barkod-ac"]');
     let d = await pencereDurumu(page, 'barkodOrtu');
     expect(d.rol).toBe('dialog');
@@ -61,12 +62,15 @@ test.describe('G22 M1 — ARIA dialog semantiği', () => {
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
     // seri tarama
-    await page.click('[data-act="sekme"][data-v="yedek"]');
-    await page.click('[data-act="seri-ac"]');
+    await ayarlarAc(page);
+    await page.click('#ortuAyar [data-act="seri-ac"]');
     d = await pencereDurumu(page, 'seriOrtu');
     expect(d.rol).toBe('dialog');
     expect(d.baslikMetni).toContain('Seri tarama');
     await page.keyboard.press('Escape');
+    // Ayarlar bir PENCERE: sekmeye dönmeden önce kapatılmalı
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#ortuAyar')).not.toHaveClass(/acik/);
     // alıntı kartı
     await page.click('[data-act="sekme"][data-v="alinti"]');
     await page.click('#alintiIcerik [data-act="alinti-kart"]');
@@ -76,8 +80,8 @@ test.describe('G22 M1 — ARIA dialog semantiği', () => {
   });
 
   test('pencere açıkken arka plan inert + aria-hidden, AÇIK PENCERE değil', async ({ page }) => {
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     const d = await pencereDurumu(page, 'ortuForm');
     expect(d.arkaInert).toBe(true);
     expect(d.arkaGizli).toBe('true');
@@ -90,8 +94,8 @@ test.describe('G22 M1 — ARIA dialog semantiği', () => {
   });
 
   test('kapanınca inert/aria-hidden temizlenir', async ({ page }) => {
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     expect((await pencereDurumu(page, 'ortuForm')).arkaInert).toBe(true);
     await page.keyboard.press('Escape');
     const temiz = await page.evaluate(() => {
@@ -105,8 +109,8 @@ test.describe('G22 M1 — ARIA dialog semantiği', () => {
   });
 
   test('iç içe: üstteki açıkken ALTTAKİ gizli, üstteki kapanınca geri geliyor', async ({ page }) => {
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     await page.click('[data-act="barkod-ac"]');
     let kat = await page.evaluate(() => ({
       formGizli: document.getElementById('ortuForm').getAttribute('aria-hidden'),
@@ -132,7 +136,7 @@ test.describe('G22 M1 — ARIA dialog semantiği', () => {
 
   test('odak yönetimi ARIA ile tutarlı: odak açık pencerenin içinde', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Odak Kitabı' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     const durum = await page.evaluate(() => {
       const o = document.getElementById('ortuDetay');
@@ -163,7 +167,7 @@ function raporKitaplari() {
   ];
 }
 async function istAc(page) {
-  await page.goto('/');
+  await rafAc(page);
   await page.click('[data-act="sekme"][data-v="ist"]');
   await expect(page.locator('#istIcerik #rpKart')).toBeVisible();
 }

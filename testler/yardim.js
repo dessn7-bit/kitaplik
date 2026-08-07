@@ -41,6 +41,32 @@ async function tohumla(page, kitaplar, ekstra) {
   }, [JSON.stringify(v), ek]);
 }
 
+/* --- Sprint IA gezinme yardimcilari ---
+   Acilis artik Ana Sayfa. Kutuphane listesine bakan vakalar uygulamayi rafAc
+   ile acar: nav dugmesine BASAR (gercek kullanici yolu), ?sekme= derin baglanti
+   kestirmesini KULLANMAZ — kestirme kullanilsaydi urunun varsayilan sekme
+   davranisi hicbir vakada sinanmamis kalirdi. Ana Sayfa'yi SINAYAN vakalar
+   dogrudan page.goto('/') cagirir. */
+async function rafaGec(page) {
+  await page.click('nav [data-act="sekme"][data-v="raf"]');
+  await expect(page.locator('#panel-raf')).toHaveClass(/active/);
+}
+async function rafAc(page, yol) {
+  await page.goto(yol || '/');
+  await rafaGec(page);
+}
+/* Yenileme de Ana Sayfa'ya duser; listeye donen vakalar bunu kullanir. */
+async function rafYenile(page) {
+  await page.reload();
+  await rafaGec(page);
+}
+/* Eski "Yedek sekmesi" artik header'daki dis dugmesiyle acilan Ayarlar penceresi. */
+async function ayarlarAc(page) {
+  // header'a kapsanir: bos kutuphanede Ana Sayfa'da da bir ayar-ac dugmesi var
+  await page.click('header [data-act="ayar-ac"]');
+  await expect(page.locator('#ortuAyar')).toHaveClass(/acik/);
+}
+
 /* Ag taklidi. Ayar page.__agAyar uzerinden test sirasinde da degistirilebilir:
    { google: <GB yaniti|'hata'>, worker: <worker yaniti|'hata'>,
      olArama: <OL search yaniti|'hata'>, olKitap: <OL books yaniti|'hata'> }
@@ -156,4 +182,4 @@ const test = temel.extend({
 });
 
 module.exports = { test, expect, tohumla, sahteKitap, agTaklit, kameraTaklit, kameraYok,
-  onaylariKabulEt, bugunISO };
+  onaylariKabulEt, bugunISO, rafAc, rafaGec, rafYenile, ayarlarAc };

@@ -1,5 +1,5 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap, bugunISO } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, bugunISO, rafAc, rafYenile } = require('./yardim');
 
 /* G24 — "Ne okusam?" öneri motoru (oneri.js, on- ad alanı)
    Tamamen yerel, açıklanabilir skorlama. Ana havuz: okunacak + sahip.
@@ -35,7 +35,7 @@ test.describe('G24 öneri motoru', () => {
       okunacak({ ad: 'Mülksüzler', yazar: 'Ursula K. Le Guin' }),
       okunacak({ ad: 'Nötr Kitap', yazar: 'Bilinmeyen Yazar' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     expect(s.mod).toBe('skor');
     expect(s.ana[0].kitap.ad).toBe('Mülksüzler');
@@ -57,7 +57,7 @@ test.describe('G24 öneri motoru', () => {
       okunacak({ ad: 'Kötü Yazarın Yenisi', yazar: 'Kötü Yazar' }),
       ...notrler
     ]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     const adlar = s.ana.map(o => o.kitap.ad);
     expect(adlar.length).toBe(5);
@@ -73,7 +73,7 @@ test.describe('G24 öneri motoru', () => {
       okunacak({ ad: 'Alakasız 1', yazar: 'Başka Yazar 1' }),
       okunacak({ ad: 'Alakasız 2', yazar: 'Başka Yazar 2' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     const sira = s.ana.findIndex(o => o.kitap.ad === 'İkinci Vakıf');
     expect(sira).toBeGreaterThanOrEqual(0);
@@ -87,7 +87,7 @@ test.describe('G24 öneri motoru', () => {
   test('"Şimdi değil": kitap listeden çıkar, 30 gün sonra geri gelir', async ({ page }) => {
     const k = okunacak({ ad: 'Ertelenecek Kitap', yazar: 'Herhangi Yazar' });
     await tohumla(page, [...taban(), k, okunacak({ ad: 'Kalan Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     await panelAc(page);
     await page.click(`#oneriIcerik [data-act="on-ertele"][data-id="${k.id}"]`);
     await expect(page.locator('#toast')).toContainText('30 gün sonra');
@@ -114,9 +114,9 @@ test.describe('G24 öneri motoru', () => {
     });
     const k = okunacak({ ad: 'Ertelenmiş Senkronlu', ertelemeTarihi: '2026-08-01', g: 5 });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     expect(await page.evaluate(() => veri.kitaplar[0].ertelemeTarihi)).toBe('2026-08-01');
-    await page.reload();
+    await rafYenile(page);
     expect(await page.evaluate(() => veri.kitaplar[0].ertelemeTarihi)).toBe('2026-08-01'); // normalize elemedi
     const tamam = await page.evaluate(() => {
       window.__senkron.ayarKaydet({ oda: 'g24-test-odasi', cihaz: 'testcihaz', sonSenkron: null });
@@ -129,7 +129,7 @@ test.describe('G24 öneri motoru', () => {
   test('senkron göçü v4: sürüm atlaması kütüphaneyi yeniden damgalamaz', async ({ page }) => {
     const k = okunacak({ ad: 'Göç Kitabı v4', g: 9 });
     await tohumla(page, [k], { kk_senkron_anlik_v1: { s: 3, p: { eskiId: 'x-yz' } } });
-    await page.goto('/');
+    await rafAc(page);
     await page.evaluate(() => depoKaydet()); // damgala göç turunda koşsun
     expect(await page.evaluate(() => veri.kitaplar[0].g)).toBe(9); // damga korundu
     const anlik = await page.evaluate(() => JSON.parse(localStorage.getItem('kk_senkron_anlik_v1')));
@@ -150,7 +150,7 @@ test.describe('G24 öneri motoru', () => {
       okunacak({ ad: 'Şiir Kitabı', yazar: 'Şair', tur: 'Şiir' }),
       okunacak({ ad: 'Öykü Kitabı', yazar: 'Öykücü', tur: 'Öykü' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     expect(s.ana.length).toBe(5);
     const yazarSay = {}, turSay = {};
@@ -172,7 +172,7 @@ test.describe('G24 öneri motoru', () => {
       bitmis({ ad: 'Puanlı 2', yazar: 'X', puan: 9 }),
       yeni, eski
     ]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     expect(s.mod).toBe('az-veri');
     expect(s.ana[0].kitap.ad).toBe('En Eski Bekleyen'); // en uzun bekleyen başta
@@ -190,7 +190,7 @@ test.describe('G24 öneri motoru', () => {
       ...puanlar.map((p, i) => bitmis({ ad: 'Borges ' + i, yazar: 'Borges', puan: p })),
       okunacak({ ad: 'Alef', yazar: 'Borges' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     const oge = s.ana.find(o => o.kitap.ad === 'Alef');
     const beklenenOrt = (puanlar.reduce((a, b) => a + b, 0) / puanlar.length);
@@ -207,7 +207,7 @@ test.describe('G24 öneri motoru', () => {
       okunacak({ ad: 'Elimde Olan', yazar: 'Sıradan Yazar' }),
       sahteKitap({ ad: 'Dalgalar', yazar: 'Woolf', durum: 'okunacak', sahiplik: 'istek' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     expect(s.ana.some(o => o.kitap.ad === 'Dalgalar')).toBe(false);   // ana havuz yalnız sahip
     expect(s.istek.some(o => o.kitap.ad === 'Dalgalar')).toBe(true);  // ayrı bölümde
@@ -221,7 +221,7 @@ test.describe('G24 öneri motoru', () => {
   test('"Okumaya başla": durum okunuyor olur, okuma OTURUMU başlamaz', async ({ page }) => {
     const k = okunacak({ ad: 'Başlanacak Kitap' });
     await tohumla(page, [...taban(), k]);
-    await page.goto('/');
+    await rafAc(page);
     await panelAc(page);
     await page.click(`#oneriIcerik [data-act="on-basla"][data-id="${k.id}"]`);
     await expect(page.locator('#toast')).toContainText('İyi okumalar');
@@ -243,7 +243,7 @@ test.describe('G24 öneri motoru', () => {
       okunacak({ ad: 'Tek Kitaplık Türden', yazar: 'Y1', tur: 'Deneme' }),
       okunacak({ ad: 'Çift Kitaplık Türden', yazar: 'Y2', tur: 'Korku' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     const tek = s.ana.find(o => o.kitap.ad === 'Tek Kitaplık Türden');
     const cift = s.ana.find(o => o.kitap.ad === 'Çift Kitaplık Türden');
@@ -260,7 +260,7 @@ test.describe('G24 öneri motoru', () => {
       okunacak({ ad: 'Sayfasız Kitap', yazar: 'Aynı Yazar', sayfa: null }),
       okunacak({ ad: 'Uygun Uzunluk', yazar: 'Aynı Yazar', sayfa: 300 })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     const sayfasiz = s.ana.find(o => o.kitap.ad === 'Sayfasız Kitap');
     expect(sayfasiz).toBeTruthy();                          // listeden düşmedi
@@ -277,7 +277,7 @@ test.describe('G24 öneri motoru', () => {
       sahteKitap({ ad: 'Zaten Bitti', durum: 'bitti', puan: 10 }),
       okunacak({ ad: 'Tek Aday' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     const adlar = s.ana.map(o => o.kitap.ad);
     expect(adlar).toEqual(['Tek Aday']);
@@ -292,7 +292,7 @@ test.describe('G24 öneri motoru', () => {
         okumalar: [{ bas: '2026-01-01', bit: '2026-03-01', puan: 9, not: '' }] }),
       okunacak({ ad: 'Calvino Yenisi', yazar: 'Calvino' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     expect(s.mod).toBe('skor');                              // arşiv sayıldı, az-veriye düşmedi
     const oge = s.ana.find(o => o.kitap.ad === 'Calvino Yenisi');
@@ -308,7 +308,7 @@ test.describe('G24 öneri motoru', () => {
         okumalar: [{ bas: '2026-01-01', bit: '2026-02-01', puan: 8, not: '' }] }),
       okunacak({ ad: 'Dune Mesihi', yazar: 'Herbert', seri: 'Dune', ciltNo: 2 })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     const oge = s.ana.find(o => o.kitap.ad === 'Dune Mesihi');
     expect(oge.bilesenler.seri).toBe(35);
@@ -323,7 +323,7 @@ test.describe('G24 öneri motoru', () => {
       // düşük puanlı yazarın İSTEK kitabı: skoru ana minimumun ALTINDA → kelepçe testi
       sahteKitap({ ad: 'Kötü İstek', yazar: 'Kötü Yazar', durum: 'okunacak', sahiplik: 'istek' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     await panelAc(page);
     const genislikler = await page.evaluate(() =>
       [...document.querySelectorAll('#oneriIcerik .on-bar-ic')].map(b => parseFloat(b.style.width)));
@@ -342,7 +342,7 @@ test.describe('G24 öneri motoru', () => {
     // puan sorusu birincil bloktaki şerittir (d-puan). Bu vaka yeni akışı kilitler.
     const k = okunacak({ ad: 'Panelden Bitirilecek' });
     await tohumla(page, [...taban(), k]);
-    await page.goto('/');
+    await rafAc(page);
     await panelAc(page);
     // panel → detay → okumaya başla → bitir (detayda kal, puan şeridi)
     await page.click(`#oneriIcerik [data-act="on-detay"][data-id="${k.id}"]`);
@@ -372,8 +372,8 @@ test.describe('G24 öneri motoru', () => {
 
   test('zar düğmesi hâlâ çalışıyor (regresyon)', async ({ page }) => {
     await tohumla(page, [okunacak({ ad: 'Zarlık Kitap' })]);
-    await page.goto('/');
-    await page.click('[data-act="zar"]');
+    await rafAc(page);
+    await page.click('.search-row [data-act="zar"]');
     await expect(page.locator('#toast')).toContainText('Zar böyle dedi');
     await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
     await expect(page.locator('#detayIcerik')).toContainText('Zarlık Kitap');

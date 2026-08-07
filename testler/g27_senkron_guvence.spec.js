@@ -6,7 +6,8 @@
    Sahte sunucu ETag üretir; gerçek Firebase davranışı curl ile ayrıca kanıtlandı
    (bayat if-match → 412). TÜM seçiciler kapsamlı. */
 'use strict';
-const { test, expect, tohumla, sahteKitap, bugunISO } = require('./yardim');
+const { test, expect, tohumla, sahteKitap,
+  bugunISO, rafAc, rafYenile, ayarlarAc } = require('./yardim');
 
 function kitap(id, ek) {
   return Object.assign({ id, ad: 'Kitap ' + id, yazar: 'Yazar', g: 100, notlar: [] }, ek || {});
@@ -73,7 +74,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
       oda: { kitaplar: [kitap('uzak1')] },
       arayaGiren: kitap('araya1', { ad: 'Araya Giren Kitap', g: 500 }) });
     await tohumla(page, [sahteKitap({ ad: 'Yerel Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     expect(await baglanVeSenkronla(page)).toBe(true);
     expect(durum.get).toBe(2);                       // 412 sonrası taze GET
     expect(durum.put).toBe(2);
@@ -87,7 +88,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
   test('TOCTOU: 3 denemede de çakışma → temiz hata, sonsuz döngü yok, yerel veri dokunulmamış', async ({ page }) => {
     const durum = await odaKur(page, { c412: 99, oda: { kitaplar: [kitap('uzak1')] } });
     await tohumla(page, [sahteKitap({ ad: 'Yerel Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     expect(await baglanVeSenkronla(page, false)).toBe(false);   // sessiz değil: mesaj görünsün
     expect(durum.put).toBe(3);                       // tam 3 deneme, fazlası yok
     expect(durum.get).toBe(3);
@@ -99,7 +100,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
   test('normal akışta ek maliyet yok: tek GET + tek PUT, süre makul', async ({ page }) => {
     const durum = await odaKur(page, { oda: {} });
     await tohumla(page, [sahteKitap({ ad: 'Tek Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     const baslangic = Date.now();
     expect(await baglanVeSenkronla(page)).toBe(true);
     const ms = Date.now() - baslangic;
@@ -111,7 +112,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
   });
 
   test('gsG: 250→25 düzeltmesi senkronda KORUNUR; damga farklıysa yeni olan kazanır', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     // düzeltme: yerel (yeni gsG) 25 vs uzak (eski gsG) 250 — aynı döngüde bile 25 kalır
     const a = await birlestirilmis(page,
       kitap('x', { g: 200, durum: 'okunuyor', guncelSayfa: 25, gsG: 2000 }),
@@ -126,7 +127,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
   });
 
   test('gsG damgasız eski veride koşullu max aynen sürer; eşit damgada da', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const a = await birlestirilmis(page,
       kitap('x', { g: 200, durum: 'okunuyor', guncelSayfa: 80 }),
       kitap('x', { g: 100, durum: 'okunuyor', guncelSayfa: 120 }));
@@ -138,7 +139,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
   });
 
   test('gsG: yeniden okuma sıfırlaması damgayla da korunur (arşiv eşit olsa bile)', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const okuma = [{ bas: '2025-01-01', bit: '2025-02-01', puan: 8, not: '' }];
     const a = await birlestirilmis(page,
       kitap('x', { g: 200, durum: 'okunuyor', guncelSayfa: 0, gsG: 2000, okumalar: okuma }),
@@ -149,14 +150,14 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
   test('gsG kullanıcı girişinde basılır (ilerleme-kaydet + yeniden-oku) ve yenilemede korunur', async ({ page }) => {
     const k = sahteKitap({ ad: 'İlerleme Kitabı', durum: 'okunuyor', sayfa: 300, guncelSayfa: 10 });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.fill('#d-sayfa', '50');
     await page.click('[data-act="ilerleme-kaydet"]');
     const s1 = await page.evaluate(() => ({ gs: veri.kitaplar[0].guncelSayfa, d: veri.kitaplar[0].gsG }));
     expect(s1.gs).toBe(50);
     expect(s1.d).toBeGreaterThan(0);                 // damga basıldı
-    await page.reload();
+    await rafYenile(page);
     const s2 = await page.evaluate(() => veri.kitaplar[0].gsG);
     expect(s2).toBe(s1.d);                           // kitapNormalize elemedi
   });
@@ -164,7 +165,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
   test('göç: eski anlık görüntü (s:7) damga basmaz, yeni sürümle yazılır', async ({ page }) => {
     const k = sahteKitap({ ad: 'Göç Kitabı v8', g: 9 });
     await tohumla(page, [k], { kk_senkron_anlik_v1: { s: 7, p: { eskiId: 'x-yz' } } });
-    await page.goto('/');
+    await rafAc(page);
     await page.evaluate(() => depoKaydet());
     expect(await page.evaluate(() => veri.kitaplar[0].g)).toBe(9);
     const anlik = await page.evaluate(() => JSON.parse(localStorage.getItem('kk_senkron_anlik_v1')));
@@ -175,18 +176,21 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
     const durum = await odaKur(page, { oda: { kitaplar: [kitap('uzak1')] } }); // odada sema YOK (eski istemci ezmiş)
     await tohumla(page, [sahteKitap({ ad: 'Yerel Kitap' })],
       { kk_senkron_v1: { oda: 'g27-test-odasi', cihaz: 'testcihaz', sonSenkron: 1, sonSema: 2 } });
-    await page.goto('/');
-    // açılış sessiz senkronu ilk turu zaten atlamış olabilir — durumu sıfırdan ölç
-    const oncekiPut = durum.put;
+    await rafAc(page);
+    /* Atlama tek seferliktir (semaDusukGecis) ve açılıştaki sessiz senkron onu
+       zaten harcamış OLABİLİR. Kaçıncı turda olduğumuz PUT sayısından
+       çıkarılamaz — atlanan tur da PUT üretmez; eski `oncekiPut === 0` kabulünün
+       kusuru buydu ve sıralamayı zamanlamaya bırakıyordu. Turun KENDİ sonucuna
+       bakıyoruz; iki sıralamada da aynı değişmezler doğrulanır. */
     const ilk = await page.evaluate(() => window.__senkron.senkronEt(true));
-    if (oncekiPut === 0) {
-      expect(ilk).toBe(false);                        // atlanan tur: yazılmadı
-      expect(durum.put).toBe(0);
+    await ayarlarAc(page);
+    await expect(page.locator('#senkronDurum')).toContainText('eski sürümlü'); // uyarı yapışkan
+    if (!ilk) {
+      expect(durum.put).toBe(0);                      // atlanan tur: yazılmadı
+      // bir sonraki tur yazar ve şemayı geri koyar (kısır döngü yok)
+      expect(await page.evaluate(() => window.__senkron.senkronEt(true))).toBe(true);
     }
-    await page.click('[data-act="sekme"][data-v="yedek"]');
-    await expect(page.locator('#senkronDurum')).toContainText('eski sürümlü'); // uyarı görünür
-    // bir sonraki tur yazar ve şemayı geri koyar (kısır döngü yok)
-    expect(await page.evaluate(() => window.__senkron.senkronEt(true))).toBe(true);
+    expect(durum.put).toBeGreaterThan(0);
     const son = JSON.parse(durum.govdeler[durum.govdeler.length - 1]);
     expect(son.sema).toBe(await page.evaluate(() => window.__senkron.SEMA_SURUM));
   });
@@ -194,7 +198,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
   test('normal akışta sonSema ilerler ve PUT gövdesi güncel şemayı taşır', async ({ page }) => {
     const durum = await odaKur(page, { oda: {} });
     await tohumla(page, [sahteKitap({ ad: 'Tek Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     expect(await baglanVeSenkronla(page)).toBe(true);
     const govde = JSON.parse(durum.govdeler[0]);
     const sema = await page.evaluate(() => window.__senkron.SEMA_SURUM);
@@ -206,7 +210,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
   test('uçuş sırasındaki kayıt kaybolmaz: senkron bitince yeniden planlanır ve gönderilir', async ({ page }) => {
     const durum = await odaKur(page, { oda: {} });
     await tohumla(page, [sahteKitap({ ad: 'Tek Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     const sonuclar = await page.evaluate(() => {
       window.__senkron.ayarKaydet({ oda: 'g27-test-odasi', cihaz: 'testcihaz', sonSenkron: null });
       // ikinci çağrı uçuş sırasına denk gelir: eskiden sessizce yutulurdu
@@ -220,7 +224,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
     // PUT gecikmeli: uçuş penceresi içinde kullanıcı kaydı simüle edilir
     const durum = await odaKur(page, { oda: {}, putGecikme: 600 });
     await tohumla(page, [sahteKitap({ ad: 'Eski Ad' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.evaluate(() => {
       window.__senkron.ayarKaydet({ oda: 'g27-test-odasi', cihaz: 'testcihaz', sonSenkron: null });
       window.__ucus = window.__senkron.senkronEt(true);   // beklenmeden başlat
@@ -245,7 +249,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
     const durum = await odaKur(page, { oda: { kitaplar: [] } });   // odada sema yok
     await tohumla(page, [sahteKitap({ ad: 'Yerel Kitap' })],
       { kk_senkron_v1: { oda: 'g27-test-odasi', cihaz: 'testcihaz', sonSenkron: 1, sonSema: 2 } });
-    await page.goto('/');
+    await rafAc(page);
     // açılış sessiz senkronu atlama turudur; planla sayesinde ~4 sn içinde yazma turu KENDİLİĞİNDEN gelir
     await expect.poll(() => durum.put, { timeout: 8000 }).toBeGreaterThanOrEqual(1);
     const ilkGovde = JSON.parse(durum.govdeler[0]);
@@ -261,7 +265,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
 
   test('damga enflasyonu yok: kota turunda değişen kitap, sonraki sağlıklı kayıtta yeniden damgalanmaz', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Kitap A' }), sahteKitap({ ad: 'Kitap B' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.evaluate(() => depoKaydet());   // sağlıklı taban
     const sonuc = await page.evaluate(async () => {
       const asilSet = Storage.prototype.setItem;
@@ -284,7 +288,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
 
   test('depo yazımı başarısızsa parmak izi güncellenmez (kota uyumsuzluğu kapandı)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Kota Kitabı' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.evaluate(() => depoKaydet());   // sağlıklı taban: iz yazılsın
     const sonuc = await page.evaluate(() => {
       const izOnce = localStorage.getItem('kk_senkron_anlik_v1');

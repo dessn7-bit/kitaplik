@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('fs');
-const { test, expect, tohumla, sahteKitap, kameraTaklit, onaylariKabulEt } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, kameraTaklit,
+  onaylariKabulEt, rafAc, rafYenile, ayarlarAc } = require('./yardim');
 
 /* --------- M1: not kimliği (aynı metinli iki alıntı) --------- */
 const AYNI_METIN = 'Dil, varlığın evidir.';
@@ -17,7 +18,7 @@ test.describe('G13 M1 — not kimliği metin eşleştirmenin yerini aldı', () =
 
   test('birebir aynı metinli iki alıntı: etiket DOĞRU nota gider', async ({ page }) => {
     await tohumla(page, ikiAyniAlinti());
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     await expect(page.locator('#alintiIcerik .not-kart')).toHaveCount(2);
     // ikinci kartın (nB) giriş kutusuna yaz
@@ -36,7 +37,7 @@ test.describe('G13 M1 — not kimliği metin eşleştirmenin yerini aldı', () =
 
   test('aynı metinde kart DOĞRU kitap adıyla üretilir', async ({ page }) => {
     await tohumla(page, ikiAyniAlinti());
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     await page.locator('#alintiIcerik .not-kart[data-nid="nB"] [data-act="alinti-kart"]').click();
     await expect(page.locator('#kartOrtu')).toHaveClass(/acik/);
@@ -48,7 +49,7 @@ test.describe('G13 M1 — not kimliği metin eşleştirmenin yerini aldı', () =
   test('not silme doğru notu siler', async ({ page }) => {
     onaylariKabulEt(page);
     await tohumla(page, ikiAyniAlinti());
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart[data-id="kB"]');
     await page.click('#detayIcerik [data-act="not-sil"]');
     const kalan = await page.evaluate(() => ({
@@ -64,7 +65,7 @@ test.describe('G13 M2 — raf gruplama düğmesi', () => {
 
   test('ızgara kapalıyken düğme görünmez, açıkken görünür', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'K1', raf: 'üst raf' })]);
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#rafGrupBtn')).toBeHidden();
     await page.click('#izgaraBtn');
     await expect(page.locator('#rafGrupBtn')).toBeVisible();
@@ -78,7 +79,7 @@ test.describe('G13 M2 — raf gruplama düğmesi', () => {
       sahteKitap({ ad: 'Raflı İki', raf: 'üst raf' }),
       sahteKitap({ ad: 'Rafsız', raf: '' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#izgaraBtn');
     await expect(page.locator('#liste .raf-basligi')).toHaveCount(0);
     await page.click('#rafGrupBtn');
@@ -90,13 +91,13 @@ test.describe('G13 M2 — raf gruplama düğmesi', () => {
 
   test('tercih yeniden yüklemede korunur', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'K1', raf: 'üst raf' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#izgaraBtn');
     await page.click('#rafGrupBtn');
     await expect(page.locator('#liste .raf-basligi')).toHaveCount(1);
     expect(await page.evaluate(() =>
       JSON.parse(localStorage.getItem('kk_gorunum_v1')).rafGrupla)).toBe(true);
-    await page.reload();
+    await rafYenile(page);
     await expect(page.locator('#liste .raf-basligi')).toHaveCount(1);
     await expect(page.locator('#rafGrupBtn')).toBeVisible();
   });
@@ -108,10 +109,10 @@ const ISBN = '9780132350884';
 test.describe('G13 M3 — ISBN ağ hatası teşhisi', () => {
 
   test('iki kaynak da ağ hatası → ağ mesajı çıkar, "kayıtlarda yok" ÇIKMAZ', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = 'hata';
     page.__agAyar.olKitap = 'hata';
-    await page.click('[data-act="yeni"]');
+    await page.click('.fab[data-act="yeni"]');
     await page.click('[data-act="barkod-ac"]');
     await page.fill('#barkodElle', ISBN);
     await page.click('[data-act="barkod-elle"]');
@@ -120,8 +121,8 @@ test.describe('G13 M3 — ISBN ağ hatası teşhisi', () => {
   });
 
   test('iki kaynak da boş yanıt → "kayıtlarda yok" mesajı korunur', async ({ page }) => {
-    await page.goto('/');   // varsayılan taklit: boş ama başarılı yanıt
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);   // varsayılan taklit: boş ama başarılı yanıt
+    await page.click('.fab[data-act="yeni"]');
     await page.click('[data-act="barkod-ac"]');
     await page.fill('#barkodElle', ISBN);
     await page.click('[data-act="barkod-elle"]');
@@ -131,11 +132,11 @@ test.describe('G13 M3 — ISBN ağ hatası teşhisi', () => {
 
   test('seri taramada ağ hatası: panelde görünür uyarı, kitap eklenmez', async ({ page }) => {
     await kameraTaklit(page);
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = 'hata';
     page.__agAyar.olKitap = 'hata';
-    await page.click('[data-act="sekme"][data-v="yedek"]');
-    await page.click('[data-act="seri-ac"]');
+    await ayarlarAc(page);
+    await page.click('#ortuAyar [data-act="seri-ac"]');
     await expect(page.locator('#seriOrtu')).toHaveClass(/acik/);
     await page.evaluate(kod => { window.__sahteKod = kod; }, ISBN);
     await expect(page.locator('#seriNot')).toContainText('İnternete ulaşılamadı', { timeout: 10000 });
@@ -169,8 +170,8 @@ test.describe('G13 M4 — alıntı/not markdown dışa aktarımı', () => {
 
   test('üretilen md kitap başlıkları ve alıntı bloklarını içerir', async ({ page }) => {
     await tohumla(page, notluKitaplar());
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     const { indirme, icerik } = await mdIndir(page, 'md-hepsi');
     expect(indirme.suggestedFilename()).toMatch(/^kitaplik-alinti-not-.*\.md$/);
     expect(icerik).toContain('## Varlık ve Zaman — Martin Heidegger');
@@ -182,8 +183,8 @@ test.describe('G13 M4 — alıntı/not markdown dışa aktarımı', () => {
 
   test('sadece-alıntılar seçeneği notları dışlar', async ({ page }) => {
     await tohumla(page, notluKitaplar());
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     const { indirme, icerik } = await mdIndir(page, 'md-alinti');
     expect(indirme.suggestedFilename()).toMatch(/^kitaplik-alintilar-.*\.md$/);
     expect(icerik).toContain('Dil, varlığın evidir.');
@@ -192,8 +193,8 @@ test.describe('G13 M4 — alıntı/not markdown dışa aktarımı', () => {
 
   test('sayfa numarası ve fikir etiketleri çıkar, Türkçe bozulmaz', async ({ page }) => {
     await tohumla(page, notluKitaplar());
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     const { icerik } = await mdIndir(page, 'md-hepsi');
     expect(icerik).toContain('(sf. 42) #varlık #dil-felsefesi');   // boşluk tireye döndü
     expect(icerik).toContain('Ağaç Kitabı');
@@ -204,8 +205,8 @@ test.describe('G13 M4 — alıntı/not markdown dışa aktarımı', () => {
 
   test('hiç not yoksa anlamlı uyarı, dosya inmez', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Notsuz Kitap' })]);
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     let indi = false;
     page.on('download', () => { indi = true; });
     await page.click('[data-act="md-hepsi"]');
@@ -254,14 +255,14 @@ test.describe('G13 M5 — paylaş hedefinden alıntı kaydetme', () => {
     await page.click('[data-act="gelen-kaydet"]');
     await expect(page.locator('#ortuGelen')).not.toHaveClass(/acik/);
     expect(new URL(page.url()).search).toBe('');
-    await page.reload();
+    await rafYenile(page);
     await expect(page.locator('#ortuGelen')).not.toHaveClass(/acik/);
     expect(await page.evaluate(() => veri.kitaplar[0].notlar.length)).toBe(1); // mükerrer yok
   });
 
   test('parametresiz normal açılışta panel açılmaz', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Normal' })]);
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#ortuGelen')).not.toHaveClass(/acik/);
   });
 

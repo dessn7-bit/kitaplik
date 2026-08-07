@@ -1,5 +1,5 @@
 'use strict';
-const { test, expect } = require('./yardim');
+const { test, expect, rafAc } = require('./yardim');
 
 function gbYanit(kitaplar) {
   return {
@@ -14,8 +14,8 @@ function gbYanit(kitaplar) {
 }
 
 async function formAc(page) {
-  await page.goto('/');
-  await page.click('[data-act="yeni"]');
+  await rafAc(page);
+  await page.click('.fab[data-act="yeni"]');
 }
 
 test.describe('G2 arama ve kaynaklar', () => {

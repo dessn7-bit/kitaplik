@@ -1,5 +1,5 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap, bugunISO } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, bugunISO, rafAc, rafYenile } = require('./yardim');
 
 /* Bu yılın tarihleri — projeksiyon/hedef testleri yıl sınırında da tutsun */
 const YIL = new Date().getFullYear();
@@ -10,7 +10,7 @@ function bitmis(ad, tur, yazar, puan, sayfa) {
     durum: 'bitti', bitisTarihi: buYil(3, 15), guncelSayfa: sayfa || 300 });
 }
 async function istAc(page) {
-  await page.goto('/');
+  await rafAc(page);
   await page.click('[data-act="sekme"][data-v="ist"]');
   await expect(page.locator('#zkSarmal')).toBeVisible();
 }
@@ -223,9 +223,9 @@ test.describe('G14 M5 — sayfa bazlı yıllık hedef', () => {
     await tohumla(page, { kitaplar: [bitmis('K1', 'Roman', 'Y1', 8, 200)],
       hedef: {}, hedefG: {}, silinenler: {},
       hedefSayfa: { [YIL]: 12000 }, hedefSayfaG: { [YIL]: 4242 } });
-    await page.goto('/');
+    await rafAc(page);
     expect(await page.evaluate(y => veri.hedefSayfa[y], YIL)).toBe(12000);
-    await page.reload();
+    await rafYenile(page);
     const s = await page.evaluate(y => ({ h: veri.hedefSayfa[y], g: veri.hedefSayfaG[y] }), YIL);
     expect(s.h).toBe(12000);
     expect(s.g).toBe(4242);            // yeniden damgalanmadı
@@ -235,7 +235,7 @@ test.describe('G14 M5 — sayfa bazlı yıllık hedef', () => {
     await tohumla(page, { kitaplar: [bitmis('K1', 'Roman', 'Y1', 8, 200)],
       hedef: {}, hedefG: {}, silinenler: {},
       hedefSayfa: { [YIL]: 9000 }, hedefSayfaG: { [YIL]: 5000 } });
-    await page.goto('/');
+    await rafAc(page);
     const sonuc = await page.evaluate(y => {
       const yerelYeni = window.__senkron.birlestir(veri,
         { kitaplar: [], silinenler: {}, hedefSayfa: { [y]: 3000 }, hedefSayfaG: { [y]: 1000 } });

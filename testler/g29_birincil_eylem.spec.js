@@ -4,7 +4,8 @@
    katlanmış <details> içindekiler ve display:none olanlar sayılmaz.
    Eklentiler (oturum/katalog/senkron) kendi düğmelerini enjekte ettiği için
    sayım her vakada enjeksiyon OTURDUKTAN sonra yapılır. */
-const { test, expect, tohumla, sahteKitap, kameraTaklit } = require('./yardim');
+const { test, expect, tohumla, sahteKitap,
+  kameraTaklit, rafAc, ayarlarAc } = require('./yardim');
 
 function okunuyorK(ek) {
   return sahteKitap(Object.assign({ ad: 'Okunan', durum: 'okunuyor', sayfa: 300,
@@ -23,7 +24,7 @@ test.describe('G29 — detayda durum başına tek birincil', () => {
 
   test('okunacak: tek pirinç = "Okumaya başla" (çekirdek); oturum düğmesi çerçeveli', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Bekleyen' })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAcVeBekle(page);
     await expect(gorunurBrass(page, '#detayIcerik')).toHaveCount(1);
     await expect(gorunurBrass(page, '#detayIcerik').first()).toHaveAttribute('data-act', 'baslat');
@@ -32,7 +33,7 @@ test.describe('G29 — detayda durum başına tek birincil', () => {
 
   test('okunuyor (oturum yok): tek pirinç = oturum başlat; "Bitirdim" ve "Ekle" çerçeveli', async ({ page }) => {
     await tohumla(page, [okunuyorK()]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAcVeBekle(page);
     await expect(gorunurBrass(page, '#detayIcerik')).toHaveCount(1);
     await expect(gorunurBrass(page, '#detayIcerik').first()).toHaveAttribute('data-act', 'oturum-basla');
@@ -42,7 +43,7 @@ test.describe('G29 — detayda durum başına tek birincil', () => {
 
   test('okunuyor (oturum açık): tek pirinç = oturum Bitir', async ({ page }) => {
     await tohumla(page, [okunuyorK()]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAcVeBekle(page);
     await page.click('[data-act="oturum-basla"]');
     await expect(page.locator('#oturumBlok [data-act="oturum-bitir"]')).toBeVisible();
@@ -52,7 +53,7 @@ test.describe('G29 — detayda durum başına tek birincil', () => {
 
   test('yarim: tek pirinç = "Devam et"', async ({ page }) => {
     await tohumla(page, [okunuyorK({ durum: 'yarim', bitisTarihi: '2026-02-01' })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAcVeBekle(page);
     await expect(gorunurBrass(page, '#detayIcerik')).toHaveCount(1);
     await expect(gorunurBrass(page, '#detayIcerik').first()).toHaveAttribute('data-act', 'baslat');
@@ -61,7 +62,7 @@ test.describe('G29 — detayda durum başına tek birincil', () => {
   test('bitti: sıfır pirinç düğme — birincil, puan şeridinin kendisi', async ({ page }) => {
     await tohumla(page, [okunuyorK({ durum: 'bitti', guncelSayfa: 300,
       bitisTarihi: '2026-02-01', puan: null })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAcVeBekle(page);
     await expect(gorunurBrass(page, '#detayIcerik')).toHaveCount(0);
     await expect(page.locator('#dPuan')).toBeVisible();
@@ -70,7 +71,7 @@ test.describe('G29 — detayda durum başına tek birincil', () => {
   test('ödünçteki kitap: ödünç eylemleri katlı, pirinç sayısı değişmez', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Ödünçte', odunc:
       [{ kisi: 'Ali', verilis: '2026-08-01', donus: null }] })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAcVeBekle(page);
     await expect(gorunurBrass(page, '#detayIcerik')).toHaveCount(1);   // yalnız baslat
     await expect(page.locator('[data-act="odunc-al"]')).toBeHidden();  // katlı bölümde
@@ -81,8 +82,8 @@ test.describe('G29 — pencere başına tek birincil', () => {
 
   test('form: tek pirinç = Kaydet', async ({ page }) => {
     await tohumla(page, []);
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     await expect(page.locator('#ortuForm')).toHaveClass(/acik/);
     await expect(gorunurBrass(page, '#ortuForm')).toHaveCount(1);
     await expect(gorunurBrass(page, '#ortuForm').first()).toHaveAttribute('data-act', 'form-kaydet');
@@ -91,8 +92,8 @@ test.describe('G29 — pencere başına tek birincil', () => {
   test('barkod penceresi: tek pirinç = Bul', async ({ page }) => {
     await kameraTaklit(page);
     await tohumla(page, []);
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     await page.click('[data-act="barkod-ac"]');
     await expect(page.locator('#barkodOrtu')).toHaveClass(/acik/);
     await expect(gorunurBrass(page, '#barkodOrtu')).toHaveCount(1);
@@ -102,9 +103,9 @@ test.describe('G29 — pencere başına tek birincil', () => {
   test('seri tarama penceresi: tek pirinç = Taramayı bitir', async ({ page }) => {
     await kameraTaklit(page);
     await tohumla(page, []);
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
-    await page.click('[data-act="seri-ac"]');
+    await rafAc(page);
+    await ayarlarAc(page);
+    await page.click('#ortuAyar [data-act="seri-ac"]');
     await expect(page.locator('#seriOrtu')).toHaveClass(/acik/);
     await expect(gorunurBrass(page, '#seriOrtu')).toHaveCount(1);
     await expect(gorunurBrass(page, '#seriOrtu').first()).toHaveAttribute('data-act', 'seri-kapat');
@@ -112,7 +113,7 @@ test.describe('G29 — pencere başına tek birincil', () => {
 
   test('toplu işlem penceresi: tek pirinç = Uygula', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Toplu Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#secimBtn');
     await page.click('[data-act="toplu-tumu"]');
     await page.click('[data-act="toplu-durum"]');
@@ -132,7 +133,7 @@ test.describe('G29 — pencere başına tek birincil', () => {
   test('alıntı kartı önizleme: tek pirinç = PNG indir', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Alıntılı', notlar:
       [{ id: 'n1', tip: 'alinti', metin: 'Bir cümle.', tarih: '2026-08-01', sayfa: 5 }] })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click('#detayIcerik [data-act="alinti-kart"]');
     await expect(page.locator('#kartOrtu')).toHaveClass(/acik/);
@@ -142,7 +143,7 @@ test.describe('G29 — pencere başına tek birincil', () => {
 
   test('öneri paneli: .btn-brass yok (kendi on-btn sınıfları)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Önerilecek' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="on-ac"]');
     await expect(page.locator('#ortuOneri')).toHaveClass(/acik/);
     await expect(gorunurBrass(page, '#ortuOneri')).toHaveCount(0);
@@ -150,12 +151,12 @@ test.describe('G29 — pencere başına tek birincil', () => {
 
   test('yedek sekmesi: tek pirinç = JSON indir (md/CSV/seri/senkron çerçeveli)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Yedeklik' })]);
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     // eklenti kartları (senkron + katalog) enjekte olsun
     await expect(page.locator('#senkronKart')).toBeVisible();
     await expect(page.locator('#katalogKart')).toBeVisible();
-    await expect(gorunurBrass(page, '#panel-yedek')).toHaveCount(1);
-    await expect(gorunurBrass(page, '#panel-yedek').first()).toHaveAttribute('data-act', 'disa-aktar');
+    await expect(gorunurBrass(page, '#ortuAyar')).toHaveCount(1);
+    await expect(gorunurBrass(page, '#ortuAyar').first()).toHaveAttribute('data-act', 'disa-aktar');
   });
 });

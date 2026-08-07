@@ -1,5 +1,5 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, rafAc, rafYenile } = require('./yardim');
 
 /* G8 — saf birleştirme mantığı testleri (window.__senkron.birlestir).
    Ağ yok: birlestir yerel bir fonksiyondur, Firebase çağrısı yapılmaz. */
@@ -9,7 +9,7 @@ const kitap = (id, ad, g) => ({ id, ad, yazar: 'Y', g });
 test.describe('G8 senkron birleştirme', () => {
 
   test('iki tarafta farklı kitaplar → ikisi de kalır', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const sonuc = await page.evaluate(k => {
       const b = window.__senkron.birlestir(
         { kitaplar: [k.a], silinenler: {} },
@@ -20,7 +20,7 @@ test.describe('G8 senkron birleştirme', () => {
   });
 
   test('aynı id, yerel damga daha yeni → yerel kazanır', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const sonuc = await page.evaluate(k => {
       const b = window.__senkron.birlestir(
         { kitaplar: [k.yerel], silinenler: {} },
@@ -31,7 +31,7 @@ test.describe('G8 senkron birleştirme', () => {
   });
 
   test('aynı id, uzak damga daha yeni → uzak kazanır', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const sonuc = await page.evaluate(k => {
       const b = window.__senkron.birlestir(
         { kitaplar: [k.yerel], silinenler: {} },
@@ -42,7 +42,7 @@ test.describe('G8 senkron birleştirme', () => {
   });
 
   test('mezar taşı kitaptan yeniyse kitap silinir', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const sonuc = await page.evaluate(k => {
       const b = window.__senkron.birlestir(
         { kitaplar: [k.k], silinenler: {} },
@@ -53,7 +53,7 @@ test.describe('G8 senkron birleştirme', () => {
   });
 
   test('kitap mezar taşından yeniyse kitap geri gelir', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const sonuc = await page.evaluate(k => {
       const b = window.__senkron.birlestir(
         { kitaplar: [k.k], silinenler: {} },
@@ -64,7 +64,7 @@ test.describe('G8 senkron birleştirme', () => {
   });
 
   test('hedef birleştirme: damgası yeni olan kazanır', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const sonuc = await page.evaluate(() => {
       const yerelYeni = window.__senkron.birlestir(
         { kitaplar: [], silinenler: {}, hedef: { 2026: 30 }, hedefG: { 2026: 200 } },
@@ -78,7 +78,7 @@ test.describe('G8 senkron birleştirme', () => {
   });
 
   test('damgasız eski kayıt kaybolmaz', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const sonuc = await page.evaluate(() => {
       const b = window.__senkron.birlestir(
         { kitaplar: [{ id: 'eski', ad: 'Damgasız Kitap', yazar: 'Y' }], silinenler: {} },
@@ -95,8 +95,8 @@ test.describe('G8 senkron birleştirme', () => {
     // İkinci yüklemede (reload) parmak izi eşleşir → g DEĞİŞMEMELİ.
     // Normalize'daki `g: parseInt(k.g) || 0` yaması olmadan g her yüklemede tazelenirdi.
     await tohumla(page, [sahteKitap({ ad: 'Damgalı Kitap', g: 12345 })]);
-    await page.goto('/'); // 1. yükleme: anlık görüntü (kk_senkron_anlik_v1) yazılır
-    await page.reload();  // 2. yükleme: doğru anlık görüntü varken...
+    await rafAc(page); // 1. yükleme: anlık görüntü (kk_senkron_anlik_v1) yazılır
+    await rafYenile(page);  // 2. yükleme: doğru anlık görüntü varken...
     expect(await page.evaluate(() => veri.kitaplar[0].g)).toBe(12345); // ...g korunur
     // depodan okunan ham değer de korunmuş olmalı
     const depo = await page.evaluate(() => JSON.parse(localStorage.getItem('kk_kitaplik_v1')));

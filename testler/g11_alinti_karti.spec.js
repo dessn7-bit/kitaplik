@@ -1,5 +1,5 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, rafAc } = require('./yardim');
 
 function alintiliKitap(ek) {
   const notEk = (ek && ek.not) || {};
@@ -13,7 +13,7 @@ function alintiliKitap(ek) {
 
 async function kartAc(page, kitaplar) {
   await tohumla(page, kitaplar || [alintiliKitap()]);
-  await page.goto('/');
+  await rafAc(page);
   await page.click('[data-act="sekme"][data-v="alinti"]');
   await page.click('[data-act="alinti-kart"] >> nth=0');
   await expect(page.locator('#kartOrtu')).toHaveClass(/acik/);
@@ -40,7 +40,7 @@ test.describe('G11 alıntı kartı', () => {
 
   test('kitap detayındaki nottan önizleme açılır', async ({ page }) => {
     await tohumla(page, [alintiliKitap()]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
     await page.click('#detayIcerik [data-act="alinti-kart"]');
@@ -80,7 +80,7 @@ test.describe('G11 alıntı kartı', () => {
     const trMetin = 'Düşüncenin ışığında gölgeler çığlık atar; ölçüsüz öfke, şüphe ve umut iç içedir. ĞÜŞİÖÇ ğüşıöç.';
     await tohumla(page, [alintiliKitap({ not: { metin: trMetin } })]);
     page.on('pageerror', h => sayfaHatalari.push(String(h)));
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     await page.click('[data-act="alinti-kart"] >> nth=0');
     await expect(page.locator('#kartOrtu')).toHaveClass(/acik/);

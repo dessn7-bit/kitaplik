@@ -1,5 +1,5 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap, bugunISO } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, bugunISO, rafAc, ayarlarAc } = require('./yardim');
 
 /* --------- M1: Türkçe arama asimetrisi --------- */
 test.describe('G19 M1 — Türkçe katlama (arama ve kopya tespiti)', () => {
@@ -11,7 +11,7 @@ test.describe('G19 M1 — Türkçe katlama (arama ve kopya tespiti)', () => {
       sahteKitap({ ad: 'Şiir Üzerine Çalışmalar', yazar: 'Bir Şair' }),
       sahteKitap({ ad: 'Alakasız Bir Roman', yazar: 'Başka Yazar' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
   }
 
   test('ASCII "Insan" yazınca "İnsan Ne İle Yaşar" bulunur', async ({ page }) => {
@@ -53,8 +53,8 @@ test.describe('G19 M1 — Türkçe katlama (arama ve kopya tespiti)', () => {
 
   test('Goodreads aktarımında "Istanbul" ve "İstanbul" aynı kitap sayılır', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'İstanbul Hatırası', yazar: 'Ahmet Ümit' })]);
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     const csv = ['Title,Author,Exclusive Shelf,My Rating,Number of Pages',
       '"Istanbul Hatirasi","Ahmet Umit",read,4,500'].join('\n');
     await page.setInputFiles('#grDosya',
@@ -65,8 +65,8 @@ test.describe('G19 M1 — Türkçe katlama (arama ve kopya tespiti)', () => {
 
   test('JSON geri yüklemede de aynı kitap tekrar eklenmez', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'İnce Memed', yazar: 'Yaşar Kemal' })]);
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     const yedek = JSON.stringify({ surum: 2,
       kitaplar: [{ ad: 'Ince Memed', yazar: 'Yasar Kemal' }], hedef: {} });
     await page.setInputFiles('#iceDosya',
@@ -78,7 +78,7 @@ test.describe('G19 M1 — Türkçe katlama (arama ve kopya tespiti)', () => {
   test('etiket mükerrer kontrolü: i-ailesi katlanır, aksan katlanMAZ', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Etiketli', notlar: [
       { id: 'n1', tip: 'alinti', metin: 'metin', tarih: '2026-08-01', sayfa: null, fikir: [] }] })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     const ekle = async (etiket) => {
       await page.locator('#alintiIcerik .not-kart .fikir-giris').fill(etiket);
@@ -102,7 +102,7 @@ test.describe('G19 M2 — oturum açıkken tek sayfa girişi', () => {
 
   test('oturum yokken çekirdek kutusu görünür', async ({ page }) => {
     await tohumla(page, [okunan()]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await expect(page.locator('#detayIcerik #dIlerlemeKutu')).toBeVisible();
     await expect(page.locator('#detayIcerik #d-sayfa')).toBeVisible();
@@ -111,7 +111,7 @@ test.describe('G19 M2 — oturum açıkken tek sayfa girişi', () => {
 
   test('oturum açıkken çekirdek kutusu gizlenir, tek giriş kalır', async ({ page }) => {
     await tohumla(page, [okunan()]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click('#detayIcerik [data-act="oturum-basla"]');
     await expect(page.locator('#detayIcerik #oturumSayfa')).toBeVisible();
@@ -123,7 +123,7 @@ test.describe('G19 M2 — oturum açıkken tek sayfa girişi', () => {
 
   test('oturum bitince çekirdek kutusu geri gelir', async ({ page }) => {
     await tohumla(page, [okunan()]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click('#detayIcerik [data-act="oturum-basla"]');
     await expect(page.locator('#detayIcerik #dIlerlemeKutu')).toBeHidden();
@@ -135,7 +135,7 @@ test.describe('G19 M2 — oturum açıkken tek sayfa girişi', () => {
 
   test('her iki yol da guncelSayfa yazar', async ({ page }) => {
     await tohumla(page, [okunan()]);
-    await page.goto('/');
+    await rafAc(page);
     // 1) çekirdek yolu
     await page.click('#liste .kart');
     await page.fill('#detayIcerik #d-sayfa', '75');

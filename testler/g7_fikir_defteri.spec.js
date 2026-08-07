@@ -1,5 +1,5 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, rafAc, rafYenile } = require('./yardim');
 
 function alintiliKitap(ad, metin, fikir) {
   return sahteKitap({ ad, notlar: [{ id: 'n' + Math.random().toString(36).slice(2, 8),
@@ -15,7 +15,7 @@ test.describe('G7 fikir defteri', () => {
 
   test('alıntıya etiket eklenir, nota işlenir', async ({ page }) => {
     await tohumla(page, [alintiliKitap('Kitap Bir', 'Varlık zamandır.')]);
-    await page.goto('/');
+    await rafAc(page);
     await alintiSekmesi(page);
     await expect(page.locator('#alintiIcerik .fikir-giris')).toHaveCount(1);
     await page.fill('#alintiIcerik .fikir-giris', 'varoluş');
@@ -29,7 +29,7 @@ test.describe('G7 fikir defteri', () => {
       alintiliKitap('Kitap Bir', 'İlk alıntı metni.', ['ortak-fikir']),
       alintiliKitap('Kitap İki', 'İkinci alıntı metni.', ['ortak-fikir'])
     ]);
-    await page.goto('/');
+    await rafAc(page);
     await alintiSekmesi(page);
     const cip = page.locator('#fikirBulut [data-act="fikir-filtre"][data-v="ortak-fikir"]');
     await expect(cip).toBeVisible();
@@ -38,7 +38,7 @@ test.describe('G7 fikir defteri', () => {
 
   test('"#" ön eki temizlenir, TR büyük/küçük mükerrer engellenir', async ({ page }) => {
     await tohumla(page, [alintiliKitap('Kitap Bir', 'Metin.')]);
-    await page.goto('/');
+    await rafAc(page);
     await alintiSekmesi(page);
     await page.fill('#alintiIcerik .fikir-giris', '#Varlık');
     await page.click('[data-act="fikir-ekle"]');
@@ -55,7 +55,7 @@ test.describe('G7 fikir defteri', () => {
       alintiliKitap('Kitap Bir', 'Etiketli alıntı.', ['felsefe']),
       alintiliKitap('Kitap İki', 'Etiketsiz alıntı.')
     ]);
-    await page.goto('/');
+    await rafAc(page);
     await alintiSekmesi(page);
     await page.click('[data-act="fikir-filtre"][data-v="felsefe"]');
     await expect(page.locator('#fikirBaslik')).toContainText('Fikir: #felsefe');
@@ -68,7 +68,7 @@ test.describe('G7 fikir defteri', () => {
       alintiliKitap('Kitap Bir', 'Etiketli alıntı.', ['felsefe']),
       alintiliKitap('Kitap İki', 'Etiketsiz alıntı.')
     ]);
-    await page.goto('/');
+    await rafAc(page);
     await alintiSekmesi(page);
     await page.click('[data-act="fikir-filtre"][data-v="felsefe"]');
     await expect(page.locator('#alintiIcerik .not-kart:visible')).toHaveCount(1);
@@ -81,7 +81,7 @@ test.describe('G7 fikir defteri', () => {
       alintiliKitap('Kitap Bir', 'Birinci.', ['gecici']),
       alintiliKitap('Kitap İki', 'İkinci.', ['gecici'])
     ]);
-    await page.goto('/');
+    await rafAc(page);
     await alintiSekmesi(page);
     await expect(page.locator('[data-act="fikir-filtre"][data-v="gecici"]')).toContainText('2/2');
     await page.click('[data-act="fikir-sil"] >> nth=0');
@@ -94,12 +94,12 @@ test.describe('G7 fikir defteri', () => {
 
   test('sayfa yenilendiğinde etiketler korunur', async ({ page }) => {
     await tohumla(page, [alintiliKitap('Kalıcı Kitap', 'Kalıcı metin.')]);
-    await page.goto('/');
+    await rafAc(page);
     await alintiSekmesi(page);
     await page.fill('#alintiIcerik .fikir-giris', 'kalıcı-fikir');
     await page.click('[data-act="fikir-ekle"]');
     await expect.poll(() => page.evaluate(() => veri.kitaplar[0].notlar[0].fikir.length)).toBe(1);
-    await page.reload();
+    await rafYenile(page);
     // kitapNormalize fikir alanını elememeli (index.html'deki koruma yaması)
     expect(await page.evaluate(() => veri.kitaplar[0].notlar[0].fikir)).toEqual(['kalıcı-fikir']);
   });

@@ -1,5 +1,6 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap, kameraTaklit } = require('./yardim');
+const { test, expect, tohumla, sahteKitap,
+  kameraTaklit, rafAc, rafYenile, ayarlarAc } = require('./yardim');
 
 /* ---- kontrast yardımcıları (WCAG 2.x nispi parlaklık) ---- */
 function rgbCoz(s) {
@@ -35,7 +36,7 @@ test.describe('G21 M1 — karanlık tema', () => {
 
   test('varsayılan sistem: koyu tercih eden ortamda karanlık açılır', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
-    await page.goto('/');
+    await rafAc(page);
     const d = await degiskenler(page);
     expect(d.tema).toBe('karanlik');
     expect(parlaklik(d.bg)).toBeLessThan(0.1);          // zemin gerçekten koyu
@@ -44,7 +45,7 @@ test.describe('G21 M1 — karanlık tema', () => {
 
   test('sistem açıkken açık tema kullanılır', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
-    await page.goto('/');
+    await rafAc(page);
     const d = await degiskenler(page);
     expect(d.tema).toBe('acik');
     expect(parlaklik(d.bg)).toBeGreaterThan(0.7);
@@ -53,21 +54,21 @@ test.describe('G21 M1 — karanlık tema', () => {
   test('elle karanlık seçimi kaydedilir ve yenilemede korunur', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await tohumla(page, [sahteKitap({ ad: 'K' })]);
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     await page.click('#tmSecim [data-act="tm-tema"][data-v="karanlik"]');
     await expect(page.locator('#toast')).toContainText('Karanlık tema');
     expect((await degiskenler(page)).tema).toBe('karanlik');
-    await page.reload();
+    await rafYenile(page);
     expect((await degiskenler(page)).tema).toBe('karanlik');   // sistem açık olsa da karanlık
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await ayarlarAc(page);
     await expect(page.locator('#tmSecim [data-v="karanlik"]')).toHaveClass(/tm-secili/);
   });
 
   test('sisteme dönünce tercih silinir', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     await page.click('#tmSecim [data-act="tm-tema"][data-v="karanlik"]');
     await page.click('#tmSecim [data-act="tm-tema"][data-v="sistem"]');
     expect((await degiskenler(page)).tema).toBe('acik');
@@ -76,16 +77,16 @@ test.describe('G21 M1 — karanlık tema', () => {
 
   test('theme-color meta etiketi temayı izler', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
-    await page.goto('/');
+    await rafAc(page);
     expect(await page.getAttribute('#temaRengi', 'content')).toBe('#171512');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await ayarlarAc(page);
     await page.click('#tmSecim [data-act="tm-tema"][data-v="acik"]');
     expect(await page.getAttribute('#temaRengi', 'content')).toBe('#F5EFE3');
   });
 
   test('karanlık temada metin kontrastları AA (4.5) eşiğini geçer', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
-    await page.goto('/');
+    await rafAc(page);
     const d = await degiskenler(page);
     const zeminler = [['bg', d.bg], ['surface', d.surface], ['surface2', d.surface2]];
     for (const metin of ['paper', 'muted', 'muted2', 'brass', 'ok', 'drop', 'mavi']) {
@@ -102,7 +103,7 @@ test.describe('G21 M1 — karanlık tema', () => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await tohumla(page, [sahteKitap({ ad: 'Karanlık Kitap', yazar: 'Y', durum: 'okunuyor',
       sayfa: 200, guncelSayfa: 50 })]);
-    await page.goto('/');
+    await rafAc(page);
     const olcum = await page.evaluate(() => {
       const kart = document.querySelector('#liste .kart');
       const baslik = kart.querySelector('.kart-baslik');
@@ -136,7 +137,7 @@ test.describe('G21 M1 — karanlık tema', () => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await tohumla(page, [sahteKitap({ id: 'kk', ad: 'Kartlık Kitap', yazar: 'Y', notlar: [
       { id: 'n1', tip: 'alinti', metin: 'Paylaşılacak alıntı.', tarih: '2026-08-01', sayfa: 10, fikir: [] }] })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     await page.click('#alintiIcerik [data-act="alinti-kart"]');
     await expect(page.locator('#kartOrtu')).toHaveClass(/acik/);
@@ -155,7 +156,7 @@ test.describe('G21 M2 — açık tema kontrast düzeltmesi', () => {
 
   test('açık temada tüm metin renkleri AA eşiğini geçer', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
-    await page.goto('/');
+    await rafAc(page);
     const d = await degiskenler(page);
     for (const metin of ['paper', 'muted', 'muted2', 'brass', 'ok', 'drop', 'mavi']) {
       for (const [zad, z] of [['bg', d.bg], ['surface', d.surface], ['surface2', d.surface2]]) {
@@ -167,7 +168,7 @@ test.describe('G21 M2 — açık tema kontrast düzeltmesi', () => {
 
   test('ikincil metin (muted2) artık 4.5 üstünde — eski değer 2.88 idi', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
-    await page.goto('/');
+    await rafAc(page);
     const d = await degiskenler(page);
     expect(kontrast(d.muted2, d.surface)).toBeGreaterThanOrEqual(4.5);
     expect(kontrast(d.muted2, d.surface2)).toBeGreaterThanOrEqual(4.5);
@@ -183,7 +184,7 @@ test.describe('G21 M3 — geniş ekran düzeni', () => {
   test('1200px: içerik maksimum genişliği aşmıyor ve ortalanmış', async ({ page }) => {
     await page.setViewportSize({ width: 1200, height: 900 });
     await tohumla(page, besKitap());
-    await page.goto('/');
+    await rafAc(page);
     const k = await page.locator('#liste').boundingBox();
     expect(k.width).toBeLessThanOrEqual(1100);
     const bosluk = { sol: k.x, sag: 1200 - (k.x + k.width) };
@@ -193,7 +194,7 @@ test.describe('G21 M3 — geniş ekran düzeni', () => {
   test('800px: liste iki sütun', async ({ page }) => {
     await page.setViewportSize({ width: 800, height: 900 });
     await tohumla(page, besKitap());
-    await page.goto('/');
+    await rafAc(page);
     const kolon = await page.evaluate(() =>
       getComputedStyle(document.getElementById('liste')).gridTemplateColumns.split(' ').length);
     expect(kolon).toBe(2);
@@ -202,7 +203,7 @@ test.describe('G21 M3 — geniş ekran düzeni', () => {
   test('390px: tek sütun, mobil düzen bozulmadı', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 780 });
     await tohumla(page, besKitap());
-    await page.goto('/');
+    await rafAc(page);
     const d = await page.evaluate(() => {
       const l = getComputedStyle(document.getElementById('liste'));
       return { display: l.display, kolon: l.gridTemplateColumns };
@@ -213,8 +214,8 @@ test.describe('G21 M3 — geniş ekran düzeni', () => {
 
   test('modal geniş ekranda ortalanmış ve sınırlı genişlikte', async ({ page }) => {
     await page.setViewportSize({ width: 1200, height: 900 });
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     const s = await page.locator('#ortuForm .sheet').boundingBox();
     expect(s.width).toBeLessThanOrEqual(560);
     expect(Math.abs((s.x + s.width / 2) - 600)).toBeLessThan(20);   // yatayda ortalı
@@ -226,8 +227,8 @@ test.describe('G21 M3 — geniş ekran düzeni', () => {
 test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
 
   test('Esc: form penceresini kapatır', async ({ page }) => {
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     await expect(page.locator('#ortuForm')).toHaveClass(/acik/);
     await page.keyboard.press('Escape');
     await expect(page.locator('#ortuForm')).not.toHaveClass(/acik/);
@@ -235,7 +236,7 @@ test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
 
   test('Esc: detay penceresini kapatır', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Detaylı' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
     await page.keyboard.press('Escape');
@@ -243,8 +244,8 @@ test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
   });
 
   test('Esc: barkod penceresini kapatır', async ({ page }) => {
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     await page.click('[data-act="barkod-ac"]');
     await expect(page.locator('#barkodOrtu')).toHaveClass(/acik/);
     await page.keyboard.press('Escape');
@@ -254,9 +255,9 @@ test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
 
   test('Esc: seri tarama penceresini kapatır ve kamera akışı durur', async ({ page }) => {
     await kameraTaklit(page);
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
-    await page.click('[data-act="seri-ac"]');
+    await rafAc(page);
+    await ayarlarAc(page);
+    await page.click('#ortuAyar [data-act="seri-ac"]');
     await expect(page.locator('#seriOrtu')).toHaveClass(/acik/);
     await expect.poll(() => page.evaluate(() => window.__akisIstendi)).toBe(true);
     await page.keyboard.press('Escape');
@@ -276,7 +277,7 @@ test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
   test('Esc: alıntı kartı önizlemesini kapatır', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Kartlı', notlar: [
       { id: 'n1', tip: 'alinti', metin: 'Alıntı.', tarih: '2026-08-01', sayfa: null, fikir: [] }] })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     await page.click('#alintiIcerik [data-act="alinti-kart"]');
     await expect(page.locator('#kartOrtu')).toHaveClass(/acik/);
@@ -286,7 +287,7 @@ test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
 
   test('Esc: toplu işlem penceresini kapatır, sonra seçim modundan çıkar', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'K1' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#secimBtn');
     await page.click('[data-act="toplu-tumu"]');
     await page.click('[data-act="toplu-raf"]');
@@ -300,7 +301,7 @@ test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
 
   test('iç içe pencerede EN ÜSTTEKİ kapanır', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'İç içe' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');          // detay
     await page.click('#dDigerKatla summary');  // Düzenle nadir bölümde katlı
     await page.click('[data-act="duzenle"]');  // form (detay kapanır)
@@ -314,7 +315,7 @@ test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
   });
 
   test('odak pencere içinde kalır ve kapanınca geri döner', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const fab = page.locator('.fab');
     await fab.focus();
     await page.keyboard.press('Enter');                 // form açıldı
@@ -332,7 +333,7 @@ test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
   });
 
   test('toast ekran okuyucuya duyurulur (aria-live)', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#toast')).toHaveAttribute('aria-live', 'polite');
     await expect(page.locator('#toast')).toHaveAttribute('role', 'status');
   });
@@ -340,8 +341,11 @@ test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
   test('ikon-only düğmelerin erişilebilir adı var', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'K', notlar: [
       { id: 'n1', tip: 'not', metin: 'Not', tarih: '2026-08-01', sayfa: null, fikir: [] }] })]);
-    await page.goto('/');
-    await expect(page.locator('.zar-btn')).toHaveAttribute('aria-label', /rastgele/i);
+    await rafAc(page);
+    // Ana Sayfa'da ikinci bir zar var (aynı eylem, aynı ad); ikisi de adlandırılmış olmalı
+    await expect(page.locator('.zar-btn')).toHaveCount(2);
+    await expect(page.locator('.search-row .zar-btn')).toHaveAttribute('aria-label', /rastgele/i);
+    await expect(page.locator('#asSiradaki .zar-btn')).toHaveAttribute('aria-label', /rastgele/i);
     await expect(page.locator('.fab')).toHaveAttribute('aria-label', /ekle/i);
     await page.click('#liste .kart');
     await expect(page.locator('#detayIcerik .not-sil')).toHaveAttribute('aria-label', /sil/i);
@@ -351,7 +355,7 @@ test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
   test('dokunma hedefleri: not-sil ve fikir × en az 40px', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'K', notlar: [
       { id: 'n1', tip: 'alinti', metin: 'Alıntı', tarih: '2026-08-01', sayfa: null, fikir: ['etiket'] }] })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     const nk = await page.locator('#detayIcerik .not-sil').boundingBox();
     expect(nk.width).toBeGreaterThanOrEqual(40);
@@ -375,7 +379,7 @@ test.describe('G21 M4 — klavye ve erişilebilirlik', () => {
   test('fikir etiketi silme GERİ ALINABİLİR', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'K', notlar: [
       { id: 'n1', tip: 'alinti', metin: 'Alıntı', tarih: '2026-08-01', sayfa: null, fikir: ['kıymetli'] }] })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     await page.click('#alintiIcerik [data-act="fikir-sil"]');
     expect(await page.evaluate(() => veri.kitaplar[0].notlar[0].fikir)).toEqual([]);

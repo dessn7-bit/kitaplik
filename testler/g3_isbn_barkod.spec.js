@@ -1,5 +1,5 @@
 'use strict';
-const { test, expect, kameraTaklit, kameraYok } = require('./yardim');
+const { test, expect, kameraTaklit, kameraYok, rafAc } = require('./yardim');
 
 const GECERLI_13 = '9780132350884';
 const GECERLI_10 = '0132350882';
@@ -15,7 +15,7 @@ function gbIsbnYanit(kitap) {
 test.describe('G3 ISBN / barkod', () => {
 
   test('ISBN13 ve ISBN10 doğrulama: geçerli kabul, bozuk sağlama red', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const sonuc = await page.evaluate(([g13, g10]) => ({
       g13: window.__barkod.isbnGecerli(g13),
       g10: window.__barkod.isbnGecerli(g10),
@@ -34,10 +34,10 @@ test.describe('G3 ISBN / barkod', () => {
 
   test('elle ISBN girişi formu doldurur', async ({ page }) => {
     await kameraYok(page); // kamera yolunu devre dışı bırak, elle giriş yeterli
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = gbIsbnYanit({ ad: 'Clean Code', yazar: 'Robert C. Martin',
       yayinevi: 'Prentice Hall', yil: 2008, sayfa: 464 });
-    await page.click('[data-act="yeni"]');
+    await page.click('.fab[data-act="yeni"]');
     await page.click('[data-act="barkod-ac"]');
     await page.fill('#barkodElle', GECERLI_13);
     await page.click('[data-act="barkod-elle"]');
@@ -49,12 +49,12 @@ test.describe('G3 ISBN / barkod', () => {
 
   test('Google + OpenLibrary birleşimi: eksik yayınevi OL\'den tamamlanır', async ({ page }) => {
     await kameraYok(page);
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = gbIsbnYanit({ ad: 'Yayınevsiz Kitap', yazar: 'Bir Yazar', yayinevi: '' });
     page.__agAyar.olKitap = { ['ISBN:' + GECERLI_13]: {
       title: 'Yayınevsiz Kitap', authors: [{ name: 'Bir Yazar' }],
       publishers: [{ name: 'Can Yayınları' }], number_of_pages: 320, publish_date: '2001' } };
-    await page.click('[data-act="yeni"]');
+    await page.click('.fab[data-act="yeni"]');
     await page.click('[data-act="barkod-ac"]');
     await page.fill('#barkodElle', GECERLI_13);
     await page.click('[data-act="barkod-elle"]');
@@ -64,8 +64,8 @@ test.describe('G3 ISBN / barkod', () => {
 
   test('bulunamayan ISBN\'de uyarı çıkar, form bozulmaz', async ({ page }) => {
     await kameraYok(page);
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     await page.fill('#f-ad', 'Elle Yazılmış Ad');
     await page.click('[data-act="barkod-ac"]');
     await page.fill('#barkodElle', BILINMEYEN_13);
@@ -77,9 +77,9 @@ test.describe('G3 ISBN / barkod', () => {
 
   test('kamera desteği yoksa mesaj çıkar ve elle giriş çalışır', async ({ page }) => {
     await kameraYok(page);
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = gbIsbnYanit({ ad: 'Desteksiz Cihaz Kitabı', yazar: 'Y' });
-    await page.click('[data-act="yeni"]');
+    await page.click('.fab[data-act="yeni"]');
     await page.click('[data-act="barkod-ac"]');
     await expect(page.locator('#barkodNot')).toContainText('desteklemiyor');
     await page.fill('#barkodElle', GECERLI_13);
@@ -89,9 +89,9 @@ test.describe('G3 ISBN / barkod', () => {
 
   test('barkod okununca form dolar ve kamera akışı kapatılır', async ({ page }) => {
     await kameraTaklit(page);
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = gbIsbnYanit({ ad: 'Kameradan Gelen', yazar: 'Tarayıcı Yazar' });
-    await page.click('[data-act="yeni"]');
+    await page.click('.fab[data-act="yeni"]');
     await page.click('[data-act="barkod-ac"]');
     await expect.poll(() => page.evaluate(() => window.__akisIstendi)).toBe(true);
     await page.evaluate(kod => { window.__sahteKod = kod; }, GECERLI_13);

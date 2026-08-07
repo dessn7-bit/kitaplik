@@ -1,5 +1,6 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap, onaylariKabulEt } = require('./yardim');
+const { test, expect, tohumla, sahteKitap,
+  onaylariKabulEt, rafAc, rafYenile, ayarlarAc } = require('./yardim');
 
 /* G12 — keşif raporunun kritik veri/güvenlik maddeleri (M1-M5).
    Her vaka, düzeltme geri alındığında KIRMIZI olacak şekilde yazıldı. */
@@ -20,7 +21,7 @@ test.describe('G12 M1 — ızgara kapak yedeği (XSS)', () => {
     await kapaklariBoz(page);
     await izgaraAc(page);
     await tohumla(page, [sahteKitap({ ad: kotuAd, kapak: 'https://ornek.gecersiz/k.jpg' })]);
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#liste')).toHaveClass(/izgara/);
     await expect(page.locator('#liste .iz-yedek')).toHaveCount(1, { timeout: 10000 });
     expect(await page.evaluate(() => window.__X)).toBeUndefined();
@@ -34,7 +35,7 @@ test.describe('G12 M1 — ızgara kapak yedeği (XSS)', () => {
     await kapaklariBoz(page);
     await izgaraAc(page);
     await tohumla(page, [sahteKitap({ ad: "Istanbul'un Fethi", kapak: 'https://ornek.gecersiz/k.jpg' })]);
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#liste .iz-yedek')).toHaveCount(1, { timeout: 10000 });
     await expect(page.locator('#liste .iz-yedek')).toHaveText("Istanbul'un Fethi");
     await expect(page.locator('#liste img.iz-kapak')).toHaveCount(0); // kırık resim kalmadı
@@ -44,7 +45,7 @@ test.describe('G12 M1 — ızgara kapak yedeği (XSS)', () => {
   test('sağlam kapakta davranış değişmez: resim kalır, yedek çizilmez', async ({ page }) => {
     await izgaraAc(page);
     await tohumla(page, [sahteKitap({ ad: 'Kapaklı Kitap', kapak: 'https://books.google.com/x.png' })]);
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#liste img.iz-kapak')).toHaveCount(1);
     await page.waitForTimeout(300);
     await expect(page.locator('#liste .iz-yedek')).toHaveCount(0);
@@ -57,12 +58,12 @@ test.describe('G12 M2 — mezar taşları yenilemede korunur', () => {
     onaylariKabulEt(page);
     const k = sahteKitap({ ad: 'Silinecek Kitap', g: 1000 });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click('#dDigerKatla summary');  // Sil nadir bölümde katlı
     await page.click('[data-act="kitap-sil"]');
     await expect(page.locator('#toast')).toContainText('Kitap silindi');
-    await page.reload();
+    await rafYenile(page);
     const mezarlar = await page.evaluate(() => Object.keys(veri.silinenler || {}));
     expect(mezarlar).toContain(k.id);
   });
@@ -71,12 +72,12 @@ test.describe('G12 M2 — mezar taşları yenilemede korunur', () => {
     onaylariKabulEt(page);
     const k = sahteKitap({ ad: 'Dirilmeyecek Kitap', g: 1000 });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click('#dDigerKatla summary');  // Sil nadir bölümde katlı
     await page.click('[data-act="kitap-sil"]');
     await expect(page.locator('#toast')).toContainText('Kitap silindi');
-    await page.reload();
+    await rafYenile(page);
     const adlar = await page.evaluate(kid => window.__senkron.birlestir(veri,
       { kitaplar: [{ id: kid, ad: 'Dirilmeyecek Kitap', yazar: 'Y', g: 1000 }], silinenler: {} }
     ).kitaplar.map(x => x.ad), k.id);
@@ -86,16 +87,16 @@ test.describe('G12 M2 — mezar taşları yenilemede korunur', () => {
   test('hedefG yenilemede korunur, yeniden damgalanmaz', async ({ page }) => {
     await tohumla(page, { kitaplar: [sahteKitap({ ad: 'Hedefli', g: 500 })],
       hedef: { 2026: 30 }, hedefG: { 2026: 4242 }, silinenler: {} });
-    await page.goto('/');
+    await rafAc(page);
     expect(await page.evaluate(() => veri.hedefG['2026'])).toBe(4242);
-    await page.reload();
+    await rafYenile(page);
     expect(await page.evaluate(() => veri.hedefG['2026'])).toBe(4242);
   });
 
   test('bozuk damga haritası uygulamayı düşürmez (tip doğrulaması)', async ({ page }) => {
     await tohumla(page, { kitaplar: [sahteKitap({ ad: 'Sağlam' })],
       hedef: {}, hedefG: 'bozuk', silinenler: { iyi: 123, kotu: 'metin', sifir: 0 } });
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#liste .kart')).toHaveCount(1);
     const s = await page.evaluate(() => ({ hedefG: veri.hedefG, silinenler: veri.silinenler }));
     expect(s.hedefG).toEqual({});
@@ -107,7 +108,7 @@ test.describe('G12 M3 — detaydan Düzenle formu görünür', () => {
 
   test('Düzenle formu detayın üstünde açılır ve doldurulabilir', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Düzenlenecek', yazar: 'Yazar A' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click('#dDigerKatla summary');  // Düzenle nadir bölümde katlı
     await page.click('[data-act="duzenle"]');
@@ -125,8 +126,8 @@ test.describe('G12 M4 — yedek geri yüklemede id çakışması', () => {
 
   test('adı değiştirilmiş kitabın eski yedeği: güncel kayıt KAYBOLMAZ', async ({ page }) => {
     await tohumla(page, [sahteKitap({ id: 'ABC', ad: 'Yeni Ad', yazar: 'Y', g: 2000 })]);
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     const yedek = JSON.stringify({ surum: 2,
       kitaplar: [{ id: 'ABC', ad: 'Eski Ad', yazar: 'Y', g: 1000 }], hedef: {} });
     await page.setInputFiles('#iceDosya',
@@ -143,8 +144,8 @@ test.describe('G12 M4 — yedek geri yüklemede id çakışması', () => {
 
   test('aynı id farklı kitap → yeni id ile eklenir', async ({ page }) => {
     await tohumla(page, [sahteKitap({ id: 'DUP', ad: 'Kitap Bir', yazar: 'Yazar Bir' })]);
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     const yedek = JSON.stringify({ surum: 2,
       kitaplar: [{ id: 'DUP', ad: 'Kitap İki', yazar: 'Yazar İki' }], hedef: {} });
     await page.setInputFiles('#iceDosya',
@@ -158,8 +159,8 @@ test.describe('G12 M4 — yedek geri yüklemede id çakışması', () => {
 
   test('tamamen aynı kayıt → mükerrer oluşmaz', async ({ page }) => {
     await tohumla(page, [sahteKitap({ id: 'SAME', ad: 'Aynı Kitap', yazar: 'Aynı Yazar' })]);
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     const yedek = JSON.stringify({ surum: 2,
       kitaplar: [{ id: 'SAME', ad: 'Aynı Kitap', yazar: 'Aynı Yazar' }], hedef: {} });
     await page.setInputFiles('#iceDosya',
@@ -180,7 +181,7 @@ test.describe('G12 M5 — depo şişmesi ve kota uyarısı', () => {
         tarih: '2026-08-01', sayfa: 20, fikir: [] }]
     }));
     await tohumla(page, kitaplar);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');       // bir kayıt tetikle → damgala + anlık görüntü yazılsın
     await page.click('[data-act="detay-kapat"]');
     await page.evaluate(() => depoKaydet());
@@ -195,7 +196,7 @@ test.describe('G12 M5 — depo şişmesi ve kota uyarısı', () => {
   test('hash damgalaması doğru: değişen kitap yeni g alır, değişmeyen sabit kalır', async ({ page }) => {
     await tohumla(page, [sahteKitap({ id: 'A', ad: 'Değişecek', g: 111 }),
       sahteKitap({ id: 'B', ad: 'Sabit Kalacak', g: 222 })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.evaluate(() => depoKaydet());   // taban anlık görüntü
     const taban = await page.evaluate(() => veri.kitaplar.map(k => k.g));
     await page.evaluate(() => {
@@ -216,7 +217,7 @@ test.describe('G12 M5 — depo şişmesi ve kota uyarısı', () => {
       // eski biçim: kitabın TAM JSON'u parmak izi olarak
       kk_senkron_anlik_v1: { G1: JSON.stringify({ id: 'G1', ad: 'Göç Kitabı' }) }
     });
-    await page.goto('/');
+    await rafAc(page);
     await page.evaluate(() => depoKaydet());
     expect(await page.evaluate(() => veri.kitaplar[0].g)).toBe(777); // damga korundu
     const anlik = await page.evaluate(() => JSON.parse(localStorage.getItem('kk_senkron_anlik_v1')));
@@ -227,7 +228,7 @@ test.describe('G12 M5 — depo şişmesi ve kota uyarısı', () => {
 
   test('kota hatasında kalıcı uyarı görünür ve başarılı yazımda kalkar', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Kotalı' })]);
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#kotaUyari')).toBeHidden();
     await page.evaluate(() => {
       window.__asilSet = localStorage.setItem.bind(localStorage);

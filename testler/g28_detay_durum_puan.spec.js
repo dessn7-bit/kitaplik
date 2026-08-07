@@ -5,7 +5,8 @@
    Sil/Düzenle + seri + geçmiş + ödünç katlanır nadir bölümlerde; puan şeridi
    form açmadan yazar; "en çok" iddiaları n>=2 eşiğine, ortalamalar görünür
    paydaya bağlı. */
-const { test, expect, tohumla, sahteKitap, onaylariKabulEt, bugunISO } = require('./yardim');
+const { test, expect, tohumla, sahteKitap,
+  onaylariKabulEt, bugunISO, rafAc } = require('./yardim');
 
 const YIL = new Date().getFullYear();
 
@@ -27,7 +28,7 @@ test.describe('G28 M1 — detay hiyerarşisi', () => {
 
   test('ilerleme çubuğu detayda tam BİR kez çizilir', async ({ page }) => {
     await tohumla(page, [okunuyorKitap()]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     await expect(page.locator('#detayIcerik .ilerleme')).toHaveCount(1);
     await expect(page.locator('#detayIcerik .ilerleme-txt')).toContainText('%40');
@@ -36,7 +37,7 @@ test.describe('G28 M1 — detay hiyerarşisi', () => {
   test('Sil ana yüzeyde değil: katlanır bölüm kapalı başlar, açınca çalışır', async ({ page }) => {
     onaylariKabulEt(page);
     await tohumla(page, [sahteKitap({ ad: 'Saklı Silinecek' })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     // kapalı: sil düğmesi görünmez ama DOM'da (nadir katman)
     await expect(page.locator('#detayIcerik [data-act="kitap-sil"]')).toBeHidden();
@@ -50,7 +51,7 @@ test.describe('G28 M1 — detay hiyerarşisi', () => {
 
   test('nadir bölümler (ödünç, düzenle) katlı başlar; ödünç formu sürekli açık değil', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Katlı' })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     expect(await page.locator('#dOduncKatla[open]').count()).toBe(0);
     await expect(page.locator('#d-odunc-kisi')).toBeHidden();
@@ -66,7 +67,7 @@ test.describe('G28 M1 — detay hiyerarşisi', () => {
 
   test('kapak eylemi künyenin parçası: 📷 düğmesi kapak sütununda', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Kapaksız' })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     await expect(page.locator('#detayIcerik .d-kapak-sutun [data-act="kp-cek"]')).toBeVisible();
     // kapaksız kitapta yer tutucu var, künye boş kalmaz
@@ -79,7 +80,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
 
   test('(a) yarım bıraktım: sayfa KORUNUR, durum yarim, bırakma tarihi bugün', async ({ page }) => {
     await tohumla(page, [okunuyorKitap()]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     await page.click('[data-act="yarim-birak"]');
     await expect(page.locator('#toast')).toContainText('sf. 120');
@@ -96,7 +97,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
   test('(b) okunacağa geri al: onaylı; ilerleme/tarihler temizlenir, gsG basılır', async ({ page }) => {
     onaylariKabulEt(page);
     await tohumla(page, [okunuyorKitap()]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     await page.click('[data-act="okunacak-al"]');
     await expect(page.locator('#toast')).toContainText('Okunacaklara alındı');
@@ -112,7 +113,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
   test('(b2) yarımdan da okunacağa geri alınır, puan da temizlenir', async ({ page }) => {
     onaylariKabulEt(page);
     await tohumla(page, [okunuyorKitap({ durum: 'yarim', puan: 4, bitisTarihi: bugunISO(-2) })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     await page.click('[data-act="okunacak-al"]');
     const k = await page.evaluate(() => veri.kitaplar[0]);
@@ -123,7 +124,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
 
   test('(c) istatistik: detaydan yarım bırakılan kitap bırakma analizine düşer', async ({ page }) => {
     await tohumla(page, [bittiKitap(), okunuyorKitap({ ad: 'Bırakılacak' })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page, await page.evaluate(() => veri.kitaplar[1].id));
     await page.click('[data-act="yarim-birak"]');
     await page.click('[data-act="detay-kapat"]');
@@ -140,7 +141,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
 
   test('(d) durum değişimi senkron damgası (k.g) basar', async ({ page }) => {
     await tohumla(page, [okunuyorKitap()]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     const gOnce = await page.evaluate(() => veri.kitaplar[0].g);
     await page.click('[data-act="yarim-birak"]');
@@ -153,7 +154,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
 
   test('açık oturum varken yarım bırakılırsa oturum KAYDEDİLEREK kapanır', async ({ page }) => {
     await tohumla(page, [okunuyorKitap()]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     await page.click('[data-act="oturum-basla"]');
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('kk_oturum_v1')))).not.toBeNull();
@@ -170,7 +171,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
   test('açık oturum varken okunacağa geri alınırsa oturum kaydedilmeden atılır', async ({ page }) => {
     onaylariKabulEt(page);
     await tohumla(page, [okunuyorKitap()]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     await page.click('[data-act="oturum-basla"]');
     await page.click('[data-act="okunacak-al"]');
@@ -182,7 +183,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
 
   test('bitir de açık oturumu kaydederek kapatır (eski boşluk)', async ({ page }) => {
     await tohumla(page, [okunuyorKitap()]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     await page.click('[data-act="oturum-basla"]');
     await page.click('[data-act="bitir"]');
@@ -199,7 +200,7 @@ test.describe('G28 M3 — uygulama içi puanlama', () => {
 
   test('(a) detaydan puan ver/değiştir/kaldır — form hiç açılmaz', async ({ page }) => {
     await tohumla(page, [bittiKitap({ puan: null })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     await expect(page.locator('#dPuan')).toBeVisible();
     await page.click('#dPuan [data-act="d-puan"][data-v="7"]');
@@ -220,7 +221,7 @@ test.describe('G28 M3 — uygulama içi puanlama', () => {
 
   test('bitirme akışı: bitir → detayda kal, puan sorusu birincil blokta', async ({ page }) => {
     await tohumla(page, [okunuyorKitap()]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     await page.click('[data-act="bitir"]');
     await expect(page.locator('#toast')).toContainText('Tebrikler');
@@ -235,7 +236,7 @@ test.describe('G28 M3 — uygulama içi puanlama', () => {
     await tohumla(page, [bittiKitap({ ad: 'Puanlı', puan: 9 }),
       bittiKitap({ ad: 'Puansız Kalan', puan: null }),
       sahteKitap({ ad: 'Alakasız Okunacak' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="filtre"][data-v="puansiz"]');
     await expect(page.locator('#liste .kart')).toHaveCount(1);
     await expect(page.locator('#liste .kart')).toContainText('Puansız Kalan');
@@ -244,7 +245,7 @@ test.describe('G28 M3 — uygulama içi puanlama', () => {
   test('(b2) istatistikteki köprü rafa götürür ve puansız filtresini kurar', async ({ page }) => {
     await tohumla(page, [bittiKitap({ ad: 'Puanlı', puan: 9 }),
       bittiKitap({ ad: 'Puansız Kalan', puan: null })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="ist"]');
     await expect(page.locator('#istPuansiz')).toContainText('1 bitmiş kitap henüz puansız');
     await page.click('#istPuansiz [data-act="puansiz-git"]');
@@ -256,7 +257,7 @@ test.describe('G28 M3 — uygulama içi puanlama', () => {
 
   test('(c) istatistik yeni puanı anında yansıtır (görünür paydayla)', async ({ page }) => {
     await tohumla(page, [bittiKitap({ ad: 'Şimdi Puanlanacak', puan: null })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     await page.click('#dPuan [data-act="d-puan"][data-v="10"]');
     await page.click('[data-act="detay-kapat"]');
@@ -269,7 +270,7 @@ test.describe('G28 M3 — uygulama içi puanlama', () => {
 
   test('(d) puan yazımı kullanıcı eylemi: k.g damgası basar', async ({ page }) => {
     await tohumla(page, [bittiKitap({ puan: null })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     const gOnce = await page.evaluate(() => veri.kitaplar[0].g);
     await page.click('#dPuan [data-act="d-puan"][data-v="6"]');
@@ -278,7 +279,7 @@ test.describe('G28 M3 — uygulama içi puanlama', () => {
 
   test('yarım kitaba puan verilebilir; form kaydetmesi puanı SİLMEZ', async ({ page }) => {
     await tohumla(page, [okunuyorKitap({ durum: 'yarim', ad: 'Yarım Puanlı', bitisTarihi: bugunISO(-1) })]);
-    await page.goto('/');
+    await rafAc(page);
     await detayAc(page);
     await expect(page.locator('#dPuan')).toBeVisible();
     await page.click('#dPuan [data-act="d-puan"][data-v="4"]');
@@ -300,7 +301,7 @@ test.describe('G28 M4 — istatistik dürüstlüğü', () => {
   test('(a) tek kitaplık yazar "en çok" İLAN EDİLMEZ (rapor)', async ({ page }) => {
     await tohumla(page, [bittiKitap({ ad: 'Tek Kitap', yazar: 'Yalnız Yazar',
       tur: 'Roman', puan: 8, bitisTarihi: `${YIL}-03-05` })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="ist"]');
     const o = await page.evaluate(y => window.__rapor.yilOzeti(y), YIL);
     expect(o.enCokYazar).toBeNull();
@@ -314,7 +315,7 @@ test.describe('G28 M4 — istatistik dürüstlüğü', () => {
     await tohumla(page, [
       bittiKitap({ ad: 'K1', yazar: 'Çift Yazar', tur: 'Roman', puan: 8, bitisTarihi: `${YIL}-02-01` }),
       bittiKitap({ ad: 'K2', yazar: 'Çift Yazar', tur: 'Deneme', puan: 7, bitisTarihi: `${YIL}-04-01` })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="ist"]');
     const o = await page.evaluate(y => window.__rapor.yilOzeti(y), YIL);
     expect(o.enCokYazar).toEqual(['Çift Yazar', 2]);
@@ -328,7 +329,7 @@ test.describe('G28 M4 — istatistik dürüstlüğü', () => {
       bittiKitap({ ad: 'P1', puan: 10, bitisTarihi: `${YIL}-01-10` }),
       bittiKitap({ ad: 'P2', puan: null, bitisTarihi: `${YIL}-02-10` }),
       bittiKitap({ ad: 'P3', puan: null, bitisTarihi: `${YIL}-03-10` })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="ist"]');
     const o = await page.evaluate(y => window.__rapor.yilOzeti(y), YIL);
     expect(o.ortPuan).toBe(10);
@@ -343,7 +344,7 @@ test.describe('G28 M4 — istatistik dürüstlüğü', () => {
       bittiKitap({ ad: 'Sayfalı', sayfa: 300, bitisTarihi: `${YIL}-05-01` }),
       bittiKitap({ ad: 'Sayfasız', sayfa: null, guncelSayfa: 0, bitisTarihi: `${YIL}-05-02` })],
       hedef: {}, hedefG: {}, hedefSayfa: { [YIL]: 5000 }, hedefSayfaG: { [YIL]: 1 }, silinenler: {} });
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="ist"]');
     const d = await page.evaluate(() => window.__zeka.sayfaHedefDurum());
     expect(d.ilerleme).toBe(300);
@@ -363,7 +364,7 @@ test.describe('G28 M4 — istatistik dürüstlüğü', () => {
         { b: saatte(14, 4), s: 600000, sa: 120, sb: 130 },
         { b: saatte(15, 5), s: 300000, sa: 130, sb: 135 }
       ] })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="ist"]');
     const s = await page.evaluate(() => window.__zeka.saatDagilimi());
     expect(s.yeterli).toBe(true);

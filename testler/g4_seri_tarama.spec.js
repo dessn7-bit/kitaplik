@@ -1,5 +1,6 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap, kameraTaklit, bugunISO } = require('./yardim');
+const { test, expect, tohumla, sahteKitap,
+  kameraTaklit, bugunISO, rafAc, ayarlarAc } = require('./yardim');
 
 const ISBN_A = '9780132350884';
 const BILINMEYEN = '9783161484100';
@@ -12,8 +13,8 @@ function gbIsbnYanit(kitap) {
 }
 
 async function seriAc(page) {
-  await page.click('[data-act="sekme"][data-v="yedek"]');
-  await page.click('[data-act="seri-ac"]');
+  await ayarlarAc(page);
+  await page.click('#ortuAyar [data-act="seri-ac"]');
   await expect(page.locator('#seriOrtu')).toHaveClass(/acik/);
   await expect.poll(() => page.evaluate(() => window.__akisIstendi)).toBe(true);
 }
@@ -22,7 +23,7 @@ test.describe('G4 seri tarama', () => {
 
   test('okutulan kitap forma girmeden doğrudan kütüphaneye eklenir', async ({ page }) => {
     await kameraTaklit(page);
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = gbIsbnYanit({ ad: 'Seri Kitap', yazar: 'Seri Yazar', sayfa: 200 });
     await seriAc(page);
     await page.evaluate(kod => { window.__sahteKod = kod; }, ISBN_A);
@@ -36,7 +37,7 @@ test.describe('G4 seri tarama', () => {
 
   test('panelde seçilen raf ve durum eklenen kitaba yazılır', async ({ page }) => {
     await kameraTaklit(page);
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = gbIsbnYanit({ ad: 'Raflı Kitap', yazar: 'Y', sayfa: 150 });
     await seriAc(page);
     await page.selectOption('#seriDurum', 'bitti');
@@ -54,7 +55,7 @@ test.describe('G4 seri tarama', () => {
 
   test('aynı barkod üst üste okunursa mükerrer kayıt oluşmaz', async ({ page }) => {
     await kameraTaklit(page);
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = gbIsbnYanit({ ad: 'Tek Kalmalı', yazar: 'Y' });
     await seriAc(page);
     await page.evaluate(kod => { window.__sahteKod = kod; }, ISBN_A);
@@ -67,7 +68,7 @@ test.describe('G4 seri tarama', () => {
   test('zaten kayıtlı kitapta "Zaten kayıtlı" uyarısı', async ({ page }) => {
     await kameraTaklit(page);
     await tohumla(page, [sahteKitap({ ad: 'Mevcut Kitap', yazar: 'Mevcut Yazar', isbn: ISBN_A })]);
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = gbIsbnYanit({ ad: 'Mevcut Kitap', yazar: 'Mevcut Yazar' });
     await seriAc(page);
     await page.evaluate(kod => { window.__sahteKod = kod; }, ISBN_A);
@@ -78,7 +79,7 @@ test.describe('G4 seri tarama', () => {
 
   test('geri al: kitap silinir, mezar taşı bırakılır, aynı barkod hemen tekrar okunabilir', async ({ page }) => {
     await kameraTaklit(page);
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = gbIsbnYanit({ ad: 'Geri Alınan', yazar: 'Y' });
     await seriAc(page);
     await page.evaluate(kod => { window.__sahteKod = kod; }, ISBN_A);
@@ -101,7 +102,7 @@ test.describe('G4 seri tarama', () => {
     // (1) kayıt tekliği (zatenVar ikinci katman olarak da korur),
     // (2) aynı koda 4 sn içinde İKİNCİ kaynak sorgusu atılMAması — mutantı bu öldürür.
     await kameraTaklit(page);
-    await page.goto('/');
+    await rafAc(page);
     // Google yanıtını ~1.2 sn geciktir: tarama tikleri sorgu sürerken de akmaya devam eder
     await page.route(url => url.href.includes('googleapis.com/books'), async route => {
       page.__agSayac.google++;
@@ -122,7 +123,7 @@ test.describe('G4 seri tarama', () => {
 
   test('bilinmeyen ISBN eklenmez', async ({ page }) => {
     await kameraTaklit(page);
-    await page.goto('/');
+    await rafAc(page);
     await seriAc(page);
     await page.evaluate(kod => { window.__sahteKod = kod; }, BILINMEYEN);
     await expect(page.locator('#seriNot')).toContainText('bulunamadı', { timeout: 10000 });

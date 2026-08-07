@@ -5,7 +5,8 @@
    kitapNormalize beyaz listesi + ANLIK_SURUM 5 göçü burada doğrulanır.
    TÜM seçiciler kapsamlı: #panel-alinti / #tkKutu / #alintiIcerik altında. */
 'use strict';
-const { test, expect, tohumla, sahteKitap, bugunISO, onaylariKabulEt } = require('./yardim');
+const { test, expect, tohumla, sahteKitap,
+  bugunISO, onaylariKabulEt, rafAc, rafYenile } = require('./yardim');
 
 let notSayac = 0;
 function notYap(ek) {
@@ -23,7 +24,7 @@ function dunkuAktif(ek) {
 }
 function kitapla(notlar, ek) { return sahteKitap(Object.assign({ notlar }, ek || {})); }
 async function alintiAc(page) {
-  await page.goto('/');
+  await rafAc(page);
   await page.click('[data-act="sekme"][data-v="alinti"]');
   await expect(page.locator('#panel-alinti #alintiIcerik')).toBeVisible();
 }
@@ -32,7 +33,7 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
 
   test('yeni alıntı varsayılanla döngüye girer: aktif, ilk gösterim 3 gün sonra; yenilemede korunur', async ({ page }) => {
     await tohumla(page, [kitapla([])]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click('[data-act="not-tip"][data-v="alinti"]');
     await page.fill('#d-not', 'Yeni eklenen alıntı');
@@ -45,7 +46,7 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     expect(n1.tekrarAralik).toBe(3);
     expect(n1.tekrarSayisi).toBe(0);
     expect(n1.tekrarSonraki).toBe(bugunISO(3));
-    await page.reload();
+    await rafYenile(page);
     const n2 = await page.evaluate(() => veri.kitaplar[0].notlar[0]);
     expect(n2.tekrarDurum).toBe('aktif');       // kitapNormalize elemedi
     expect(n2.tekrarSonraki).toBe(bugunISO(3)); // zamanlama yenilemede değişmedi
@@ -67,7 +68,7 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
   });
 
   test('aralık merdiveni: 3→7→15→33→73→161→354→365, tavanda durur', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const merdiven = await page.evaluate(() => {
       const c = []; let a = 3;
       for (let i = 0; i < 8; i++) { a = window.__tekrar.aralikBuyut(a); c.push(a); }
@@ -100,7 +101,7 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     // liste kartındaki gösterge AYNI OTURUMDA tazelenir (bayat "bugün" kalmaz)
     await expect(page.locator(`#alintiIcerik .not-kart[data-nid="${n.id}"] .tk-durum`))
       .toContainText('duraklatıldı');
-    await page.reload();
+    await rafYenile(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     await expect(page.locator('#tkKutu .tk-kart')).toHaveCount(0);
     expect(await page.evaluate(() => window.__tekrar.bugunKuyruk().length)).toBe(0);
@@ -151,7 +152,7 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
       kitaplar.push(kitapla(notlar));
     }
     await tohumla(page, kitaplar);
-    await page.goto('/');   // zamanlama açılışta koşar, sekmeye girmek gerekmez
+    await rafAc(page);   // zamanlama açılışta koşar, sekmeye girmek gerekmez
     const dagilim = await page.evaluate(() => {
       const gunler = {};
       let enEskiSonraki = null;
@@ -172,7 +173,7 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
   test('notlar (tip=not) varsayılan döngü dışı; "tekrara al" ile isteğe bağlı girer', async ({ page }) => {
     const n = notYap({ tip: 'not', metin: 'Kendi düşüncem' });
     await tohumla(page, [kitapla([n])]);
-    await page.goto('/');
+    await rafAc(page);
     const once = await page.evaluate(id =>
       veri.kitaplar[0].notlar.find(x => x.id === id), n.id);
     expect(once.tekrarDurum).toBe('duraklatildi');   // normalize varsayılanı
@@ -200,8 +201,8 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     const n = notYap({ tekrarSonraki: bugunISO(5), tekrarAralik: 7, tekrarSayisi: 2,
       tekrarDurum: 'aktif' });
     await tohumla(page, [kitapla([n], { g: 5 })]);
-    await page.goto('/');
-    await page.reload();
+    await rafAc(page);
+    await rafYenile(page);
     const s = await page.evaluate(() => veri.kitaplar[0].notlar[0]);
     expect(s.tekrarSonraki).toBe(bugunISO(5));   // kitapNormalize elemedi, zamanlayıcı ezmedi
     expect(s.tekrarAralik).toBe(7);
@@ -221,7 +222,7 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
   test('senkron göçü: sürüm atlaması kütüphaneyi yeniden damgalamaz', async ({ page }) => {
     const k = kitapla([notYap()], { g: 9 });
     await tohumla(page, [k], { kk_senkron_anlik_v1: { s: 4, p: { eskiId: 'x-yz' } } });
-    await page.goto('/');
+    await rafAc(page);
     await page.evaluate(() => depoKaydet()); // damgala göç turunda koşsun
     expect(await page.evaluate(() => veri.kitaplar[0].g)).toBe(9); // damga korundu
     const anlik = await page.evaluate(() => JSON.parse(localStorage.getItem('kk_senkron_anlik_v1')));
@@ -313,8 +314,8 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     const nB = dunkuAktif();                         // bugün bekleyen — kasıtlı eylem
     const kA = kitapla([nA], { g: 9 }), kB = kitapla([nB], { g: 9 });
     await tohumla(page, [kA, kB]);
-    await page.goto('/');                            // anlik tabanı kurulur
-    await page.reload();                             // kararlı durum (göç turu bitti)
+    await rafAc(page);                            // anlik tabanı kurulur
+    await rafYenile(page);                             // kararlı durum (göç turu bitti)
     const oto = await page.evaluate(id => {
       const k = veri.kitaplar.find(x => x.id === id);
       k.notlar[0].tekrarSonraki = null;              // birleşmeden zamanlanmamış kopya gelmiş gibi
@@ -356,7 +357,7 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     const n = notYap({ tekrarDurum: 'aktif', tekrarAralik: -5, tekrarSayisi: 1,
       tekrarSonraki: '9999' });
     await tohumla(page, [kitapla([n])]);
-    await page.goto('/');
+    await rafAc(page);
     const s = await page.evaluate(() => veri.kitaplar[0].notlar[0]);
     expect(s.tekrarAralik).toBe(1);            // [1,365] aralığına kırpıldı
     expect(s.tekrarSonraki).toBe(bugunISO(3)); // '9999' düştü, zamanlayıcı yeniden atadı

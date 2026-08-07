@@ -1,5 +1,5 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, rafAc } = require('./yardim');
 
 /* TÜM seçiciler kapsamlı: #panel-alinti / #faPanel altında. */
 
@@ -13,7 +13,7 @@ function kitap(ad, notlar) {
   return sahteKitap({ ad, notlar });
 }
 async function alintiAc(page) {
-  await page.goto('/');
+  await rafAc(page);
   await page.click('[data-act="sekme"][data-v="alinti"]');
   await expect(page.locator('#panel-alinti #faPanel')).toBeVisible();
 }
@@ -26,7 +26,7 @@ test.describe('G17 M1 — eş-geçim hesabı', () => {
 
   test('iki etiket tek notta: eşik altında; ikinci notta tekrar: eşiği geçer', async ({ page }) => {
     await tohumla(page, [kitap('Kitap A', [not('Birinci alıntı', ['varlık', 'zaman'])])]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     let c = await page.evaluate(() => window.__fikirag.esGecim());
     expect(c.length).toBe(1);
@@ -54,7 +54,7 @@ test.describe('G17 M1 — eş-geçim hesabı', () => {
       kitap('Kitap A', [not('A alıntısı', ['özgürlük', 'ahlak'])]),
       kitap('Kitap B', [not('B alıntısı', ['özgürlük', 'ahlak'])])
     ]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     const k = await page.evaluate(() => window.__fikirag.komsular('özgürlük'));
     expect(k).toEqual([{ ad: 'ahlak', notlar: 2, kitapSayisi: 2, kitaptaBirlikte: 2 }]);
@@ -65,7 +65,7 @@ test.describe('G17 M1 — eş-geçim hesabı', () => {
   test('ikincil ölçüt: aynı kitapta ayrı notlarda geçenler ayrı sayılır', async ({ page }) => {
     await tohumla(page, [kitap('Tek Kitap', [
       not('İlk not', ['a-fikri']), not('İkinci not', ['b-fikri'])])]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     const c = await page.evaluate(() => window.__fikirag.esGecim());
     expect(c.length).toBe(1);
@@ -247,7 +247,7 @@ test.describe('G17 — bütünlük', () => {
 
   test('hiç kitap yokken bile çökme yok', async ({ page }) => {
     const hatalar = [];
-    await page.goto('/');
+    await rafAc(page);
     page.on('pageerror', h => hatalar.push(String(h)));
     await page.click('[data-act="sekme"][data-v="alinti"]');
     await page.waitForTimeout(200);

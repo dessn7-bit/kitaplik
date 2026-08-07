@@ -1,5 +1,5 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap, bugunISO } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, bugunISO, rafAc } = require('./yardim');
 
 /* Tarayıcı içinde gün anahtarı üretimi — oturum.js'in gunStr'ı ile aynı biçim */
 const gunHaritasi = kaymalar => {
@@ -16,13 +16,13 @@ const gunHaritasi = kaymalar => {
 test.describe('G6 seri ve istatistik', () => {
 
   test('üst üste okunan gün sayısı doğru (bugün+dün+önceki = 3)', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const seri = await page.evaluate(h => window.__oturum.seriHesapla(h), gunHaritasi([0, -1, -2]));
     expect(seri).toBe(3);
   });
 
   test('bugün okunmadıysa seri dünden sayılır', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const seri = await page.evaluate(h => window.__oturum.seriHesapla(h), gunHaritasi([-1, -2]));
     expect(seri).toBe(2); // bugün boş → ceza yok, dünden geriye 2
     const kirik = await page.evaluate(h => window.__oturum.seriHesapla(h), gunHaritasi([-1, -3]));
@@ -32,7 +32,7 @@ test.describe('G6 seri ve istatistik', () => {
   test('30 günlük ısı şeridi 30 kutu çizer', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Isı Kitabı', durum: 'okunuyor', baslamaTarihi: bugunISO(-5),
       oturumlar: [{ b: Date.now() - 86400000, s: 25 * 60000, sa: 0, sb: 30 }] })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="ist"]');
     await expect(page.locator('#oturumIst')).toBeVisible();
     await expect(page.locator('#oturumIst [title]')).toHaveCount(30);
@@ -40,7 +40,7 @@ test.describe('G6 seri ve istatistik', () => {
 
   test('yıllık hedef kaydedilir, ilerleme ve projeksiyon görünür', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Hedef Kitabı', durum: 'bitti', bitisTarihi: bugunISO(-10) })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="ist"]');
     await page.fill('#hedefInput', '24');
     await page.click('[data-act="hedef-kaydet"]');
@@ -54,7 +54,7 @@ test.describe('G6 seri ve istatistik', () => {
   test('hedef kaydedilince okuma alışkanlığı kartı kaybolmaz', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Alışkanlık Kitabı', durum: 'okunuyor', baslamaTarihi: bugunISO(-5),
       oturumlar: [{ b: Date.now() - 2 * 86400000, s: 40 * 60000, sa: 0, sb: 50 }] })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="ist"]');
     await expect(page.locator('#oturumIst')).toBeVisible();
     await page.fill('#hedefInput', '12');

@@ -444,8 +444,11 @@
           if(confirm('Bu cihazdaki TÜM kapak fotoğrafları silinsin mi? Bu işlem geri alınamaz.'))
             hepsiniSil(false);
           break;
-        case 'sekme':
-          if(el.dataset.v === 'yedek') istatistikTazele();
+        /* Depo satırı eskiden "Yedek sekmesine geçildi"nde tazeleniyordu; o sekme
+           kalktı, kart artık Ayarlar penceresinde. Kanca güncellenmeseydi
+           #kpDepoBilgi açılıştaki tek hesabı gösterip donardı. */
+        case 'ayar-ac':
+          istatistikTazele();
           break;
       }
     });

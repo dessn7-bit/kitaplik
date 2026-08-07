@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { test, expect, tohumla, sahteKitap } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, rafAc } = require('./yardim');
 
 let sayac = 0;
 function not(metin, fikir) {
@@ -38,7 +38,7 @@ test.describe('G18 D1 — kaynak dosyalarında kontrol karakteri yok', () => {
       sahteKitap({ ad: 'K1', notlar: [not('n1', ['a b', 'c'])] }),
       sahteKitap({ ad: 'K2', notlar: [not('n2', ['a', 'b c'])] })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     const c = await page.evaluate(() => window.__fikirag.esGecim());
     expect(c.length).toBe(2);                       // iki AYRI çift
@@ -58,7 +58,7 @@ function kesisimKitaplari() {
   ];
 }
 async function surecSec(page) {
-  await page.goto('/');
+  await rafAc(page);
   await page.click('[data-act="sekme"][data-v="alinti"]');
   await page.click('#panel-alinti #fikirBulut [data-act="fikir-filtre"][data-v="surec"]');
   await expect(page.locator('#panel-alinti #faKomsuKart')).toBeVisible();

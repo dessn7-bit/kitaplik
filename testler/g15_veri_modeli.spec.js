@@ -1,13 +1,14 @@
 'use strict';
 const fs = require('fs');
-const { test, expect, tohumla, sahteKitap, kameraTaklit, bugunISO } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, kameraTaklit,
+  bugunISO, rafAc, rafYenile, ayarlarAc } = require('./yardim');
 
 const YIL = new Date().getFullYear();
 const ISBN = '9780132350884';
 
 async function formAc(page) {
-  await page.goto('/');
-  await page.click('[data-act="yeni"]');
+  await rafAc(page);
+  await page.click('.fab[data-act="yeni"]');
 }
 function gbIsbnYanit(k) {
   return { totalItems: 1, items: [{ volumeInfo: { title: k.ad, authors: [k.yazar || 'Y'],
@@ -27,7 +28,7 @@ test.describe('G15 M1 — çevirmen ve dil', () => {
     let k = await page.evaluate(() => veri.kitaplar[0]);
     expect(k.cevirmen).toBe('Nihal Yalaza Taluy');
     expect(k.dil).toBe('tr');                 // küçük harfe normalize
-    await page.reload();
+    await rafYenile(page);
     k = await page.evaluate(() => veri.kitaplar[0]);
     expect(k.cevirmen).toBe('Nihal Yalaza Taluy');   // kitapNormalize elemedi
     expect(k.dil).toBe('tr');
@@ -38,7 +39,7 @@ test.describe('G15 M1 — çevirmen ve dil', () => {
       sahteKitap({ ad: 'Çevirili Kitap', cevirmen: 'Ahmet Cemal' }),
       sahteKitap({ ad: 'Başka Kitap', cevirmen: '' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     await page.fill('#arama', 'Ahmet Cemal');
     await expect(page.locator('#liste .kart')).toHaveCount(1);
     await expect(page.locator('#liste .kart-baslik')).toHaveText('Çevirili Kitap');
@@ -57,8 +58,8 @@ test.describe('G15 M1 — çevirmen ve dil', () => {
 
   test('CSV dışa aktarımda çevirmen ve dil sütunları çıkar', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'CSV Kitabı', cevirmen: 'Bir Çevirmen', dil: 'tr' })]);
-    await page.goto('/');
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await rafAc(page);
+    await ayarlarAc(page);
     const [indirme] = await Promise.all([
       page.waitForEvent('download'),
       page.click('[data-act="csv-aktar"]')
@@ -79,14 +80,14 @@ test.describe('G15 M2 — elle ISBN', () => {
     await page.fill('#f-isbn', '978-0-13-235088-4');
     await page.click('[data-act="form-kaydet"]');
     expect(await page.evaluate(() => veri.kitaplar[0].isbn)).toBe(ISBN);   // ayraçlar temizlendi
-    await page.reload();
+    await rafYenile(page);
     expect(await page.evaluate(() => veri.kitaplar[0].isbn)).toBe(ISBN);
   });
 
   test('barkod okununca form ISBN alanı dolar', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = gbIsbnYanit({ ad: 'Barkodlu Kitap', yazar: 'Y', sayfa: 200 });
-    await page.click('[data-act="yeni"]');
+    await page.click('.fab[data-act="yeni"]');
     await page.click('[data-act="barkod-ac"]');
     await page.fill('#barkodElle', ISBN);
     await page.click('[data-act="barkod-elle"]');
@@ -98,8 +99,8 @@ test.describe('G15 M2 — elle ISBN', () => {
 
   test('aynı ISBN ikinci kez girilince uyarı çıkar ama kayıt ENGELLENMEZ', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'İlk Baskı', isbn: ISBN })]);
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     await page.fill('#f-ad', 'İkinci Baskı');
     await page.fill('#f-isbn', ISBN);
     await page.click('[data-act="form-kaydet"]');
@@ -118,7 +119,7 @@ test.describe('G15 M3 — yeniden okuma', () => {
 
   test('yeniden oku: eski okuma arşivlenir, veri kaybı YOK', async ({ page }) => {
     await tohumla(page, [bitmisKitap()]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click('[data-act="yeniden-oku"]');
     await expect(page.locator('#toast')).toContainText('geçmişe kaydedildi');
@@ -140,9 +141,9 @@ test.describe('G15 M3 — yeniden okuma', () => {
   test('okumalar dizisi yenilemede KORUNUR', async ({ page }) => {
     await tohumla(page, [bitmisKitap({ okumalar: [
       { bas: '2024-03-01', bit: '2024-04-01', puan: 7, not: '' }] })]);
-    await page.goto('/');
+    await rafAc(page);
     expect(await page.evaluate(() => veri.kitaplar[0].okumalar.length)).toBe(1);
-    await page.reload();
+    await rafYenile(page);
     const o = await page.evaluate(() => veri.kitaplar[0].okumalar[0]);
     expect(o).toMatchObject({ bas: '2024-03-01', bit: '2024-04-01', puan: 7 });
   });
@@ -150,7 +151,7 @@ test.describe('G15 M3 — yeniden okuma', () => {
   test('okuma geçmişi detayda görünür', async ({ page }) => {
     await tohumla(page, [bitmisKitap({ okumalar: [
       { bas: '2024-03-01', bit: '2024-04-05', puan: 7, not: '' }] })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await expect(page.locator('#detayIcerik')).toContainText('Okuma geçmişi');
     await expect(page.locator('#detayIcerik .vm-okuma-satir').first()).toContainText('1. okuma');
@@ -163,7 +164,7 @@ test.describe('G15 M3 — yeniden okuma', () => {
     await tohumla(page, [{ id: 'eski1', ad: 'Eski Kayıt', yazar: 'Y', durum: 'bitti',
       bitisTarihi: `${YIL}-05-05`, puan: 8, eklenme: 1 }]);
     page.on('pageerror', h => hatalar.push(String(h)));
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await expect(page.locator('#detayIcerik')).toContainText('Eski Kayıt');
     expect(await page.evaluate(() => veri.kitaplar[0].okumalar)).toEqual([]);
@@ -186,7 +187,7 @@ test.describe('G15 M4 — seri ve cilt takibi', () => {
     await page.fill('#f-seri', 'Kayıp Zamanın İzinde');
     await page.fill('#f-cilt', '1');
     await page.click('[data-act="form-kaydet"]');
-    await page.reload();
+    await rafYenile(page);
     const k = await page.evaluate(() => veri.kitaplar[0]);
     expect(k.seri).toBe('Kayıp Zamanın İzinde');
     expect(k.ciltNo).toBe(1);
@@ -195,7 +196,7 @@ test.describe('G15 M4 — seri ve cilt takibi', () => {
   test('detayda aynı serinin kitapları listelenir ve gezinilebilir', async ({ page }) => {
     await tohumla(page, [seriKitap('Birinci Cilt', 1), seriKitap('İkinci Cilt', 2),
       sahteKitap({ ad: 'Alakasız Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart[data-id="' + await page.evaluate(() => veri.kitaplar[0].id) + '"]');
     await page.click('#dSeriKatla summary');   // seri nadir bölümde katlı
     await expect(page.locator('#detayIcerik .vm-seri-liste .vm-seri-oge')).toHaveCount(2);
@@ -206,14 +207,14 @@ test.describe('G15 M4 — seri ve cilt takibi', () => {
 
   test('eksik cilt doğru tespit edilir (1,2,4 → 3 eksik)', async ({ page }) => {
     await tohumla(page, [seriKitap('C1', 1), seriKitap('C2', 2), seriKitap('C4', 4)]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart >> nth=0');
     await expect(page.locator('#detayIcerik .vm-eksik')).toContainText('Eksik cilt: 3');
   });
 
   test('tek ciltli seride eksik uyarısı ÇIKMAZ', async ({ page }) => {
     await tohumla(page, [seriKitap('Tek Cilt', 1)]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click('#dSeriKatla summary');   // seri nadir bölümde katlı
     await expect(page.locator('#detayIcerik .vm-seri-kutu')).toBeVisible();
@@ -223,7 +224,7 @@ test.describe('G15 M4 — seri ve cilt takibi', () => {
   test('"Bu seriyi rafta göster" listeyi seriye göre süzer', async ({ page }) => {
     const kitaplar = [seriKitap('C1', 1), seriKitap('C2', 2), sahteKitap({ ad: 'Alakasız' })];
     await tohumla(page, kitaplar);
-    await page.goto('/');
+    await rafAc(page);
     await page.click(`#liste .kart[data-id="${kitaplar[0].id}"]`);   // seri kartı olan kitabı aç
     await page.click('#dSeriKatla summary');   // seri nadir bölümde katlı
     await page.click('[data-act="vm-seri-filtre"]');
@@ -241,7 +242,7 @@ test.describe('G15 M5 — sahiplik ve istek listesi', () => {
     await page.selectOption('#f-sahiplik', 'istek');
     await page.click('[data-act="form-kaydet"]');
     expect(await page.evaluate(() => veri.kitaplar[0].sahiplik)).toBe('istek');
-    await page.reload();
+    await rafYenile(page);
     expect(await page.evaluate(() => veri.kitaplar[0].sahiplik)).toBe('istek');
   });
 
@@ -250,8 +251,11 @@ test.describe('G15 M5 — sahiplik ve istek listesi', () => {
       sahteKitap({ ad: 'Bendeki Kitap', sahiplik: 'sahip' }),
       sahteKitap({ ad: 'İstediğim Kitap', sahiplik: 'istek' })
     ]);
-    await page.goto('/');
-    await expect(page.locator('#liste .kart')).toHaveCount(2);   // varsayılan: ikisi de görünür
+    await rafAc(page);
+    // Sprint IA: varsayılan artık "Bende olanlar" — istek listesi dışarıda
+    await expect(page.locator('#vmSahiplikChips .vm-secili')).toHaveAttribute('data-v', 'sahip');
+    await expect(page.locator('#liste .kart')).toHaveCount(1);
+    await expect(page.locator('#liste .kart-baslik')).toHaveText('Bendeki Kitap');
     await page.click('[data-act="vm-sahiplik"][data-v="istek"]');
     await expect(page.locator('#liste .kart')).toHaveCount(1);
     await expect(page.locator('#liste .kart-baslik')).toHaveText('İstediğim Kitap');
@@ -269,10 +273,10 @@ test.describe('G15 M5 — sahiplik ve istek listesi', () => {
 
   test('seri taramadan gelen kitap "sahip" işaretlenir', async ({ page }) => {
     await kameraTaklit(page);
-    await page.goto('/');
+    await rafAc(page);
     page.__agAyar.google = gbIsbnYanit({ ad: 'Taranan Kitap', yazar: 'Y' });
-    await page.click('[data-act="sekme"][data-v="yedek"]');
-    await page.click('[data-act="seri-ac"]');
+    await ayarlarAc(page);
+    await page.click('#ortuAyar [data-act="seri-ac"]');
     await page.evaluate(kod => { window.__sahteKod = kod; }, ISBN);
     await expect(page.locator('#seriNot')).toContainText('Eklendi', { timeout: 10000 });
     await page.evaluate(() => { window.__sahteKod = null; });
@@ -281,7 +285,7 @@ test.describe('G15 M5 — sahiplik ve istek listesi', () => {
 
   test('eski kayıtlar (alan yok) varsayılan "sahip" sayılır', async ({ page }) => {
     await tohumla(page, [{ id: 'eski', ad: 'Alansız Kayıt', yazar: 'Y', durum: 'okunacak', eklenme: 1 }]);
-    await page.goto('/');
+    await rafAc(page);
     expect(await page.evaluate(() => veri.kitaplar[0].sahiplik)).toBe('sahip');
     await page.click('[data-act="vm-sahiplik"][data-v="sahip"]');
     await expect(page.locator('#liste .kart')).toHaveCount(1);
@@ -294,7 +298,7 @@ test.describe('G15 M6 — hedef damgası', () => {
   test('hedef değişince hedefG TAZELENİR', async ({ page }) => {
     await tohumla(page, { kitaplar: [sahteKitap({ ad: 'K' })],
       hedef: { [YIL]: 20 }, hedefG: { [YIL]: 1000 }, silinenler: {} });
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="ist"]');
     await page.fill('#hedefInput', '30');
     await page.click('[data-act="hedef-kaydet"]');
@@ -306,7 +310,7 @@ test.describe('G15 M6 — hedef damgası', () => {
   test('hedef değişmeden kaydedilince hedefG SABİT kalır', async ({ page }) => {
     await tohumla(page, { kitaplar: [sahteKitap({ ad: 'K' })],
       hedef: { [YIL]: 20 }, hedefG: { [YIL]: 1000 }, silinenler: {} });
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="ist"]');
     await page.fill('#hedefInput', '20');           // aynı değer
     await page.click('[data-act="hedef-kaydet"]');
@@ -316,7 +320,7 @@ test.describe('G15 M6 — hedef damgası', () => {
   test('senkron birleştirmede değiştirilmiş hedef eski uzak değeri yener', async ({ page }) => {
     await tohumla(page, { kitaplar: [sahteKitap({ ad: 'K' })],
       hedef: { [YIL]: 20 }, hedefG: { [YIL]: 1000 }, silinenler: {} });
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="ist"]');
     await page.fill('#hedefInput', '35');
     await page.click('[data-act="hedef-kaydet"]');

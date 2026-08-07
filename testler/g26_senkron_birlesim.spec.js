@@ -6,7 +6,8 @@
    yaşar. Şema koruması: odadaki sema yerelden büyükse NE birleştir NE yaz.
    birlestir SAF: window.__senkron.birlestir doğrudan çağrılır (g8 deseni). */
 'use strict';
-const { test, expect, tohumla, sahteKitap, bugunISO, onaylariKabulEt } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, bugunISO,
+  onaylariKabulEt, rafAc, rafYenile, ayarlarAc } = require('./yardim');
 
 function kitap(id, ek) {
   return Object.assign({ id, ad: 'Kitap ' + id, yazar: 'Yazar', g: 100, notlar: [] }, ek || {});
@@ -27,7 +28,7 @@ async function birlestirilmis(page, yerelK, uzakK) {
 test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
 
   test('KRİTİK: iki cihaz aynı kitaba FARKLI alıntı ekler → İKİSİ DE kalır', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const k = await birlestirilmis(page,
       kitap('x', { g: 200, notlar: [not('nYerel', { metin: 'Yerel alıntı' })] }),
       kitap('x', { g: 100, notlar: [not('nUzak', { metin: 'Uzak alıntı' })] }));
@@ -40,18 +41,18 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
     const n = not('silinecek');
     await tohumla(page, [sahteKitap({ notlar: [n] })]);
     onaylariKabulEt(page);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click(`#detayIcerik [data-act="not-sil"][data-nid="${n.id}"]`);
     let mezar = await page.evaluate(() => veri.kitaplar[0].silinenNotlar);
     expect(mezar.silinecek).toBeGreaterThan(0);
-    await page.reload();
+    await rafYenile(page);
     mezar = await page.evaluate(() => veri.kitaplar[0].silinenNotlar);
     expect(mezar.silinecek).toBeGreaterThan(0);   // kitapNormalize elemedi
   });
 
   test('silinen not birleşimde GERİ GELMEZ (mezar iki yönde de işler)', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     // yerel sildi, uzak kopyada not hâlâ var
     const a = await birlestirilmis(page,
       kitap('x', { g: 200, notlar: [], silinenNotlar: { nEski: 5000 } }),
@@ -66,7 +67,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   });
 
   test('silme sonrası düzenleme: ng mezardan yeniyse not yaşar ve mezar düşer', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const a = await birlestirilmis(page,
       kitap('x', { g: 200, notlar: [], silinenNotlar: { n1: 5000 } }),
       kitap('x', { g: 100, notlar: [not('n1', { ng: 9000, metin: 'Sonradan düzenlendi' })] }));
@@ -80,7 +81,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
 
   test('aynı not iki tarafta: ng yeni olan fikir listesi DAHİL bütünüyle kazanır', async ({ page }) => {
     // DAVRANIŞ DEĞİŞTİ (bilinçli): fikir küme birleşimi silinen etiketi diriltiyordu → LWW
-    await page.goto('/');
+    await rafAc(page);
     const a = await birlestirilmis(page,
       kitap('x', { g: 200, notlar: [not('n1', { metin: 'Yerel hali', ng: 1000, fikir: ['özgürlük'] })] }),
       kitap('x', { g: 100, notlar: [not('n1', { metin: 'Uzak hali', ng: 2000, fikir: ['ahlak'] })] }));
@@ -93,7 +94,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   });
 
   test('silinen not fikir etiketi senkronda GERİ GELMEZ (kanıt senaryosu birebir)', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     // fikir-sil ng basar: yerel ng=3000 ['olus'] vs uzak ng=1000 ['olus','surec']
     const k = await birlestirilmis(page,
       kitap('x', { g: 3000, notlar: [not('n1', { ng: 3000, fikir: ['olus'] })] }),
@@ -102,7 +103,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   });
 
   test('oturumlar birleşir, aynı b mükerrer olmaz, tamamlanmış (uzun) hali kazanır', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const k = await birlestirilmis(page,
       kitap('x', { g: 200, oturumlar: [{ b: 1000, s: 60000, sa: 1, sb: 5 }, { b: 3000, s: 100, sa: 6, sb: 6 }] }),
       kitap('x', { g: 100, oturumlar: [{ b: 1000, s: 60000, sa: 1, sb: 5 }, { b: 2000, s: 30000, sa: 5, sb: 8 },
@@ -112,7 +113,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   });
 
   test('okumalar birleşir, aynı bas+bit mükerrer olmaz', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const k = await birlestirilmis(page,
       kitap('x', { g: 200, okumalar: [{ bas: '2025-01-01', bit: '2025-02-01', puan: 8, not: '' }] }),
       kitap('x', { g: 100, okumalar: [{ bas: '2025-01-01', bit: '2025-02-01', puan: 8, not: '' },
@@ -122,7 +123,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   });
 
   test('ödünç birleşir (kisi+verilis anahtar), iade kaydı tercih edilir', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const k = await birlestirilmis(page,
       kitap('x', { g: 200, odunc: [{ kisi: 'Ali', verilis: '2026-01-01', donus: null }] }),
       kitap('x', { g: 100, odunc: [{ kisi: 'Ali', verilis: '2026-01-01', donus: '2026-02-01' },
@@ -132,7 +133,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   });
 
   test('seanslar: aynı gün büyük (ilerlemiş) sayfa kazanır, farklı günler birleşir', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const k = await birlestirilmis(page,
       kitap('x', { g: 200, seanslar: [{ t: '2026-08-01', a: 10, b: 40 }] }),
       kitap('x', { g: 100, seanslar: [{ t: '2026-08-01', a: 10, b: 65 }, { t: '2026-08-02', a: 65, b: 80 }] }));
@@ -141,7 +142,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   });
 
   test('guncelSayfa: aynı okuma döngüsünde 120 ve 80 → 120 kazanır (damgadan bağımsız)', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const a = await birlestirilmis(page,
       kitap('x', { g: 200, durum: 'okunuyor', guncelSayfa: 80 }),
       kitap('x', { g: 100, durum: 'okunuyor', guncelSayfa: 120 }));
@@ -153,7 +154,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   });
 
   test('kasıtlı sıfırlama korunur: yeniden-oku / okunacak sıfırlaması max ile geri gelmez', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     // "Yeniden oku": arşiv boyu değişti (okumalar +1) → aynı döngü değil → 0 korunur
     const a = await birlestirilmis(page,
       kitap('x', { g: 200, durum: 'okunuyor', guncelSayfa: 0,
@@ -168,7 +169,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   });
 
   test('aynı gün iki seans dilimi aralık-birleşimiyle korunur, sıra kronolojik', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     // taraf-İÇİ mükerrer gün (bozuk sıra sonrası seansEkle'nin doğurduğu vaka): yutulmaz, birleşir
     const k = await birlestirilmis(page,
       kitap('x', { g: 200, seanslar: [{ t: '2026-08-05', a: 10, b: 40 },
@@ -182,7 +183,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   });
 
   test('oturumlar kronolojik sıralanır, 400 tavanı birleşimde korunur', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const coklu = Array.from({ length: 399 }, (_, i) => ({ b: 10000 + i, s: 1000, sa: i, sb: i + 1 }));
     const k = await birlestirilmis(page,
       kitap('x', { g: 200, oturumlar: coklu }),
@@ -195,7 +196,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
 
   test('silinen kitap etiketi GERİ GELMEZ: kazanan LWW, içi TR-mükerrersiz', async ({ page }) => {
     // DAVRANIŞ DEĞİŞTİ (bilinçli): küme birleşimi silinen etiketi diriltiyordu → kazanan listesi aynen
-    await page.goto('/');
+    await rafAc(page);
     // kanıt senaryosu birebir: yerel g=3000 ['felsefe'] vs uzak g=1000 ['felsefe','silinecek']
     const a = await birlestirilmis(page,
       kitap('x', { g: 3000, etiketler: ['felsefe'] }),
@@ -209,7 +210,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   });
 
   test('skaler alanlar: daha yeni damgalı kitap kazanır (mevcut davranış korunur)', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const k = await birlestirilmis(page,
       kitap('x', { g: 200, ad: 'Yeni Ad', durum: 'bitti', puan: 9, raf: 'salon' }),
       kitap('x', { g: 100, ad: 'Eski Ad', durum: 'okunacak', puan: 3, raf: 'depo' }));
@@ -232,7 +233,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
     });
     await tohumla(page, [sahteKitap({ ad: 'Yerel Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     const sonuc = await page.evaluate(() => {
       window.__senkron.ayarKaydet({ oda: 'g26-test-odasi', cihaz: 'testcihaz', sonSenkron: null });
       return window.__senkron.senkronEt(true);
@@ -241,7 +242,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
     expect(putSayisi).toBe(0);                                  // uzağa YAZILMADI
     const yerel = await page.evaluate(() => veri.kitaplar.map(k => k.ad));
     expect(yerel).toEqual(['Yerel Kitap']);                     // gelecekteki veri İÇERİ ALINMADI
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await ayarlarAc(page);
     await expect(page.locator('#senkronDurum')).toContainText('eski sürümde'); // uyarı görünür
     // ikinci deneme kısa devre: GET bile atılmadan reddedilir
     expect(await page.evaluate(() => window.__senkron.senkronEt(true))).toBe(false);
@@ -257,7 +258,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
     });
     await tohumla(page, [sahteKitap({ ad: 'Senkronlu Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     const tamam = await page.evaluate(() => {
       window.__senkron.ayarKaydet({ oda: 'g26-test-odasi', cihaz: 'testcihaz', sonSenkron: null });
       return window.__senkron.senkronEt(true);
@@ -270,7 +271,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   test('göç: eski anlık görüntü (s:6) damga basmaz, yeni sürümle yazılır', async ({ page }) => {
     const k = sahteKitap({ ad: 'Göç Kitabı v7', g: 9, notlar: [not('n1')] });
     await tohumla(page, [k], { kk_senkron_anlik_v1: { s: 6, p: { eskiId: 'x-yz' } } });
-    await page.goto('/');
+    await rafAc(page);
     await page.evaluate(() => depoKaydet());
     expect(await page.evaluate(() => veri.kitaplar[0].g)).toBe(9);
     const anlik = await page.evaluate(() => JSON.parse(localStorage.getItem('kk_senkron_anlik_v1')));
@@ -281,7 +282,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
     // açılış: ng'siz/mezarsız eski kitap normalize'dan sağ çıkar
     await tohumla(page, [{ id: 'eski1', ad: 'Çok Eski Kitap',
       notlar: [{ tip: 'alinti', metin: 'İdsiz eski alıntı' }] }]);
-    await page.goto('/');
+    await rafAc(page);
     const acilis = await page.evaluate(() => veri.kitaplar[0].notlar[0]);
     expect(acilis.ng).toBe(0);
     expect(acilis.id).toBeTruthy();                 // normalize id verdi
@@ -298,7 +299,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
     const n2 = not('nTekrar', { ng: 0, tekrarDurum: 'aktif', tekrarAralik: 3,
       tekrarSayisi: 0, tekrarSonraki: bugunISO(-1) });
     await tohumla(page, [sahteKitap({ notlar: [n1, n2] })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('[data-act="sekme"][data-v="alinti"]');
     const kartA = page.locator(`#alintiIcerik .not-kart[data-nid="${n1.id}"]`);
     await kartA.locator('.fikir-giris').fill('cesaret');
@@ -311,7 +312,7 @@ test.describe('G26 senkron dizi birleşimi + şema koruması', () => {
   });
 
   test('performans: 500 kitaplık iki taraflı birleşim makul sürede biter', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const sonuc = await page.evaluate(() => {
       const taraf = kayma => ({
         kitaplar: Array.from({ length: 500 }, (_, i) => ({

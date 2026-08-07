@@ -1,6 +1,6 @@
 'use strict';
 const fs = require('fs');
-const { test, expect, tohumla, sahteKitap } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, rafAc, ayarlarAc } = require('./yardim');
 
 const GR_CSV = [
   'Title,Author,ISBN13,My Rating,Number of Pages,Year Published,Date Read,Date Added,Bookshelves,Exclusive Shelf,My Review,Publisher',
@@ -10,19 +10,19 @@ const GR_CSV = [
 ].join('\n');
 
 async function yedekSekmesi(page) {
-  await page.click('[data-act="sekme"][data-v="yedek"]');
+  await ayarlarAc(page);
 }
 
 test.describe('G10 yedek ve aktarım', () => {
 
   test('JSON dışa aktarım indirme tetikler ve içerik geçerli JSON', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Yedeklenen Kitap', yazar: 'Yedek Yazar' })]);
-    await page.goto('/');
+    await rafAc(page);
     await yedekSekmesi(page);
     const [indirme] = await Promise.all([
       page.waitForEvent('download'),
       // Kota uyarı şeridinde de aynı eylem var (M5); Yedek panelindekini hedefle.
-      page.click('#panel-yedek .yedek-kart [data-act="disa-aktar"]')
+      page.click('#ortuAyar .yedek-kart [data-act="disa-aktar"]')
     ]);
     expect(indirme.suggestedFilename()).toMatch(/^kitaplik-yedek-.*\.json$/);
     const icerik = JSON.parse(fs.readFileSync(await indirme.path(), 'utf8'));
@@ -33,7 +33,7 @@ test.describe('G10 yedek ve aktarım', () => {
 
   test('JSON geri yükleme mevcutla birleştirir, mükerrer eklemez', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Mevcut Kitap', yazar: 'Aynı Yazar' })]);
-    await page.goto('/');
+    await rafAc(page);
     await yedekSekmesi(page);
     const yedek = JSON.stringify({ surum: 2, kitaplar: [
       { ad: 'Mevcut Kitap', yazar: 'Aynı Yazar' },      // mükerrer → atlanmalı
@@ -46,7 +46,7 @@ test.describe('G10 yedek ve aktarım', () => {
   });
 
   test('Goodreads CSV: raf→durum, puan 5→10, tarih dönüşümü, yorum→not', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     await yedekSekmesi(page);
     await page.setInputFiles('#grDosya',
       { name: 'goodreads.csv', mimeType: 'text/csv', buffer: Buffer.from(GR_CSV, 'utf8') });
@@ -76,7 +76,7 @@ test.describe('G10 yedek ve aktarım', () => {
   });
 
   test('aynı CSV ikinci kez yüklenirse yeni kayıt oluşmaz', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     await yedekSekmesi(page);
     const dosya = { name: 'goodreads.csv', mimeType: 'text/csv', buffer: Buffer.from(GR_CSV, 'utf8') };
     await page.setInputFiles('#grDosya', dosya);
@@ -88,7 +88,7 @@ test.describe('G10 yedek ve aktarım', () => {
 
   test('bozuk dosya reddedilir, mevcut veri bozulmaz', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Korunan Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     await yedekSekmesi(page);
     // bozuk JSON
     await page.setInputFiles('#iceDosya',

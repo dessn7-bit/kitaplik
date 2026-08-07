@@ -93,6 +93,11 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
   backdrop-filter:blur(6px);padding:calc(14px + env(safe-area-inset-top)) 16px 10px}
 .app-title{font-family:var(--serif);font-size:1.5rem;letter-spacing:.02em}
 .app-title span{color:var(--brass)}
+/* Ayarlar başlık satırında, arama satırında DEĞİL: arama satırı yalnız Kütüphane
+   sekmesinde görünüyor (sekmeGec), ayarlar ise her sekmeden erişilebilmeli. */
+.baslik-satir{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ayar-btn{flex:0 0 38px;width:38px;height:38px;border-radius:10px;background:var(--surface);
+  border:1px solid var(--border);color:var(--muted);font-size:1.1rem}
 .search-row{display:flex;gap:8px;margin-top:10px}
 .search-row input{flex:1;background:var(--surface);border-radius:10px}
 .zar-btn{flex:0 0 46px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:1.2rem}
@@ -133,6 +138,35 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 .bos .b-ikon{font-size:2.6rem;margin-bottom:14px;opacity:.6}
 .bos p{font-family:var(--serif);font-size:1.05rem;line-height:1.5}
 .bos small{display:block;margin-top:8px;font-size:.82rem;color:var(--muted2)}
+
+/* Ana Sayfa (as-) — kendi ad alanı. `.sort-row` ve `.yedek-wrap` sınıfları
+   BİLİNÇLİ olarak kullanılmaz: gorunum.js ve senkron.js/katalog.js bu sınıfların
+   İLK eşleşmesine yazıyor, ana sayfa DOM'da raf panelinden önce geldiği için
+   düğmeleri/kartları yanlış panele düşürürdü. Görsel dil değişmedi: tüm renk,
+   yazı ve kenarlık değişkenleri mevcut kart/rozet desenlerinden. */
+.as-wrap{padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+.as-blok{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px;box-shadow:0 1px 3px var(--golge)}
+.as-blok-btn{display:block;width:100%;text-align:left}
+.as-blok-bas{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.as-blok-bas h2{font-family:var(--serif);font-size:1rem;font-weight:600}
+.as-blok-bas .zar-btn{flex:0 0 38px;height:34px;font-size:1rem;padding:0}
+.as-tumu{font-size:.76rem;color:var(--brass);white-space:nowrap}
+.as-satir{display:flex;gap:12px;width:100%;text-align:left;padding:10px 0}
+.as-satir + .as-satir{border-top:1px solid var(--border)}
+.as-satir:first-child{padding-top:0}
+.as-satir:last-child{padding-bottom:0}
+.as-satir-ic{flex:1;min-width:0}
+.as-ad{font-family:var(--serif);font-size:.98rem;line-height:1.3;overflow-wrap:break-word}
+.as-yazar{font-size:.78rem;color:var(--muted);margin-top:2px}
+.as-not{font-size:.82rem;color:var(--muted);line-height:1.55}
+.as-neden{font-size:.78rem;color:var(--muted2);line-height:1.5;margin-top:4px}
+.as-sayi{font-family:var(--serif);font-size:1.6rem;color:var(--brass);line-height:1.1}
+.as-olcu{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap}
+.as-olcu-ad{font-size:.76rem;color:var(--muted2);margin-top:2px}
+.as-eylem{display:flex;gap:8px;flex-wrap:wrap}
+.as-eylem .btn{width:auto;flex:1 1 28%;padding:11px 8px;font-size:.82rem}
+.as-eylem .zar-btn{flex:0 0 46px;height:auto}
 
 nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   background:var(--nav-zemin);backdrop-filter:blur(10px);border-top:1px solid var(--border);
@@ -180,6 +214,8 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .ga-kaynak{font-size:.78rem;color:var(--muted);margin-top:10px}
 
 .yedek-wrap{padding:16px;display:flex;flex-direction:column;gap:12px}
+/* Ayarlar penceresinde: .sheet zaten yatay iç boşluk veriyor, ikilenmesin. */
+#ortuAyar .yedek-wrap{padding:14px 0 0}
 .yedek-kart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 1px 3px var(--golge)}
 .yedek-kart h3{font-family:var(--serif);font-size:1rem;margin-bottom:6px}
 .yedek-kart p{font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:12px}
@@ -406,7 +442,10 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 </div>
 
 <header>
-  <div class="app-title">Kitap<span>lık</span></div>
+  <div class="baslik-satir">
+    <div class="app-title">Kitap<span>lık</span></div>
+    <button class="ayar-btn" data-act="ayar-ac" aria-label="Ayarlar" title="Ayarlar">⚙</button>
+  </div>
   <div class="search-row" id="aramaSatiri">
     <input type="search" id="arama" placeholder="Kitap, yazar, yayınevi veya etiket ara…" autocomplete="off">
     <button class="zar-btn" data-act="zar" title="Okunacaklardan rastgele öner"
@@ -418,8 +457,18 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   </div>
 </header>
 
-<!-- ===== RAF ===== -->
-<section class="panel active" id="panel-raf">
+<!-- ===== ANA SAYFA (as-) =====
+     Yönelim yüzeyi. DOM'da raf panelinden ÖNCE duruyor; bu yüzden `.sort-row`
+     ve `.yedek-wrap` sınıflarını kullanmaz (bkz. as- CSS notu). -->
+<section class="panel active" id="panel-ana">
+  <div class="as-wrap" id="anaIcerik"></div>
+</section>
+
+<!-- ===== KÜTÜPHANE =====
+     data-v/id BİLİNÇLİ olarak `raf` kaldı: yalnız görünen ad "Kütüphane" oldu.
+     `raf` değişseydi #panel-raf, durum.sekme varsayılanı, ?sekme=raf derin
+     bağlantısı ve puansiz-git köprüsü birlikte kırılırdı — kazancı sıfır. -->
+<section class="panel" id="panel-raf">
   <div class="chips" id="durumChips">
     <button class="chip active" data-act="filtre" data-v="hepsi">Tümü</button>
     <button class="chip" data-act="filtre" data-v="okunuyor">Okunuyor</button>
@@ -430,8 +479,8 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <button class="chip" data-act="filtre" data-v="puansiz">Puansız</button>
   </div>
   <div class="vm-chips" id="vmSahiplikChips">
-    <button class="vm-chip vm-secili" data-act="vm-sahiplik" data-v="hepsi">Tüm raf</button>
-    <button class="vm-chip" data-act="vm-sahiplik" data-v="sahip">Bende olanlar</button>
+    <button class="vm-chip" data-act="vm-sahiplik" data-v="hepsi">Tüm raf</button>
+    <button class="vm-chip vm-secili" data-act="vm-sahiplik" data-v="sahip">Bende olanlar</button>
     <button class="vm-chip" data-act="vm-sahiplik" data-v="istek">İstek listesi</button>
   </div>
   <div class="sort-row">
@@ -461,67 +510,77 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   <div class="ist-wrap" id="istIcerik"></div>
 </section>
 
-<!-- ===== YEDEK ===== -->
-<section class="panel" id="panel-yedek">
-  <div class="yedek-wrap">
-    <div class="yedek-kart">
-      <h3>Yedek al</h3>
-      <p>Tüm kütüphaneni (kitaplar, notlar, seanslar, hedefler) tek JSON dosyası olarak indir.</p>
-      <button class="btn btn-brass" data-act="disa-aktar">JSON indir</button>
-      <div style="height:8px"></div>
-      <button class="btn btn-cerceve" data-act="csv-aktar">CSV indir (Excel için)</button>
-    </div>
-    <div class="yedek-kart">
-      <h3>Görünüm</h3>
-      <p>Gece okurken ekran gözünü yormasın. “Sistem” seçilirse telefonunun/bilgisayarının karanlık mod ayarını izler.</p>
-      <div class="tm-secim" id="tmSecim">
-        <button class="tm-dugme" data-act="tm-tema" data-v="acik">☀ Açık</button>
-        <button class="tm-dugme" data-act="tm-tema" data-v="karanlik">☾ Karanlık</button>
-        <button class="tm-dugme" data-act="tm-tema" data-v="sistem">⚙ Sistem</button>
-      </div>
-    </div>
-    <div class="yedek-kart">
-      <h3>Alıntı ve notları dışa aktar</h3>
-      <p>Bütün alıntıların ve notların, kitaplara göre gruplanmış tek bir Markdown (.md) dosyası olarak iner — yazı çalışmanda doğrudan kullanabilirsin.</p>
-      <button class="btn btn-cerceve" data-act="md-alinti">Sadece alıntılar (.md)</button>
-      <div style="height:8px"></div>
-      <button class="btn btn-cerceve" data-act="md-hepsi">Alıntılar + notlar (.md)</button>
-    </div>
-    <div class="yedek-kart">
-      <h3>Goodreads'ten aktar</h3>
-      <p>Goodreads → My Books → sol menüde <b>Import and export</b> → <b>Export Library</b> ile CSV indir, buraya yükle. Kitaplar rafları (okundu/okunuyor/okunacak), puanların (5'lik → 10'luğa çevrilir), tarihler, yorumların ve kapaklarıyla gelir.</p>
-      <button class="btn btn-cerceve" data-act="gr-aktar">Goodreads CSV yükle</button>
-      <input type="file" id="grDosya" accept=".csv,text/csv" hidden>
-    </div>
-    <div class="yedek-kart">
-      <h3>Yedekten geri yükle</h3>
-      <p>JSON yedeğini seç. Mevcut kayıtlarla birleştirilir; aynı kitap (ad + yazar) iki kez eklenmez.</p>
-      <button class="btn btn-cerceve" data-act="ice-aktar">Dosya seç</button>
-      <input type="file" id="iceDosya" accept="application/json,.json" hidden>
-    </div>
-    <div class="yedek-kart">
-      <h3>Kapak fotoğrafları</h3>
-      <p>Kendi çektiğin kapak fotoğrafları <b>yalnız bu cihazda</b> saklanır — senkrona ve JSON
-      yedeğine girmezler. Cihaz değiştirirsen fotoğrafları yeni cihazda yeniden çekmen gerekir.</p>
-      <div class="kp-depo-satir" id="kpDepoBilgi">Hesaplanıyor…</div>
-      <button class="btn btn-tehlike" data-act="kp-tum-sil">Tüm fotoğrafları sil</button>
-    </div>
-    <div class="yedek-kart">
-      <h3>Tümünü sil</h3>
-      <p>Bütün kayıtları kalıcı olarak siler. Önce yedek almadan kullanma.</p>
-      <button class="btn btn-tehlike" data-act="tumunu-sil">Kütüphaneyi boşalt</button>
-    </div>
-  </div>
-</section>
-
 <button class="fab" data-act="yeni" aria-label="Kitap ekle">+</button>
 
 <nav>
-  <button class="nav-btn active" data-act="sekme" data-v="raf"><span class="n-ikon">📚</span>Kitaplık</button>
+  <button class="nav-btn active" data-act="sekme" data-v="ana"><span class="n-ikon">🏠</span>Ana Sayfa</button>
+  <button class="nav-btn" data-act="sekme" data-v="raf"><span class="n-ikon">📚</span>Kütüphane</button>
   <button class="nav-btn" data-act="sekme" data-v="alinti"><span class="n-ikon">❝</span>Alıntılar</button>
   <button class="nav-btn" data-act="sekme" data-v="ist"><span class="n-ikon">📊</span>İstatistik</button>
-  <button class="nav-btn" data-act="sekme" data-v="yedek"><span class="n-ikon">💾</span>Yedek</button>
 </nav>
+
+<!-- ===== AYARLAR (eski "Yedek" sekmesi) =====
+     KARAR: sekme değil, pencere. Kullanıcı buraya gidip KALMAZ; bir iş yapıp
+     döner — .ortu deseni bu ritmi doğru modeller, beşinci bir panel ise nav'da
+     karşılığı olmayan "hiçbir sekme aktif değil" durumu üretirdi.
+     KRİTİK: kapsayıcıya `panel` sınıfı VERİLMEZ. ARKA_PLAN_SEC 'section.panel'
+     içeriyor; pencere açıkken kendi içeriği inert'lenir ve buradaki her düğme
+     sessizce ölürdü. `.yedek-wrap` sınıfı KORUNUYOR: senkron.js ve katalog.js
+     kartlarını boot'ta o seçiciyle enjekte ediyor, ikisi de değişmeden çalışır. -->
+<div class="ortu" id="ortuAyar">
+  <div class="sheet">
+    <div class="tutamac"></div>
+      <button class="sheet-kapat" data-act="ayar-kapat" aria-label="Kapat">✕</button>
+    <div class="sheet-baslik" id="ortuAyarBaslik">Ayarlar</div>
+    <div class="yedek-wrap">
+      <div class="yedek-kart">
+        <h3>Yedek al</h3>
+        <p>Tüm kütüphaneni (kitaplar, notlar, seanslar, hedefler) tek JSON dosyası olarak indir.</p>
+        <button class="btn btn-brass" data-act="disa-aktar">JSON indir</button>
+        <div style="height:8px"></div>
+        <button class="btn btn-cerceve" data-act="csv-aktar">CSV indir (Excel için)</button>
+      </div>
+      <div class="yedek-kart">
+        <h3>Görünüm</h3>
+        <p>Gece okurken ekran gözünü yormasın. “Sistem” seçilirse telefonunun/bilgisayarının karanlık mod ayarını izler.</p>
+        <div class="tm-secim" id="tmSecim">
+          <button class="tm-dugme" data-act="tm-tema" data-v="acik">☀ Açık</button>
+          <button class="tm-dugme" data-act="tm-tema" data-v="karanlik">☾ Karanlık</button>
+          <button class="tm-dugme" data-act="tm-tema" data-v="sistem">⚙ Sistem</button>
+        </div>
+      </div>
+      <div class="yedek-kart">
+        <h3>Alıntı ve notları dışa aktar</h3>
+        <p>Bütün alıntıların ve notların, kitaplara göre gruplanmış tek bir Markdown (.md) dosyası olarak iner — yazı çalışmanda doğrudan kullanabilirsin.</p>
+        <button class="btn btn-cerceve" data-act="md-alinti">Sadece alıntılar (.md)</button>
+        <div style="height:8px"></div>
+        <button class="btn btn-cerceve" data-act="md-hepsi">Alıntılar + notlar (.md)</button>
+      </div>
+      <div class="yedek-kart">
+        <h3>Goodreads'ten aktar</h3>
+        <p>Goodreads → My Books → sol menüde <b>Import and export</b> → <b>Export Library</b> ile CSV indir, buraya yükle. Kitaplar rafları (okundu/okunuyor/okunacak), puanların (5'lik → 10'luğa çevrilir), tarihler, yorumların ve kapaklarıyla gelir.</p>
+        <button class="btn btn-cerceve" data-act="gr-aktar">Goodreads CSV yükle</button>
+      </div>
+      <div class="yedek-kart">
+        <h3>Yedekten geri yükle</h3>
+        <p>JSON yedeğini seç. Mevcut kayıtlarla birleştirilir; aynı kitap (ad + yazar) iki kez eklenmez.</p>
+        <button class="btn btn-cerceve" data-act="ice-aktar">Dosya seç</button>
+      </div>
+      <div class="yedek-kart">
+        <h3>Kapak fotoğrafları</h3>
+        <p>Kendi çektiğin kapak fotoğrafları <b>yalnız bu cihazda</b> saklanır — senkrona ve JSON
+      yedeğine girmezler. Cihaz değiştirirsen fotoğrafları yeni cihazda yeniden çekmen gerekir.</p>
+        <div class="kp-depo-satir" id="kpDepoBilgi">Hesaplanıyor…</div>
+        <button class="btn btn-tehlike" data-act="kp-tum-sil">Tüm fotoğrafları sil</button>
+      </div>
+      <div class="yedek-kart">
+        <h3>Tümünü sil</h3>
+        <p>Bütün kayıtları kalıcı olarak siler. Önce yedek almadan kullanma.</p>
+        <button class="btn btn-tehlike" data-act="tumunu-sil">Kütüphaneyi boşalt</button>
+      </div>
+    </div>
+    </div>
+</div>
 
 <!-- ===== FORM ===== -->
 <div class="ortu" id="ortuForm">
@@ -726,6 +785,12 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
      kamerayı açıp galeriden seçimi imkânsız kılıyor; özniteliksiz girdi yerel
      seçim sayfasını gösterir (Fotoğraf Çek / Galeri) → "çek/seç" sözü tutulur. -->
 <input type="file" id="kpDosya" accept="image/*" hidden>
+<!-- Aynı gerekçe: bu iki girdi eskiden Yedek panelindeydi, artık Ayarlar
+     PENCERESİNDEN tetikleniyor. Pencere içinde bırakılsalardı üstlerine ikinci
+     bir pencere açıldığı anda inert kapsayıcıya düşer ve .click() sessizce
+     yutulurdu (Goodreads aktarımı ile geri yükleme hata bile vermeden ölürdü). -->
+<input type="file" id="grDosya" accept=".csv,text/csv" hidden>
+<input type="file" id="iceDosya" accept="application/json,.json" hidden>
 
 <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
@@ -737,10 +802,16 @@ const DURUM_AD = { okunacak:'Okunacak', okunuyor:'Okunuyor', bitti:'Bitti', yari
 const SIRT_RENK = ['#C89B4B','#8FA86B','#B06A4A','#7E8FA6','#A67E9E','#8A6A33','#6BA0A8','#B58F5E'];
 
 let veri = depoYukle();
-let durum = { filtre:'hepsi', arama:'', etiket:'', sirala:'eklenme', sekme:'raf',
+/* sekme:'ana' — açılış Ana Sayfa. KARAR: son sekme HATIRLANMAZ (kalıcı anahtar
+   yok). Ana Sayfa'nın işi yönelim; hatırlanan sekme onu iptal eder, ayrıca
+   derin bağlantıyla (?sekme=, paylaş hedefi) yarışıp "hangisi kazanır" diye
+   yazılmamış bir kural üretirdi.
+   sahiplikFiltre:'sahip' — Kütüphane "elimdekiler" demek. Kayıp riski yok:
+   kitapNormalize sahiplik'i 'istek' değilse 'sahip'e sabitliyor. */
+let durum = { filtre:'hepsi', arama:'', etiket:'', sirala:'eklenme', sekme:'ana',
   formDuzenId:null, formDurum:'okunacak', formPuan:null, formKapak:null,
   detayId:null, notTip:'not', alintiArama:'', araTip:'ad',
-  gelenKitapId:null, gelenTip:'alinti', sahiplikFiltre:'hepsi' };
+  gelenKitapId:null, gelenTip:'alinti', sahiplikFiltre:'sahip' };
 
 /* ---------- depo + geriye uyumlu göç ---------- */
 function kitapNormalize(k){
@@ -951,7 +1022,17 @@ function listeCiz(){
   }[durum.sirala];
   ks.sort(cmp);
 
-  document.getElementById('sayac').textContent = ks.length ? `${ks.length} kitap` : '';
+  /* Sayaç dururken de anlamlı olsun: fiziksel envanter hissi için raf konumu
+     sayısı eklenir. Üçüncü parça DÜRÜSTLÜK payı — "Bende olanlar" varsayılan
+     olduğu için istek listesindeki kitaplar görünmüyor; kaç tane olduğunu
+     söylemezsek sessizce kaybolmuş gibi durur. Gizlenen yoksa hiç yazılmaz. */
+  const rafSayi = new Set(ks.map(k => (k.raf||'').trim()).filter(Boolean)).size;
+  const gizliIstek = durum.sahiplikFiltre === 'sahip'
+    ? veri.kitaplar.filter(k => k.sahiplik === 'istek').length : 0;
+  document.getElementById('sayac').textContent = ks.length
+    ? [`${ks.length} kitap`, rafSayi ? `${rafSayi} raf konumu` : '',
+       gizliIstek ? `${gizliIstek} istek listesinde` : ''].filter(Boolean).join(' · ')
+    : '';
 
   if(!ks.length){
     const bosMesaj = veri.kitaplar.length
@@ -994,6 +1075,7 @@ function listeCiz(){
           ${k.sahiplik === 'istek' ? `<span class="vm-rozet">İstek listesi</span>` : ''}
           ${((k.durum === 'bitti' || k.durum === 'yarim') && k.puan) ? `<span class="puan-mini">★ ${k.puan}/10</span>` : ''}
           ${notSayi ? `<span class="etiket-mini">✎ ${notSayi}</span>` : ''}
+          ${(k.raf||'').trim() ? `<span class="etiket-mini">📚 ${esc(k.raf.trim())}</span>` : ''}
           ${(k.etiketler||[]).slice(0,3).map(e => `<span class="etiket-mini">#${esc(e)}</span>`).join('')}
         </div>
         ${ilerlemeHtml}
@@ -1925,8 +2007,156 @@ function gelenKaydet(){
 }
 
 /* ---------- çizim / sekme ---------- */
+/* ---------- ANA SAYFA (as-) ----------
+   Yönelim yüzeyi: "aç, nerede olduğunu gör". Kendi analizini YAPMAZ, hazır
+   kaynaklardan okur. İki kural:
+   1) UYDURMA YOK — verisi olmayan bölüm hiç çizilmez; sıfır gösterip suçlamaz.
+   2) Eklentiler bu betikten SONRA yükleniyor, her window.__X çağrısı savunmacı.
+      Sayfa sonundaki ikinci anaCiz() eklentiler bağlandıktan sonra tazeler.
+   YAN ETKİ YASAĞI: __tekrar.kuyruk() salt okur; ciz()/planlamaYap() depoKaydet
+   çağırdığı için ana sayfadan ASLA çağrılmaz (açılış her seferinde damga
+   basardı → bayat cihaz güncel veriyi ezerdi). */
+function anaBugunOkuma(){
+  /* oturum.js "bugünkü sayfa"yı vermiyor (toplamSayfa kitap ömrüdür), gün
+     süzgecini burada yapıyoruz. sup:true = unutulup otomatik kapanmış oturum;
+     oturum.js hangi gerekçeyle analiz dışı bırakıyorsa burada da dışarıda. */
+  const g = bugun();
+  let ms = 0, sayfa = 0;
+  for(const k of veri.kitaplar)
+    for(const o of (k.oturumlar || [])){
+      if(!o || o.sup || !o.b) continue;
+      const d = new Date(o.b);
+      const gs = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      if(gs !== g) continue;
+      ms += o.s || 0;
+      sayfa += Math.max(0, (o.sb||0) - (o.sa||0));
+    }
+  return { ms, sayfa };
+}
+function anaCiz(){
+  const kap = document.getElementById('anaIcerik');
+  if(!kap) return;
+
+  /* --- boş kütüphane: süsleme yok, tek doğru eyleme yönlendir --- */
+  if(!veri.kitaplar.length){
+    kap.innerHTML = `<div class="bos"><div class="b-ikon">📖</div>
+        <p>Kütüphanen henüz boş.</p>
+        <small>İlk kitabını ekle — adını yazıp arattığında yazar, sayfa ve kapak kendiliğinden gelir.
+        Goodreads'ten geliyorsan bütün kitaplığını olduğu gibi aktarabilirsin.</small></div>
+      <div class="as-blok"><div class="as-eylem">
+        <button class="btn btn-brass" data-act="yeni">Kitap ekle</button>
+        <button class="btn btn-cerceve" data-act="ayar-ac">Goodreads'ten aktar</button>
+      </div></div>`;
+    return;
+  }
+
+  const bloklar = [];
+
+  /* --- 1. şu an okudukların --- */
+  const okunuyor = veri.kitaplar.filter(k => k.durum === 'okunuyor')
+    .sort((a,b) => (b.gsG||0) - (a.gsG||0) || (b.eklenme||0) - (a.eklenme||0));
+  const okunuyorHtml = okunuyor.length
+    ? okunuyor.slice(0,3).map(k => {
+        const p = k.sayfa > 0 ? Math.min(100, Math.round((k.guncelSayfa||0) / k.sayfa * 100)) : null;
+        return `<button class="as-satir" data-act="detay" data-id="${escAttr(k.id)}">
+          <div class="as-satir-ic">
+            <div class="as-ad">${esc(k.ad)}</div>
+            ${k.yazar ? `<div class="as-yazar">${esc(k.yazar)}</div>` : ''}
+            ${p !== null
+              ? `<div class="ilerleme"><div style="width:${p}%"></div></div>
+                 <div class="ilerleme-txt">${k.guncelSayfa||0} / ${k.sayfa} · %${p}</div>`
+              : k.guncelSayfa
+                ? `<div class="ilerleme-txt">sf. ${k.guncelSayfa} — toplam sayfa girilmemiş</div>` : ''}
+          </div></button>`;
+      }).join('')
+    : `<div class="as-not">Şu an okuduğun kitap yok.</div>`;
+  bloklar.push(`<div class="as-blok" id="asOkunuyor">
+    <div class="as-blok-bas"><h2>Şu an okudukların</h2>
+      ${okunuyor.length > 3
+        ? `<button class="as-tumu" data-act="ana-okunuyor">Tümü (${okunuyor.length})</button>` : ''}
+    </div>${okunuyorHtml}</div>`);
+
+  /* --- 2. bugün: hiçbiri yoksa bölüm HİÇ çizilmez --- */
+  let tekrarSayi = 0;
+  try{ if(window.__tekrar) tekrarSayi = window.__tekrar.kuyruk().length; }catch(e){ tekrarSayi = 0; }
+  const bg = anaBugunOkuma();
+  const sureYaz = (window.__oturum && window.__oturum.sureMetni)
+    ? window.__oturum.sureMetni : (ms => Math.max(0, Math.round(ms/60000)) + ' dk');
+  const bugunParca = [];
+  if(tekrarSayi) bugunParca.push(
+    `<button class="as-satir" data-act="ana-tekrar"><div class="as-satir-ic">
+       <div class="as-ad">${tekrarSayi} alıntı tekrar için bekliyor</div>
+       <div class="as-yazar">Alıntılar sekmesinde seni bekliyorlar.</div>
+     </div></button>`);
+  if(bg.ms > 0 || bg.sayfa > 0) bugunParca.push(`<div class="as-satir"><div class="as-olcu">
+      ${bg.ms > 0 ? `<div><div class="as-sayi">${esc(sureYaz(bg.ms))}</div><div class="as-olcu-ad">okuma süresi</div></div>` : ''}
+      ${bg.sayfa > 0 ? `<div><div class="as-sayi">${bg.sayfa}</div><div class="as-olcu-ad">sayfa</div></div>` : ''}
+    </div></div>`);
+  if(bugunParca.length) bloklar.push(`<div class="as-blok" id="asBugun">
+    <div class="as-blok-bas"><h2>Bugün</h2></div>${bugunParca.join('')}</div>`);
+
+  /* --- 3. sıradaki: öneri motoru yüklenmediyse bölüm hiç çizilmez --- */
+  if(window.__oneri && window.__oneri.hesapla){
+    let oneriler = [];
+    try{
+      const r = window.__oneri.hesapla();
+      oneriler = (r && Array.isArray(r.ana) ? r.ana : []).slice(0,2);
+    }catch(e){ oneriler = []; }
+    const okunacakVar = veri.kitaplar.some(k => k.durum === 'okunacak');
+    const oneriHtml = oneriler.length
+      ? oneriler.map(o => `<button class="as-satir" data-act="detay" data-id="${escAttr(o.kitap.id)}">
+          <div class="as-satir-ic">
+            <div class="as-ad">${esc(o.kitap.ad)}</div>
+            ${o.kitap.yazar ? `<div class="as-yazar">${esc(o.kitap.yazar)}</div>` : ''}
+            ${o.neden ? `<div class="as-neden">${esc(o.neden)}</div>` : ''}
+          </div></button>`).join('')
+      : okunacakVar
+        ? `<div class="as-not">Okunacaklarının hepsini ertelemişsin — şimdilik önerecek bir şey yok.</div>`
+        : `<div class="as-not">Okunacak listen boş. Kütüphanendeki kitapları “Okunacak” işaretledikçe burada öneri çıkar.</div>`;
+    bloklar.push(`<div class="as-blok" id="asSiradaki">
+      <div class="as-blok-bas"><h2>Sıradaki</h2>
+        ${okunacakVar ? `<button class="zar-btn" data-act="zar" title="Kader seçsin"
+          aria-label="Okunacaklardan rastgele kitap öner">🎲</button>` : ''}
+      </div>${oneriHtml}</div>`);
+  }
+
+  /* --- 4. yıl özeti ---
+     KARAR: sayım istKayit tabanlı, yani İstatistik sekmesiyle AYNI motor.
+     rapor.js'in yilOzeti'si yeniden okumaları farklı sayıyor; buradaki rakam
+     dokununca İstatistik'e gidiyor, orada başka bir sayı görmek kusurdur. */
+  const yil = new Date().getFullYear();
+  const buYil = veri.kitaplar.map(istKayit).filter(Boolean)
+    .filter(k => k.bitisTarihi && k.bitisTarihi.startsWith(String(yil)));
+  const hedef = veri.hedef[yil] || 0;
+  const yuzde = hedef > 0 ? Math.min(100, Math.round(buYil.length / hedef * 100)) : null;
+  bloklar.push(`<button class="as-blok as-blok-btn" id="asYil" data-act="ana-ist">
+    <div class="as-blok-bas"><h2>${yil} özeti</h2><span class="as-tumu">İstatistik →</span></div>
+    <div class="as-olcu"><div>
+      <div class="as-sayi">${buYil.length}${hedef > 0
+        ? ` <span style="font-size:.92rem;color:var(--muted)">/ ${hedef}</span>` : ''}</div>
+      <div class="as-olcu-ad">bu yıl bitirdiğin kitap</div>
+    </div></div>
+    ${yuzde !== null
+      ? `<div class="ilerleme" style="margin-top:10px"><div style="width:${yuzde}%"></div></div>
+         <div class="ilerleme-txt">Yıllık hedefinin %${yuzde}'i</div>`
+      : `<div class="as-neden">Yıllık hedef koymadın — İstatistik sekmesinden koyabilirsin.</div>`}
+  </button>`);
+
+  /* --- 5. hızlı eylemler --- */
+  bloklar.push(`<div class="as-blok" id="asEylem">
+    <div class="as-blok-bas"><h2>Hızlı eylemler</h2></div>
+    <div class="as-eylem">
+      <button class="btn btn-cerceve" data-act="yeni">Kitap ekle</button>
+      <button class="btn btn-cerceve" data-act="ana-barkod">Barkod tara</button>
+      <button class="btn btn-cerceve" data-act="seri-ac">Seri tarama</button>
+    </div></div>`);
+
+  kap.innerHTML = bloklar.join('');
+}
+
 function hepsiniCiz(){
   etiketFiltreDoldur(); listeCiz();
+  if(durum.sekme === 'ana') anaCiz();
   if(durum.sekme === 'ist') istCiz();
   if(durum.sekme === 'alinti') alintiCiz();
   // öneri paneli açıkken veri değiştiyse (detaydan başlat/bitir/sil vb.) panel
@@ -1942,17 +2172,37 @@ function temaDugmeleriCiz(){
     b.setAttribute('aria-pressed', b.dataset.v === secili ? 'true' : 'false');
   });
 }
-function sekmeGec(s){
-  durum.sekme = s;
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + s).classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.v === s));
+/* Sekme geçişinin TEK yeri. Ayarlar bilinçli olarak buradan geçmez: o bir
+   sekme değil pencere (bkz. #ortuAyar notu) — sekmeGec'e girseydi "hangi
+   sekme aktif" sorusunun cevapsız kaldığı bir durum üretirdi. */
+/* Arama satırı ve + düğmesi Kütüphane'ye ait. Ayrı fonksiyon çünkü AÇILIŞTA da
+   uygulanmalı: panel-ana statik olarak `active` geldiği için sekmeGec açılışta
+   koşmuyor — bu kural sekmeGec'in içinde kalsaydı ilk ekranda arama çubuğu ve
+   "+" düğmesi Ana Sayfa'nın üstünde asılı kalırdı. */
+function sekmeGorunum(s){
   document.getElementById('aramaSatiri').style.display = s === 'raf' ? 'flex' : 'none';
   document.querySelector('.fab').style.display = s === 'raf' ? 'flex' : 'none';
+}
+function sekmeGec(s){
+  const panel = document.getElementById('panel-' + s);
+  if(!panel) return;
+  durum.sekme = s;
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  panel.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.v === s));
+  sekmeGorunum(s);
+  if(s === 'ana') anaCiz();
   if(s === 'ist') istCiz();
   if(s === 'alinti') alintiCiz();
   window.scrollTo({ top:0 });
 }
+function ayarAc(){
+  document.getElementById('ortuAyar').classList.add('acik');
+  /* Eski "Yedek sekmesine geçildi" kancalarının yerine geçen tazeleme.
+     kapak.js ve katalog.js artık ayar-ac aktını dinliyor; burada tekrar
+     çağırmıyoruz ki tek sahip kalsın. */
+}
+function ayarKapat(){ document.getElementById('ortuAyar').classList.remove('acik'); }
 
 /* ---------- klavye ve odak (a11y) ----------
    Esc en ÜSTTEKİ açık pencereyi kapatır. Kapatma mantığını çekirdek bilmez:
@@ -2049,6 +2299,24 @@ document.addEventListener('click', e => {
 
   switch(act){
     case 'sekme': sekmeGec(v); break;
+    case 'ayar-ac': ayarAc(); break;
+    case 'ayar-kapat': ayarKapat(); break;
+    /* Ana sayfa köprüleri — hepsi mevcut yollara bağlanır, yeni mantık yok. */
+    case 'ana-okunuyor':
+      durum.filtre = 'okunuyor';
+      document.querySelectorAll('#durumChips .chip').forEach(c =>
+        c.classList.toggle('active', c.dataset.v === 'okunuyor'));
+      sekmeGec('raf'); listeCiz(); break;
+    case 'ana-tekrar': sekmeGec('alinti'); break;
+    case 'ana-ist': sekmeGec('ist'); break;
+    case 'ana-barkod':
+      /* Barkod tarayıcı formu DOLDURUR, açmaz (barkod.js:formuDoldur). Ana
+         sayfadan doğrudan açılsaydı okunan kitap görünmeyen bir forma yazılır,
+         kullanıcı hiçbir şey olmamış sanırdı. Önce form, sonra tarayıcı —
+         üretimdeki #barkodBtn yolunun aynısına basıyoruz, kopya mantık yok. */
+      formAc(null);
+      setTimeout(() => { const b = document.getElementById('barkodBtn'); if(b) b.click(); }, 0);
+      break;
     case 'filtre':
       durum.filtre = v;
       document.querySelectorAll('#durumChips .chip').forEach(c =>
@@ -2324,6 +2592,9 @@ document.getElementById('ortuForm').addEventListener('click', e => {
 document.getElementById('ortuDetay').addEventListener('click', e => {
   if(e.target.id === 'ortuDetay'){ e.target.classList.remove('acik'); durum.detayId = null; }
 });
+document.getElementById('ortuAyar').addEventListener('click', e => {
+  if(e.target.id === 'ortuAyar') ayarKapat();
+});
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
@@ -2333,14 +2604,20 @@ if('serviceWorker' in navigator){
 
 hepsiniCiz();
 temaDugmeleriCiz();
+sekmeGorunum(durum.sekme);
 
-/* Paylaş hedefinden gelindiyse paneli aç; kısayoldan gelindiyse sekmeyi seç */
+/* Paylaş hedefinden gelindiyse paneli aç; kısayoldan gelindiyse sekmeyi seç.
+   Sıra korunuyor: paylaşım parametresi varsa ?sekme= hiç okunmaz. */
 (function(){
   const gelen = gelenParametre();
   if(gelen){ gelenAc(gelen); return; }
   try{
     const s = new URLSearchParams(location.search).get('sekme');
-    if(s && document.getElementById('panel-' + s)){ sekmeGec(s); urlTemizle(); }
+    if(!s) return;
+    /* ?sekme=yedek artık bir panel değil: eski yer imi/kısayol sessizce Ana
+       Sayfa'da kalmasın diye Ayarlar penceresine yönlendiriliyor. */
+    if(s === 'yedek'){ ayarAc(); urlTemizle(); return; }
+    if(document.getElementById('panel-' + s)){ sekmeGec(s); urlTemizle(); }
   }catch(e){}
 })();
 </script>
@@ -2361,5 +2638,10 @@ temaDugmeleriCiz();
 <script src="./rapor.js"></script>
 <script src="./kapak.js"></script>
 <script src="./oneri.js"></script>
+<!-- Ana Sayfa'nın ikinci çizimi. İlk çizim (hepsiniCiz) eklentilerden ÖNCE
+     koşuyor: o anda window.__tekrar / __oneri / __oturum henüz yok, bu yüzden
+     "Bugün" ve "Sıradaki" bölümleri eksik kalırdı. Betikler eşzamanlı
+     yüklendiği için buraya gelindiğinde hepsi bağlanmıştır. -->
+<script>if(durum.sekme === 'ana') anaCiz();</script>
 </body>
 </html>

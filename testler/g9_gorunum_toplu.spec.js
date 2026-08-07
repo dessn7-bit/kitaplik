@@ -1,11 +1,12 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap, onaylariKabulEt, bugunISO } = require('./yardim');
+const { test, expect, tohumla, sahteKitap,
+  onaylariKabulEt, bugunISO, rafAc } = require('./yardim');
 
 test.describe('G9 görünüm ve toplu işlem', () => {
 
   test('ızgara/liste geçişi çalışır, tercih localStorage\'da saklanır', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Izgara Kitabı' })]);
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#liste')).not.toHaveClass(/izgara/);
     await page.click('#izgaraBtn');
     await expect(page.locator('#liste')).toHaveClass(/izgara/);
@@ -21,7 +22,7 @@ test.describe('G9 görünüm ve toplu işlem', () => {
     await tohumla(page, [sahteKitap({ ad: 'Kapaksız Kitap', kapak: null })]);
     await page.addInitScript(() =>
       localStorage.setItem('kk_gorunum_v1', JSON.stringify({ izgara: true })));
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#liste')).toHaveClass(/izgara/);
     await expect(page.locator('#liste .iz-yedek')).toHaveCount(1);
     await expect(page.locator('#liste .iz-yedek')).toContainText('Kapaksız Kitap');
@@ -31,7 +32,7 @@ test.describe('G9 görünüm ve toplu işlem', () => {
     await tohumla(page, [sahteKitap({ ad: 'Detay Kitabı' })]);
     await page.addInitScript(() =>
       localStorage.setItem('kk_gorunum_v1', JSON.stringify({ izgara: true })));
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
     await expect(page.locator('#detayIcerik')).toContainText('Detay Kitabı');
@@ -39,7 +40,7 @@ test.describe('G9 görünüm ve toplu işlem', () => {
 
   test('seçim modunda karta tıklayınca detay açılmaz, kart seçilir', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Seçilecek Kitap' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#secimBtn');
     await expect(page.locator('#topluCubuk')).toBeVisible();
     await page.click('#liste .kart');
@@ -50,7 +51,7 @@ test.describe('G9 görünüm ve toplu işlem', () => {
 
   test('Tümü düğmesi hepsini seçer, ikinci basışta bırakır', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'K1' }), sahteKitap({ ad: 'K2' }), sahteKitap({ ad: 'K3' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#secimBtn');
     await page.click('[data-act="toplu-tumu"]');
     await expect(page.locator('#topluSayi')).toHaveText('3 seçili');
@@ -63,7 +64,7 @@ test.describe('G9 görünüm ve toplu işlem', () => {
       sahteKitap({ ad: 'R1', raf: 'eski raf' }),
       sahteKitap({ ad: 'R2' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#secimBtn');
     await page.click('[data-act="toplu-tumu"]');
     await page.click('[data-act="toplu-raf"]');
@@ -80,7 +81,7 @@ test.describe('G9 görünüm ve toplu işlem', () => {
 
   test('toplu etiket mevcut etiketleri korur, mükerrer eklemez', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'E1', etiketler: ['felsefe', 'çeviri'] })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#secimBtn');
     await page.click('[data-act="toplu-tumu"]');
     await page.click('[data-act="toplu-etiket"]');
@@ -96,7 +97,7 @@ test.describe('G9 görünüm ve toplu işlem', () => {
 
   test('toplu durum değişikliği tarihleri doğru ayarlar', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'D1', durum: 'okunacak', sayfa: 240 })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#secimBtn');
     await page.click('[data-act="toplu-tumu"]');
     await page.click('[data-act="toplu-durum"]');
@@ -123,7 +124,7 @@ test.describe('G9 görünüm ve toplu işlem', () => {
     const a = sahteKitap({ ad: 'Silinecek A' });
     const b = sahteKitap({ ad: 'Silinecek B' });
     await tohumla(page, [a, b]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#secimBtn');
     await page.click('[data-act="toplu-tumu"]');
     await page.click('[data-act="toplu-sil"]');

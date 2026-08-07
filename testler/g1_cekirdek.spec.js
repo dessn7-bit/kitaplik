@@ -1,16 +1,17 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap, onaylariKabulEt, bugunISO } = require('./yardim');
+const { test, expect, tohumla, sahteKitap,
+  onaylariKabulEt, bugunISO, rafAc } = require('./yardim');
 
 test.describe('G1 çekirdek', () => {
 
   test('boş raf mesajı görünür', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#liste')).toContainText('Raf henüz boş.');
   });
 
   test('boş adla kaydetme reddedilir', async ({ page }) => {
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     await page.click('[data-act="form-kaydet"]');
     await expect(page.locator('#toast')).toContainText('Kitap adı boş olamaz');
     await expect(page.locator('#ortuForm')).toHaveClass(/acik/); // form kapanmadı
@@ -18,8 +19,8 @@ test.describe('G1 çekirdek', () => {
   });
 
   test('kitap ekleme: listede görünür ve localStorage\'a yazılır', async ({ page }) => {
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     await page.fill('#f-ad', 'Varlık ve Zaman');
     await page.fill('#f-yazar', 'Martin Heidegger');
     await page.click('[data-act="form-kaydet"]');
@@ -31,9 +32,9 @@ test.describe('G1 çekirdek', () => {
   });
 
   test('XSS: kitap adındaki HTML kaçışlanır, çalışmaz', async ({ page }) => {
-    await page.goto('/');
+    await rafAc(page);
     const saldiri = '<img src=x onerror="window.__xss=1">';
-    await page.click('[data-act="yeni"]');
+    await page.click('.fab[data-act="yeni"]');
     await page.fill('#f-ad', saldiri);
     await page.click('[data-act="form-kaydet"]');
     await expect(page.locator('#liste .kart')).toHaveCount(1);
@@ -46,7 +47,7 @@ test.describe('G1 çekirdek', () => {
   test('düzenleme: alanlar dolu gelir, kayıt güncellenir', async ({ page }) => {
     const k = sahteKitap({ ad: 'Eski Ad', yazar: 'Yazar A', sayfa: 200 });
     await tohumla(page, [k]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click('#dDigerKatla summary');  // Düzenle/Sil nadir bölümde katlı
     await page.click('[data-act="duzenle"]');
@@ -64,7 +65,7 @@ test.describe('G1 çekirdek', () => {
   test('silme: kitap listeden ve depodan gider', async ({ page }) => {
     onaylariKabulEt(page);
     await tohumla(page, [sahteKitap({ ad: 'Silinecek' })]);
-    await page.goto('/');
+    await rafAc(page);
     await page.click('#liste .kart');
     await page.click('#dDigerKatla summary');  // Sil nadir bölümde katlı
     await page.click('[data-act="kitap-sil"]');
@@ -76,7 +77,7 @@ test.describe('G1 çekirdek', () => {
 
   test('TR arama: büyük/küçük harf TR kurallarıyla eşleşir', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Varlık ve Zaman', yazar: 'Martin Heidegger' })]);
-    await page.goto('/');
+    await rafAc(page);
     // küçük harf
     await page.fill('#arama', 'heidegger');
     await expect(page.locator('#liste .kart')).toHaveCount(1);
@@ -94,7 +95,7 @@ test.describe('G1 çekirdek', () => {
       sahteKitap({ ad: 'Kitap Bir', yayinevi: 'Can Yayınları', raf: 'üst raf sol' }),
       sahteKitap({ ad: 'Kitap İki', yayinevi: 'İletişim', raf: 'alt raf' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     await page.fill('#arama', 'Can Yayınları');
     await expect(page.locator('#liste .kart')).toHaveCount(1);
     await expect(page.locator('#liste .kart-baslik')).toHaveText('Kitap Bir');
@@ -110,7 +111,7 @@ test.describe('G1 çekirdek', () => {
       sahteKitap({ ad: 'Biten Kitap', durum: 'bitti', bitisTarihi: bugunISO(-1) }),
       sahteKitap({ ad: 'Yarım Kitap', durum: 'yarim' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
     await expect(page.locator('#liste .kart')).toHaveCount(4);
     const beklenen = { okunuyor: 'Okunuyor Kitabı', okunacak: 'Okunacak Kitabı', bitti: 'Biten Kitap', yarim: 'Yarım Kitap' };
     for (const [filtre, ad] of Object.entries(beklenen)) {
@@ -123,8 +124,8 @@ test.describe('G1 çekirdek', () => {
   });
 
   test('bitiş tarihi başlamadan önceyse kayıt reddedilir', async ({ page }) => {
-    await page.goto('/');
-    await page.click('[data-act="yeni"]');
+    await rafAc(page);
+    await page.click('.fab[data-act="yeni"]');
     await page.fill('#f-ad', 'Tarih Testi');
     await page.click('[data-act="f-durum"][data-v="bitti"]');
     await page.fill('#f-bas', '2026-08-02');

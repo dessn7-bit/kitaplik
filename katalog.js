@@ -295,7 +295,9 @@
       }
       else if(act === 'yeni' || act === 'duzenle'){ setTimeout(formAlaniEkle, 0); }
       else if(act === 'detay' || act === 'alinti-git'){ setTimeout(detayZenginlestir, 0); }
-      else if(act === 'sekme' && el.dataset.v === 'yedek'){ setTimeout(kartEkle, 0); }
+      /* Kart boot'ta .yedek-wrap'a zaten giriyor; bu yalnız emniyet kemeri.
+         Eski kancası "Yedek sekmesi"ydi, o sekme kalktı — Ayarlar penceresi. */
+      else if(act === 'ayar-ac'){ setTimeout(kartEkle, 0); }
     });
 
     document.addEventListener('keydown', e => {

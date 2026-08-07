@@ -1,5 +1,6 @@
 'use strict';
-const { test, expect, tohumla, sahteKitap, onaylariKabulEt } = require('./yardim');
+const { test, expect, tohumla, sahteKitap,
+  onaylariKabulEt, rafAc, rafYenile, ayarlarAc } = require('./yardim');
 
 const YIL = new Date().getFullYear();
 
@@ -11,7 +12,9 @@ test.describe('G16 D1 — istek listesi rozeti liste kartlarında', () => {
       sahteKitap({ id: 'sh', ad: 'Bendeki Kitap', sahiplik: 'sahip' }),
       sahteKitap({ id: 'is', ad: 'İstediğim Kitap', sahiplik: 'istek' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
+    // Sprint IA: varsayılan "Bende olanlar" — istek kitabını görmek için tüm rafa geç
+    await page.click('[data-act="vm-sahiplik"][data-v="hepsi"]');
     await expect(page.locator('#liste .kart[data-id="is"] .vm-rozet')).toHaveCount(1);
     await expect(page.locator('#liste .kart[data-id="is"] .vm-rozet')).toContainText('İstek');
     await expect(page.locator('#liste .kart[data-id="sh"] .vm-rozet')).toHaveCount(0);
@@ -24,7 +27,9 @@ test.describe('G16 D1 — istek listesi rozeti liste kartlarında', () => {
       sahteKitap({ id: 'sh', ad: 'Bendeki Kitap', sahiplik: 'sahip' }),
       sahteKitap({ id: 'is', ad: 'İstediğim Kitap', sahiplik: 'istek' })
     ]);
-    await page.goto('/');
+    await rafAc(page);
+    // Sprint IA: varsayılan "Bende olanlar" — istek kitabını görmek için tüm rafa geç
+    await page.click('[data-act="vm-sahiplik"][data-v="hepsi"]');
     await expect(page.locator('#liste')).toHaveClass(/izgara/);
     await expect(page.locator('#liste .kart[data-id="is"] .vm-iz-istek')).toBeVisible();
     await expect(page.locator('#liste .kart[data-id="sh"] .vm-iz-istek')).toHaveCount(0);
@@ -40,9 +45,9 @@ test.describe('G16 D2 — kütüphaneyi boşalt', () => {
     const b = sahteKitap({ id: 'kb', ad: 'Kitap B' });
     await tohumla(page, { kitaplar: [a, b], hedef: { [YIL]: 24 }, hedefG: { [YIL]: 111 },
       hedefSayfa: { [YIL]: 9000 }, hedefSayfaG: { [YIL]: 222 }, silinenler: { eski: 55 } });
-    await page.goto('/');
+    await rafAc(page);
     await page.evaluate(() => depoKaydet());        // anlık görüntü tabanı
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await ayarlarAc(page);
     await page.click('[data-act="tumunu-sil"]');
     await expect(page.locator('#toast')).toContainText('boşaltıldı');
     const s = await page.evaluate(() => ({
@@ -64,11 +69,11 @@ test.describe('G16 D2 — kütüphaneyi boşalt', () => {
     await tohumla(page, { kitaplar: [sahteKitap({ id: 'kx', ad: 'Kitap X' })],
       hedef: { [YIL]: 12 }, hedefG: { [YIL]: 111 }, hedefSayfa: { [YIL]: 3000 },
       hedefSayfaG: { [YIL]: 222 }, silinenler: {} });
-    await page.goto('/');
+    await rafAc(page);
     await page.evaluate(() => depoKaydet());
-    await page.click('[data-act="sekme"][data-v="yedek"]');
+    await ayarlarAc(page);
     await page.click('[data-act="tumunu-sil"]');
-    await page.reload();
+    await rafYenile(page);
     const s = await page.evaluate(() => ({
       kitap: veri.kitaplar.length, mezarVar: !!(veri.silinenler || {}).kx,
       hedef: veri.hedef[String(new Date().getFullYear())],
@@ -87,7 +92,7 @@ function seriKitap(ad, ciltNo) {
 }
 async function seriDetayAc(page, kitaplar) {
   await tohumla(page, kitaplar);
-  await page.goto('/');
+  await rafAc(page);
   await page.click(`#liste .kart[data-id="${kitaplar[0].id}"]`);
   await page.click('#dSeriKatla summary');   // seri nadir bölümde katlı
   await expect(page.locator('#detayIcerik .vm-seri-kutu')).toBeVisible();
