@@ -36,28 +36,30 @@
       #liste.izgara .kart-baslik{font-size:.82rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
       #liste.izgara .kart-yazar{font-size:.72rem;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       #liste.izgara .kart-alt,#liste.izgara .ilerleme-txt{display:none}
-      #liste.izgara .iz-kapak{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:8px;
-        border:1px solid var(--border);background:var(--surface2);box-shadow:0 2px 6px var(--golge-orta)}
-      #liste.izgara .iz-yedek{width:100%;aspect-ratio:2/3;border-radius:8px;display:flex;align-items:flex-end;
-        padding:8px;font-family:var(--serif);font-size:.8rem;color:var(--uzeri);line-height:1.2;
-        box-shadow:0 2px 6px var(--golge-orta);overflow:hidden}
+      #liste.izgara .iz-kapak{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:var(--r-mini);
+        border:1px solid var(--border);background:var(--surface2);box-shadow:var(--yukselti-2)}
+      #liste.izgara .iz-yedek{width:100%;aspect-ratio:2/3;border-radius:var(--r-mini);display:flex;align-items:flex-end;
+        padding:8px;font-family:var(--serif);font-size:.8rem;color:var(--uzeri);line-height:1.3;
+        box-shadow:var(--yukselti-2);overflow:hidden}
       .vm-iz-istek{position:absolute;top:6px;right:6px;background:var(--mavi);color:var(--uzeri);
         font-size:.6rem;padding:2px 6px;border-radius:999px;z-index:2;letter-spacing:.02em}
       .raf-basligi{grid-column:1/-1;font-size:.8rem;color:var(--muted);margin:6px 0 -4px;letter-spacing:.03em}
-      .kart.secili{outline:2px solid var(--brass);outline-offset:2px;border-radius:12px}
-      .secim-isaret{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
+      .kart.secili{outline:2px solid var(--brass);outline-offset:2px;border-radius:var(--radius)}
+      .secim-isaret{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:999px;
         background:var(--brass);color:var(--uzeri);display:flex;align-items:center;justify-content:center;
-        font-size:.8rem;z-index:3;box-shadow:0 1px 4px var(--golge-orta)}
+        font-size:.8rem;z-index:3;box-shadow:var(--yukselti-2)}
+      .secim-isaret .ikon{width:13px;height:13px;vertical-align:0}
+      /* yukarı-yönlü tek gölge: yüzer geçici çubuk — bilinçli istisna */
       .toplu-cubuk{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:31;
         background:var(--surface);border-top:1px solid var(--brass-dim);padding:10px 14px;
-        display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 -3px 12px var(--golge-orta)}
+        display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 -2px 8px var(--golge-orta)}
       .toplu-cubuk .sayi{font-size:.85rem;color:var(--brass);font-weight:600;margin-right:auto}
-      .toplu-cubuk button{padding:8px 12px;border-radius:8px;border:1px solid var(--border);
+      .toplu-cubuk button{padding:8px 12px;border-radius:var(--r-ic);border:1px solid var(--border);
         background:var(--surface2);font-size:.8rem;color:var(--paper)}
       .toplu-cubuk button.tehlike{border-color:var(--drop);color:var(--drop)}
-      .gorunum-dugme{padding:6px 10px;border-radius:8px;border:1px solid var(--border);
+      .gorunum-dugme{padding:8px 12px;border-radius:var(--r-ic);border:1px solid var(--border);
         background:var(--surface);font-size:.8rem;color:var(--muted)}
-      .gorunum-dugme.aktif{background:var(--brass);color:var(--uzeri);border-color:var(--brass)}
+      .gorunum-dugme.aktif{background:var(--brass);color:var(--uzeri);border-color:var(--brass);font-weight:600}
     `;
     document.head.appendChild(s);
   }
@@ -68,18 +70,21 @@
     const b = document.createElement('button');
     b.id = 'izgaraBtn'; b.className = 'gorunum-dugme' + (izgara ? ' aktif' : '');
     b.dataset.act = 'gorunum-degis';
-    b.textContent = izgara ? '☰ Liste' : '▦ Izgara';
+    // innerHTML güvenli: içerik sabit dizeler + ikon() SVG'si, kullanıcı verisi yok (XSS riski yok).
+    b.innerHTML = izgara
+      ? (window.ikon ? window.ikon('liste') : '') + ' Liste'
+      : (window.ikon ? window.ikon('izgara') : '') + ' Izgara';
     satir.insertBefore(b, satir.firstChild.nextSibling);
     const s = document.createElement('button');
     s.id = 'secimBtn'; s.className = 'gorunum-dugme';
     s.dataset.act = 'secim-ac';
-    s.textContent = '✓ Seç';
+    s.innerHTML = (window.ikon ? window.ikon('onay') : '') + ' Seç';
     satir.insertBefore(s, b);
     // Raf gruplama YALNIZ ızgara açıkken anlamlı — liste görünümünde gizli durur.
     const r = document.createElement('button');
     r.id = 'rafGrupBtn'; r.className = 'gorunum-dugme' + (rafGrupla ? ' aktif' : '');
     r.dataset.act = 'raf-grupla';
-    r.textContent = '▤ Rafa göre';
+    r.innerHTML = (window.ikon ? window.ikon('raf') : '') + ' Rafa göre';
     satir.insertBefore(r, b.nextSibling);
     rafDugmeTazele();
   }
@@ -159,7 +164,7 @@
       : '<div class="iz-yedek" style="background:' + sirtRenkL(k.ad) + '">' + kacir(k.ad) + '</div>';
     const rozet = k.durum === 'okunuyor'
       ? '<div style="position:absolute;top:6px;left:6px;background:var(--brass);color:var(--uzeri);' +
-        'font-size:.62rem;padding:2px 6px;border-radius:999px">okunuyor</div>' : '';
+        'font-size:.6rem;padding:2px 6px;border-radius:999px">okunuyor</div>' : '';
     // Izgarada yer dar: sol üst "okunuyor" rozetine ayrılmış, seçim işareti geçici;
     // istek işareti sağ üstte küçük bir pil olarak duruyor (kapak üstünde okunur kalsın diye dolu zemin).
     const istek = k.sahiplik === 'istek'
@@ -191,7 +196,8 @@
       if(secimModu && secilenler.has(id)){
         kart.style.position = 'relative';
         const i = document.createElement('div');
-        i.className = 'secim-isaret'; i.textContent = '✓';
+        i.className = 'secim-isaret';
+        i.innerHTML = window.ikon ? window.ikon('onay') : '✓';
         kart.appendChild(i);
       }
     });
@@ -343,7 +349,10 @@
 
       if(act === 'gorunum-degis'){
         izgara = !izgara; ayarYaz();
-        el.textContent = izgara ? '☰ Liste' : '▦ Izgara';
+        // innerHTML güvenli: sabit dize + ikon() SVG'si, kullanıcı verisi yok (XSS riski yok).
+        el.innerHTML = izgara
+          ? (window.ikon ? window.ikon('liste') : '') + ' Liste'
+          : (window.ikon ? window.ikon('izgara') : '') + ' Izgara';
         el.classList.toggle('aktif', izgara);
         rafDugmeTazele();
         if(typeof listeCiz === 'function') listeCiz();

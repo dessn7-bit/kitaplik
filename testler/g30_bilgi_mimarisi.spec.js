@@ -421,8 +421,9 @@ test.describe('G30 — Kütüphane sekmesi', () => {
     await rafAc(page);
     const rafli = page.locator('#liste .kart', { hasText: 'Rafta' });
     const rafsiz = page.locator('#liste .kart', { hasText: 'Rafsız' });
-    await expect(rafli).toContainText('📚 Salon-3');
-    await expect(page.locator('#liste')).not.toContainText('📚 undefined');
+    // GÖÇ (görsel dil sprinti): emoji ikon dili kalktı — raf metin öneki taşır
+    await expect(rafli).toContainText('Raf: Salon-3');
+    await expect(page.locator('#liste')).not.toContainText('Raf: undefined');
     // rafı olmayan kitapta boş rozet çıkmaz
     await expect(rafsiz.locator('.etiket-mini')).toHaveCount(0);
   });

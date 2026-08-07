@@ -470,7 +470,7 @@
     if(eskiSurum){
       form.style.display = 'none';
       if(bagli) bagli.style.display = 'none';
-      dEl.innerHTML = '⚠️ <b>Bu cihaz eski sürümde</b> — odadaki veri daha yeni bir uygulama ' +
+      dEl.innerHTML = (window.ikon?window.ikon('uyari'):'') + ' <b>Bu cihaz eski sürümde</b> — odadaki veri daha yeni bir uygulama ' +
         'sürümüyle yazılmış. Veri kaybını önlemek için senkron duraklatıldı. ' +
         'Güncellemek için uygulamayı kapatıp yeniden aç.';
       return;
@@ -481,7 +481,7 @@
         ? new Date(ayar.sonSenkron).toLocaleString('tr-TR', { dateStyle:'short', timeStyle:'short' })
         : 'henüz yok';
       dEl.innerHTML = (semaDustu
-          ? '⚠️ Odaya <b>eski sürümlü</b> bir cihaz yazmış — o cihazda uygulamayı kapatıp açmalısın. ' +
+          ? (window.ikon?window.ikon('uyari'):'') + ' Odaya <b>eski sürümlü</b> bir cihaz yazmış — o cihazda uygulamayı kapatıp açmalısın. ' +
             'Koruma için bir senkron turu atlandı.<br>'
           : '') +
         'Bağlı — oda <b>' + kacir(ayar.oda) + '</b>, bu cihaz: <b>' + kacir(ayar.cihaz || '-') +

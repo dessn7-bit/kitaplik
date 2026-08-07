@@ -221,33 +221,33 @@
     s.id = 'rpStil';
     s.textContent = `
       .rp-kart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-        padding:14px;box-shadow:0 1px 3px var(--golge);margin-top:14px}
+        padding:14px;box-shadow:var(--yukselti-1);margin-top:14px}
       .rp-baslik{font-family:var(--serif);font-size:1.05rem}
       .rp-yillar{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:4px;scrollbar-width:none}
       .rp-yillar::-webkit-scrollbar{display:none}
-      .rp-yil{flex:0 0 auto;padding:6px 13px;border-radius:999px;border:1px solid var(--border);
-        background:var(--surface2);color:var(--muted);font-size:.82rem}
+      .rp-yil{flex:0 0 auto;padding:6px 12px;border-radius:999px;border:1px solid var(--border);
+        background:var(--surface2);color:var(--muted);font-size:.8rem}
       .rp-yil.rp-secili{background:var(--brass);color:var(--uzeri);border-color:var(--brass);font-weight:600}
       .rp-not{font-size:.8rem;color:var(--muted);margin-top:9px;line-height:1.55}
       .rp-sayilar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
       .rp-kutu{background:var(--surface2);border-radius:10px;padding:10px 12px}
       .rp-sayi{font-family:var(--serif);font-size:1.5rem;color:var(--brass)}
       .rp-etiket{font-size:.72rem;color:var(--muted);margin-top:2px}
-      .rp-bolum{font-size:.76rem;color:var(--muted2);margin:14px 0 4px;letter-spacing:.04em}
-      .rp-satir{display:flex;justify-content:space-between;gap:10px;font-size:.84rem;
+      .rp-bolum{font-size:.76rem;color:var(--muted2);margin:14px 0 4px;letter-spacing:.03em}
+      .rp-satir{display:flex;justify-content:space-between;gap:10px;font-size:.85rem;
         color:var(--paper);padding:6px 0;border-bottom:1px solid var(--border)}
       .rp-satir:last-child{border-bottom:none}
       .rp-satir span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .rp-vurgu{color:var(--brass);font-weight:600;white-space:nowrap}
       .rp-aylar{display:flex;gap:3px;align-items:flex-end;height:56px;margin-top:10px}
-      .rp-ay{flex:1;background:var(--brass-dim);border-radius:3px 3px 0 0;min-height:3px}
+      .rp-ay{flex:1;background:var(--brass-dim);border-radius:3px 3px 0 0;min-height:3px} /* mikro grafik istisnası (999 hap grafikte yanlış durur) */
       .rp-ay-etiket{display:flex;gap:3px;margin-top:4px}
-      .rp-ay-etiket span{flex:1;text-align:center;font-size:.58rem;color:var(--muted2)}
+      .rp-ay-etiket span{flex:1;text-align:center;font-size:.6rem;color:var(--muted2)}
       .rp-hedef{font-size:.82rem;margin-top:8px;color:var(--muted)}
       .rp-tuttu{color:var(--ok);font-weight:600}
       .rp-tutmadi{color:var(--drop);font-weight:600}
-      .rp-dugme{width:100%;margin-top:14px;padding:11px 18px;border-radius:10px;
-        background:var(--brass);color:var(--uzeri);font-size:.92rem;font-weight:600}
+      .rp-dugme{width:100%;margin-top:14px;padding:12px 16px;border-radius:var(--r-ic); /* .btn ile aynı reçete */
+        background:var(--brass);color:var(--uzeri);font-size:.9rem;font-weight:600}
     `;
     document.head.appendChild(s);
   }
@@ -319,7 +319,7 @@
         + ekstra.map(([a, b]) => '<div class="rp-satir"><span>' + kacir(a)
           + '</span><span class="rp-vurgu">' + kacir(b) + '</span></div>').join('') + '</div>';
     }
-    h += '<button class="rp-dugme" data-act="rp-png">🖼 Yıl kartını indir (PNG)</button>';
+    h += '<button class="rp-dugme" data-act="rp-png">' + (window.ikon ? window.ikon('gorsel') : '') + ' Yıl kartını indir (PNG)</button>';
     return h + '</div>';
   }
 

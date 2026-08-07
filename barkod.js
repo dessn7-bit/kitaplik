@@ -173,7 +173,7 @@
       b.className = 'mini-chip'; b.id = 'barkodBtn';
       b.dataset.act = 'barkod-ac';
       b.style.marginLeft = 'auto';
-      b.textContent = '📷 Barkod / ISBN';
+      b.innerHTML = (window.ikon?window.ikon('kamera'):'') + ' Barkod / ISBN'; /* sabit dize — kullanıcı verisi yok */
       serit.appendChild(b);
     }
     if(document.getElementById('barkodOrtu')) return;
@@ -188,11 +188,11 @@
           '<video id="barkodVideo" playsinline muted style="width:100%;max-height:44vh;object-fit:cover;display:block"></video>' +
           '<div style="position:absolute;inset:22% 12%;border:2px solid var(--kamera-cerceve);border-radius:10px;pointer-events:none"></div>' +
         '</div>' +
-        '<div id="barkodNot" style="font-size:.82rem;color:var(--muted);margin-top:10px"></div>' +
+        '<div id="barkodNot" style="font-size:.85rem;color:var(--muted);margin-top:10px"></div>' +
         '<label for="barkodElle">ISBN\'i elle yaz</label>' +
         '<div style="display:flex;gap:8px">' +
           '<input id="barkodElle" inputmode="numeric" placeholder="978…" autocomplete="off" style="flex:1">' +
-          '<button class="btn btn-brass" style="width:auto;padding:11px 18px" data-act="barkod-elle">Bul</button>' +
+          '<button class="btn btn-brass" style="width:auto" data-act="barkod-elle">Bul</button>' +
         '</div>' +
         '<div style="height:14px"></div>' +
         '<button class="btn btn-cerceve" data-act="barkod-kapat">Kapat</button>' +

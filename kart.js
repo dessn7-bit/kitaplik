@@ -211,7 +211,7 @@
       d.dataset.nid = nid;
       d.dataset.kid = kid;
       d.style.marginTop = '8px';
-      d.textContent = '🖼 Kart yap';
+      d.innerHTML = (window.ikon?window.ikon('gorsel'):'') + ' Kart yap'; /* sabit dize — kullanıcı verisi yok */
       kart.appendChild(d);
     });
   }

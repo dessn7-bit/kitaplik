@@ -284,8 +284,9 @@ test.describe('G28 M3 — uygulama içi puanlama', () => {
     await expect(page.locator('#dPuan')).toBeVisible();
     await page.click('#dPuan [data-act="d-puan"][data-v="4"]');
     expect(await page.evaluate(() => veri.kitaplar[0].puan)).toBe(4);
-    // kartta ve künyede görünür
-    await expect(page.locator('#detayIcerik .puan-mini')).toContainText('4/10');
+    // kartta ve künyede görünür — GÖÇ (görsel dil sprinti): puan hapı '★ 4'
+    // gösterir, '/10' paydası kalktı (payda sabit; hap biçimi g31'de sınanıyor)
+    await expect(page.locator('#detayIcerik .puan-mini')).toHaveText('★ 4');
     // düzenle-kaydet turu puanı korur (formKaydet yarim koruması)
     await page.click('#dDigerKatla summary');
     await page.click('[data-act="duzenle"]');

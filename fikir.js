@@ -117,7 +117,7 @@
     blok.id = 'fikirBulut';
     blok.style.margin = '2px 0 4px';
     if(!etiketler.length){
-      blok.innerHTML = '<div style="font-size:.78rem;color:var(--muted2);line-height:1.5">' + T.bosluk + '</div>';
+      blok.innerHTML = '<div style="font-size:.8rem;color:var(--muted2);line-height:1.5">' + T.bosluk + '</div>';
     }else{
       var parcalar = ['<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px">'];
       parcalar.push('<button class="mini-chip' + (secili ? '' : ' secili') +
@@ -154,9 +154,9 @@
       var alt = document.createElement('div');
       alt.style.marginTop = '8px';
       alt.innerHTML = etiketSatiri(b.n, kim.kid || b.k.id) +
-        '<div style="display:flex;gap:6px;margin-top:7px">' +
+        '<div style="display:flex;gap:6px;margin-top:8px">' +
           '<input class="fikir-giris" data-nid="' + kacir(kim.nid) + '" placeholder="' + T.fikirEkle +
-            '" autocomplete="off" style="flex:1;font-size:.82rem;padding:7px 10px">' +
+            '" autocomplete="off" style="flex:1;font-size:.85rem;padding:8px 10px">' +
           '<button class="mini-chip" data-act="fikir-ekle" data-nid="' + kacir(kim.nid) +
             '" data-kid="' + kacir(kim.kid || b.k.id) + '">' + T.ekle + '</button>' +
         '</div>';
@@ -167,7 +167,7 @@
     var et = n.fikir || [];
     if(!et.length) return '';
     return '<div style="display:flex;flex-wrap:wrap;gap:5px">' + et.map(function(e){
-      return '<span class="mini-chip" style="padding:3px 9px;font-size:.72rem">#' + kacir(e) +
+      return '<span class="mini-chip" style="padding:3px 10px;font-size:.75rem">#' + kacir(e) +
         ' <button data-act="fikir-sil" data-nid="' + kacir(n.id) + '" data-kid="' + kacir(kitapId || '') +
         '" data-v="' + kacir(e) +
         '" style="color:var(--muted2);margin-left:2px">\u00d7</button></span>';
@@ -198,7 +198,7 @@
     var kitapSayi = say ? Object.keys(say.kitaplar).length : 0;
     var h = document.createElement('div');
     h.id = 'fikirBaslik';
-    h.style.cssText = 'font-size:.82rem;color:var(--muted);margin:6px 0 2px';
+    h.style.cssText = 'font-size:.85rem;color:var(--muted);margin:6px 0 2px';
     h.innerHTML = '<b style="color:var(--brass)">' + T.fikirBasligi + '#' + kacir(secili) + '</b> \u2014 ' +
       gorunen + T.kayit + ', ' + kitapSayi + T.kitapta;
     var bulut = document.getElementById('fikirBulut');

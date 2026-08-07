@@ -22,6 +22,10 @@
                              // (sınırın altında — yeni eklenenlere yer kalsın)
   const SAYAC_ANAHTAR = 'kk_tekrar_v1';
 
+  /* İkon dili: index.html'deki window.ikon(ad) inline SVG döndürür (görsel dil
+     sprinti — emoji yerine SVG glif). ikon yüklenmemişse boş dize: metin bozulmaz. */
+  function ik(ad){ return window.ikon ? window.ikon(ad) : ''; }
+
   function bildir(m){ if(typeof toast === 'function') toast(m); }
   function gunIso(kayma){
     const d = new Date();
@@ -163,7 +167,7 @@
     const bugunku = bugunKuyruk();
     const islenen = sayacYukle().islenen;
     const enUzun = tum.reduce((m, b) => Math.max(m, aralikOf(b.n)), 0);
-    const ist = '<div class="tk-ist">🔁 ' + tum.length + ' alıntı döngüde · bugün '
+    const ist = '<div class="tk-ist">' + ik('tekrar') + ' ' + tum.length + ' alıntı döngüde · bugün '
       + tumKuyruk.length + ' bekliyor · en uzun aralık ' + enUzun + ' gün</div>';
 
     let govde = '';
@@ -180,15 +184,17 @@
         +     ' <button class="tk-git" data-act="tk-git" data-id="' + escAttr(k.id) + '">kitaba git →</button></div>'
         +   '<div class="tk-eylem">'
         +     '<button class="tk-btn tk-btn-birincil" data-act="tk-devam" data-nid="' + escAttr(n.id) + '" title="'
-        +       aralikBuyut(aralikOf(n)) + ' gün sonra tekrar">✓ Devam etsin</button>'
+        +       aralikBuyut(aralikOf(n)) + ' gün sonra tekrar">' + ik('onay') + ' Devam etsin</button>'
         +     '<button class="tk-btn" data-act="tk-sik" data-nid="' + escAttr(n.id) + '" title="'
-        +       aralikKucult(aralikOf(n)) + ' gün aralıkla">↩ Daha sık</button>'
-        +     '<button class="tk-btn" data-act="tk-yeter" data-nid="' + escAttr(n.id) + '">✕ Yeter</button>'
+        +       aralikKucult(aralikOf(n)) + ' gün aralıkla">' + ik('geri') + ' Daha sık</button>'
+        /* "Yeter" ikonsuz: ✕/çarpı görsel dilde kapat/vazgeç düğmelerine özgü;
+           buradaki eylem vazgeçme değil döngüden çıkarma — sözcük tek başına yeter. */
+        +     '<button class="tk-btn" data-act="tk-yeter" data-nid="' + escAttr(n.id) + '">Yeter</button>'
         +     (bugunku.length > 1 ? '<button class="tk-btn tk-btn-atla" data-act="tk-atla">Sonraki ›</button>' : '')
         +   '</div>'
         + '</div>';
     }else if(islenen > 0){
-      govde = '<div class="tk-tamam">Bugünlük tamam ✓'
+      govde = '<div class="tk-tamam">Bugünlük tamam ' + ik('onay')
         + (tumKuyruk.length ? ' — kalan ' + tumKuyruk.length + ' alıntı yarına' : '')
         + '</div>';
     }
@@ -221,16 +227,18 @@
         kart.appendChild(d);
       }
       const n = b.n;
+      /* innerHTML güvenli: içerik yalnız ikon SVG'si + sabit metin + sayı
+         (gunFarki çıktısı) — kullanıcı verisi girmiyor, kaçış gerekmez. */
       if(durumOf(n) === 'aktif' && n.tekrarSonraki){
         const kalanGun = (typeof gunFarki === 'function') ? gunFarki(gunIso(0), n.tekrarSonraki) : 0;
-        d.textContent = '🔁 ' + (kalanGun <= 0 ? 'bugün' : kalanGun + ' gün sonra');
+        d.innerHTML = ik('tekrar') + ' ' + (kalanGun <= 0 ? 'bugün' : kalanGun + ' gün sonra');
       }else if(durumOf(n) === 'aktif'){
-        d.textContent = '🔁 planlanıyor…';
+        d.innerHTML = ik('tekrar') + ' planlanıyor…';
       }else{
         const hicGirmedi = n.tip === 'not' && !(parseInt(n.tekrarSayisi) || 0);
-        d.innerHTML = (hicGirmedi ? '' : '⏸ duraklatıldı ')
+        d.innerHTML = (hicGirmedi ? '' : ik('durakla') + ' duraklatıldı ')
           + '<button class="tk-mini" data-act="tk-baslat" data-nid="' + escAttr(n.id) + '">'
-          + (hicGirmedi ? '🔁 tekrara al' : '▶ başlat') + '</button>';
+          + (hicGirmedi ? ik('tekrar') + ' tekrara al' : ik('oynat') + ' başlat') + '</button>';
       }
     });
   }

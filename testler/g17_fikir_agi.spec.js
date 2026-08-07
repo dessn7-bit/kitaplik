@@ -15,7 +15,9 @@ function kitap(ad, notlar) {
 async function alintiAc(page) {
   await rafAc(page);
   await page.click('[data-act="sekme"][data-v="alinti"]');
-  await expect(page.locator('#panel-alinti #faPanel')).toBeVisible();
+  // GÖÇ (görsel dil sprinti): etiket yokken #faPanel BOŞ kalır (mükerrer boş
+  // mesaj kalktı) — boş öğe Playwright'ta "görünür" sayılmaz; varlık yeter.
+  await expect(page.locator('#panel-alinti #faPanel')).toHaveCount(1);
 }
 async function fikirSec(page, etiket) {
   await page.click(`#panel-alinti #fikirBulut [data-act="fikir-filtre"][data-v="${etiket}"]`);
@@ -239,7 +241,10 @@ test.describe('G17 — bütünlük', () => {
     await tohumla(page, [kitap('K1', [not('Etiketsiz alıntı', [])])]);
     page.on('pageerror', h => hatalar.push(String(h)));
     await alintiAc(page);
-    await expect(page.locator('#panel-alinti #faBos')).toContainText('Henüz fikir etiketi yok');
+    // GÖÇ (görsel dil sprinti): boş mesajın tek sahibi fikir.js; fikirag
+    // etiket yokken kart ÇİZMEZ (#faBos DOM'a girmez) — mükerrer mesaj kalktı.
+    await expect(page.locator('#panel-alinti')).toContainText('Henüz fikir etiketi yok');
+    await expect(page.locator('#panel-alinti #faBos')).toHaveCount(0);
     expect(await page.evaluate(() => window.__fikirag.esGecim())).toEqual([]);
     expect(await page.evaluate(() => window.__fikirag.enYaygin())).toBeNull();
     expect(hatalar).toEqual([]);

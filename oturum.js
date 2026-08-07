@@ -161,7 +161,7 @@
         + '<input type="number" inputmode="numeric" min="0" ' + (k.sayfa ? 'max="'+k.sayfa+'"' : '')
         + ' id="oturumSayfa" value="' + (k.guncelSayfa||o.sa||0) + '">'
         + '<span>' + (k.sayfa ? '/ ' + k.sayfa + ' sayfada kaldım' : 'sayfada kaldım') + '</span>'
-        + '<button class="btn btn-brass" style="width:auto;padding:9px 14px" data-act="oturum-bitir">Bitir</button>'
+        + '<button class="btn btn-brass btn-kucuk" data-act="oturum-bitir">Bitir</button>'
         + '</div>'
         + '<button class="btn btn-cerceve" style="margin-top:8px" data-act="oturum-iptal">Oturumu iptal et</button>'
         + ozet;
@@ -175,7 +175,7 @@
                pirinç; okunacak/yarim'da birincil çekirdeğin durum düğmesi, bitti'de
                puan şeridi → burada çerçeveli kalır. Ekranda aynı anda ≤1 .btn-brass. */
             : '<button class="btn ' + (k.durum === 'okunuyor' ? 'btn-brass' : 'btn-cerceve')
-              + '" data-act="oturum-basla">▶ Okumaya başla (süre tut)</button>')
+              + '" data-act="oturum-basla">' + (window.ikon?window.ikon('oynat'):'') + ' Okumaya başla (süre tut)</button>')
         + ozet;
       sayacDurdur();
     }
@@ -210,6 +210,7 @@
       const d = new Date(); d.setDate(d.getDate() - i);
       const g = gunStr(d.getTime()), v = harita[g] || 0;
       const yogun = v ? Math.max(0.25, v / enBuyuk) : 0;
+      /* border-radius:3px — mikro grafik istisnası */
       kutular.push('<div title="' + g + (v ? ' · ' + sureMetni(v) : '') + '" style="flex:1;height:26px;border-radius:3px;'
         + (v ? 'background:var(--brass);opacity:' + yogun.toFixed(2) : 'background:var(--surface2)') + '"></div>');
     }

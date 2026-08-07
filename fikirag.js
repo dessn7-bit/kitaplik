@@ -153,32 +153,32 @@
     s.id = 'faStil';
     s.textContent = `
       #faPanel{display:flex;flex-direction:column;gap:10px;margin:6px 0 2px}
-      .fa-kart{background:var(--surface);border:1px solid var(--border);border-radius:12px;
-        padding:12px 13px;box-shadow:0 1px 3px var(--golge)}
+      .fa-kart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+        padding:12px 13px;box-shadow:var(--yukselti-1)}
       .fa-baslik{font-family:var(--serif);font-size:.98rem}
-      .fa-not{font-size:.76rem;color:var(--muted);margin-top:7px;line-height:1.5}
+      .fa-not{font-size:.76rem;color:var(--muted);margin-top:8px;line-height:1.5}
       .fa-vurgu{font-size:.82rem;color:var(--brass);font-weight:600;margin-top:8px}
       .fa-sira{display:flex;gap:6px;overflow-x:auto;margin-top:9px;padding-bottom:3px;scrollbar-width:none}
       .fa-sira::-webkit-scrollbar{display:none}
-      .fa-cip{flex:0 0 auto;padding:5px 11px;border-radius:999px;border:1px solid var(--border);
-        background:var(--surface2);color:var(--muted);font-size:.74rem}
+      .fa-cip{flex:0 0 auto;padding:6px 12px;border-radius:999px;border:1px solid var(--border);
+        background:var(--surface2);color:var(--muted);font-size:.75rem}
       .fa-cip.fa-secili{background:var(--brass);color:var(--uzeri);border-color:var(--brass);font-weight:600}
       .fa-komsu{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;
         text-align:left;padding:8px 10px;margin-top:7px;border:1px solid var(--border);
-        border-radius:9px;background:var(--surface2);font-size:.84rem;color:var(--paper)}
+        border-radius:var(--r-ic);background:var(--surface2);font-size:.84rem;color:var(--paper)}
       .fa-komsu span{font-size:.72rem;color:var(--muted2);white-space:nowrap}
       .fa-oneri{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;margin-top:7px;
-        border:1px dashed var(--brass-dim);border-radius:9px;font-size:.82rem;color:var(--muted)}
-      .fa-satir{display:flex;align-items:center;gap:8px;margin-top:7px}
+        border:1px dashed var(--brass-dim);border-radius:var(--r-ic);font-size:.82rem;color:var(--muted)}
+      .fa-satir{display:flex;align-items:center;gap:8px;margin-top:8px}
       .fa-ad{flex:0 0 104px;font-size:.78rem;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .fa-govde{flex:1;height:13px;background:var(--surface2);border-radius:4px;overflow:hidden}
+      .fa-govde{flex:1;height:13px;background:var(--surface2);border-radius:999px;overflow:hidden}
       .fa-govde > div{height:100%;background:var(--brass-dim);border-radius:4px}
       .fa-deger{flex:0 0 74px;text-align:right;font-size:.72rem;color:var(--muted2)}
-      .fa-kesisim-not{border-left:3px solid var(--brass);background:var(--surface2);border-radius:8px;
-        padding:9px 11px;margin-top:8px}
-      .fa-kesisim-metin{font-family:var(--serif);font-style:italic;font-size:.88rem;line-height:1.5;color:var(--paper)}
+      .fa-kesisim-not{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--brass);
+        border-radius:var(--r-ic);padding:9px 11px;margin-top:8px}
+      .fa-kesisim-metin{font-family:var(--serif);font-style:italic;font-size:.95rem;line-height:1.6;color:var(--paper)}
       .fa-kesisim-kaynak{font-size:.72rem;color:var(--brass);margin-top:6px}
-      .fa-kapat{margin-top:10px;padding:8px 12px;border-radius:9px;border:1px solid var(--border);
+      .fa-kapat{margin-top:10px;padding:8px 12px;border-radius:var(--r-ic);border:1px solid var(--border);
         background:var(--surface2);color:var(--muted);font-size:.78rem}
     `;
     document.head.appendChild(s);
@@ -222,11 +222,10 @@
   }
   function haritaKartHtml(){
     const liste = harita();
-    if(!liste.length){
-      return '<div class="fa-kart" id="faHaritaKart"><div class="fa-baslik">Fikir haritası</div>'
-        + '<div class="fa-not" id="faBos">Henüz fikir etiketi yok. Alıntılara etiket ekledikçe '
-        + 'hangi fikrin hangi kitaplarda dolaştığı burada görünecek.</div></div>';
-    }
+    // Boş durum mesajının tek sahibi fikir.js — mükerrer mesaj kaldırıldı (görsel dil sprinti).
+    // Etiket yokken bölüm/kart hiç çizilmez: #faPanel DOM'da kalır ama içi boş bırakılır,
+    // #faBos ve başlığı DOM'a girmez.
+    if(!liste.length) return '';
     const olcut = { not: 'notSayisi', kitap: 'kitapSayisi', baglanti: 'komsuSayisi' }[sirala] || 'notSayisi';
     const enB = Math.max.apply(null, liste.map(o => o[olcut]).concat([1]));
     const yaygin = enYaygin();

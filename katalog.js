@@ -91,8 +91,8 @@
     if(!meta) return;
     const e = document.createElement('div');
     e.id = 'rafBilgi';
-    e.style.cssText = 'font-size:.78rem;color:var(--muted2);margin-top:8px';
-    e.innerHTML = (k.raf ? '📚 ' + kacir(k.raf) : '') + (k.raf && k.isbn ? ' · ' : '')
+    e.style.cssText = 'font-size:.8rem;color:var(--muted2);margin-top:8px';
+    e.innerHTML = (k.raf ? (window.ikon?window.ikon('kitaplik'):'') + ' ' + kacir(k.raf) : '') + (k.raf && k.isbn ? ' · ' : '')
       + (k.isbn ? 'ISBN ' + kacir(k.isbn) : '');
     meta.parentNode.insertBefore(e, meta.nextSibling);
   }
@@ -109,7 +109,7 @@
         '<div class="tutamac"></div>' +
         '<button class="sheet-kapat" data-act="seri-kapat" aria-label="Kapat">✕</button>' +
         '<div class="sheet-baslik">Seri tarama</div>' +
-        '<div style="font-size:.82rem;color:var(--muted);margin-top:6px">Kamerayı kitabın barkoduna tut, ekleyeyim; sonra sıradakini tut. Form açılmaz.</div>' +
+        '<div style="font-size:.85rem;color:var(--muted);margin-top:6px">Kamerayı kitabın barkoduna tut, ekleyeyim; sonra sıradakini tut. Form açılmaz.</div>' +
         '<div class="form-iki" style="margin-top:10px">' +
           '<div><label for="seriDurum">Durum</label>' +
             '<select id="seriDurum">' +
@@ -124,7 +124,7 @@
           '<video id="seriVideo" playsinline muted style="width:100%;max-height:38vh;object-fit:cover;display:block"></video>' +
           '<div style="position:absolute;inset:24% 12%;border:2px solid var(--kamera-cerceve);border-radius:10px;pointer-events:none"></div>' +
         '</div>' +
-        '<div id="seriNot" style="font-size:.82rem;color:var(--muted);margin-top:10px"></div>' +
+        '<div id="seriNot" style="font-size:.85rem;color:var(--muted);margin-top:10px"></div>' +
         '<div style="display:flex;gap:8px;margin-top:8px">' +
           '<input id="seriElle" inputmode="numeric" placeholder="ISBN elle" autocomplete="off" style="flex:1">' +
           '<button class="btn btn-cerceve" style="width:auto;padding:11px 16px" data-act="seri-elle">Ekle</button>' +
@@ -142,9 +142,9 @@
     el.innerHTML = '<div style="font-size:.8rem;color:var(--brass);margin-bottom:6px"><b>'
       + oturumKayitlari.length + ' kitap eklendi</b></div>'
       + oturumKayitlari.slice().reverse().slice(0, 12).map(x =>
-        '<div class="not-kart" style="padding:8px 11px;margin-top:6px">'
-        + '<div style="font-size:.86rem">' + kacir(x.ad) + '</div>'
-        + '<div style="font-size:.72rem;color:var(--muted2);margin-top:2px">' + kacir(x.yazar || '') + '</div>'
+        '<div class="not-kart" style="margin-top:6px">'
+        + '<div style="font-size:.85rem">' + kacir(x.ad) + '</div>'
+        + '<div style="font-size:.75rem;color:var(--muted2);margin-top:2px">' + kacir(x.yazar || '') + '</div>'
         + '<button class="not-sil" data-act="seri-geri" data-id="' + x.id + '" aria-label="Geri al">✕</button>'
         + '</div>').join('');
   }
@@ -172,7 +172,7 @@
       // Ağ arızası "kitap yok" demek DEĞİL: seri taramada sessizce atlanırsa
       // Kaan tüm rafı tarayıp hiçbirinin bulunmadığını sanabilir.
       if(agSorunu){
-        if(not) not.innerHTML = '<b style="color:var(--drop)">⚠ İnternete ulaşılamadı</b> — '
+        if(not) not.innerHTML = (window.ikon?window.ikon('uyari'):'') + ' <b style="color:var(--drop)">İnternete ulaşılamadı</b> — '
           + 'ISBN ' + kacir(t) + ' sorgulanamadı, kitap EKLENMEDİ. Bağlantını kontrol edip tekrar okut.';
         bildir('İnternete ulaşılamadı — kitap eklenmedi');
       }else{
@@ -269,7 +269,7 @@
     kart.className = 'yedek-kart'; kart.id = 'katalogKart';
     kart.innerHTML = '<h3>Toplu katalog (seri tarama)</h3>'
       + '<p>Fiziksel rafını sisteme geçir: kamera açık kalır, kitapları arka arkaya okutursun. Her kitap için form açılmaz, raf konumu hepsine birden yazılır.</p>'
-      + '<button class="btn btn-cerceve" data-act="seri-ac">📚 Seri taramayı başlat</button>';
+      + '<button class="btn btn-cerceve" data-act="seri-ac">' + (window.ikon?window.ikon('kitaplik'):'') + ' Seri taramayı başlat</button>';
     kap.insertBefore(kart, kap.firstChild);
   }
 

@@ -274,11 +274,11 @@
     if(!kutu) return;
     let metin = null;
     if(formBekleyen && formBekleyen.foto)
-      metin = '📷 Fotoğraf hazır — kitapla birlikte kaydedilecek (yalnız bu cihazda)';
+      metin = 'Fotoğraf hazır — kitapla birlikte kaydedilecek (yalnız bu cihazda)';
     else if(formBekleyen && formBekleyen.kaldir)
       metin = 'Kapak fotoğrafı kaydedince kaldırılacak';
     else if(formYerelVar)
-      metin = '📷 Bu kitabın kendi kapak fotoğrafı var (yalnız bu cihazda)';
+      metin = 'Bu kitabın kendi kapak fotoğrafı var (yalnız bu cihazda)';
     if(metin){
       kutu.style.display = 'flex';
       kutu.innerHTML = '<span></span><button type="button" class="kp-kucuk-btn" data-act="kp-form-kaldir">Kaldır</button>';
