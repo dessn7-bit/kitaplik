@@ -273,11 +273,11 @@
     kap.insertBefore(kart, kap.firstChild);
   }
 
-  function aramayaRafEkle(){
-    const arama = document.getElementById('arama');
-    if(arama && arama.placeholder.indexOf('raf') < 0)
-      arama.placeholder = 'Kitap, yazar, yayınevi, raf veya etiket ara…';
-  }
+  /* D1 (görsel ince ayar): placeholder'ın TEK sahibi index.html. Buradaki eski
+     "raf" ekleme override'ı uzun metni geri basıyordu ve 412px'te kesiliyordu —
+     placeholder örnekleyicidir, arama kapsamının sözleşmesi değil (raf araması
+     zaten çalışır ve testlidir). */
+  function aramayaRafEkle(){}
 
   function baslat(){
     kartEkle(); formuBagla(); aramayaRafEkle();
