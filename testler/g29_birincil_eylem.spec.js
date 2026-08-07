@@ -68,13 +68,13 @@ test.describe('G29 — detayda durum başına tek birincil', () => {
     await expect(page.locator('#dPuan')).toBeVisible();
   });
 
-  test('ödünçteki kitap: ödünç eylemleri katlı, pirinç sayısı değişmez', async ({ page }) => {
+  test('ödünç VERİSİ olan eski kitapta çökme yok, pirinç sayısı değişmez (ödünç UI v40\'ta yok)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Ödünçte', odunc:
       [{ kisi: 'Ali', verilis: '2026-08-01', donus: null }] })]);
     await rafAc(page);
     await detayAcVeBekle(page);
     await expect(gorunurBrass(page, '#detayIcerik')).toHaveCount(1);   // yalnız baslat
-    await expect(page.locator('[data-act="odunc-al"]')).toBeHidden();  // katlı bölümde
+    await expect(page.locator('[data-act="odunc-al"]')).toHaveCount(0); // GÖÇ: UI söküldü
   });
 });
 

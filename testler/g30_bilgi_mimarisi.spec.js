@@ -142,9 +142,12 @@ test.describe('G30 — Ana Sayfa bölümleri gerçek veriyle', () => {
     await tohumla(page, [sahteKitap({ ad: 'Alıntılı', notlar: [bekleyenAlinti(1)] })]);
     await page.goto('/');
     await expect(page.locator('#asBugun')).toContainText('1 alıntı');
-    // Ana Sayfa çizimi planlamaYap/ciz çağırmadığı için not damgası basılmamalı
+    // Ana Sayfa çizimi planlamaYap/ciz çağırmadığı için not damgası basılmamalı.
+    // KUSUR DÜZELTMESİ (v40'ta bulundu): beklenen değer tohumla AYNI yerel-saat
+    // hesabından gelmeli — eski toISOString (UTC) kıyası gece 00-03 (UTC+3)
+    // penceresinde bir gün kayıp vakayı kırıyordu.
     const damga = await page.evaluate(() => veri.kitaplar[0].notlar[0].tekrarSonraki);
-    expect(damga).toBe(new Date(Date.now() - 86400000).toISOString().slice(0, 10));
+    expect(damga).toBe(bugunISO(-1));
   });
 
   test('sıradaki: öneri motorundan kitap + neden cümlesi, zar düğmesi çalışır', async ({ page }) => {

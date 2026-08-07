@@ -282,7 +282,7 @@
       }
       // detay/sekme etkileşimlerinden sonra şeridi tazele
       if(['detay','duzenle','bitir','baslat','ilerleme-kaydet','not-ekle','not-sil',
-          'odunc-ver','odunc-al','alinti-git',
+          'alinti-git',   // odunc-ver/odunc-al v40'ta söküldü (ödünç UI yok)
           'yarim-birak','okunacak-al','yeniden-oku','d-puan','d-puan-sil'].indexOf(act) >= 0){
         setTimeout(detayGuncelle, 0);
       }

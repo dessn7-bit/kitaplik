@@ -195,7 +195,6 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 .r-bitti{color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent)}
 .r-okunacak{color:var(--muted);background:color-mix(in srgb,var(--muted) 10%,transparent)}
 .r-yarim{color:var(--drop);background:color-mix(in srgb,var(--drop) 10%,transparent)}
-.r-odunc{color:var(--mavi);background:color-mix(in srgb,var(--mavi) 10%,transparent)}
 .puan-mini{font-size:.75rem;font-weight:600;color:var(--brass);padding:3px 10px;
   border-radius:999px;background:color-mix(in srgb,var(--brass) 10%,transparent)}
 .etiket-mini{font-size:.75rem;color:var(--muted2)}
@@ -387,9 +386,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .hiz-kutu{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-ic);
   padding:12px 14px;margin-top:12px;font-size:.85rem;color:var(--muted);line-height:1.6}
 .hiz-kutu b{color:var(--brass);font-weight:600}
-.odunc-aktif{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--mavi);
-  border-radius:var(--r-ic);padding:12px 14px;margin-top:8px;font-size:.85rem}
-.odunc-gecmis{font-size:.75rem;color:var(--muted2);margin-top:8px;line-height:1.6}
+/* ödünç UI v40'ta kaldırıldı — veri modeli ve senkron kuralı yaşıyor */
 
 /* OL arama */
 .ol-sonuc{margin-top:8px;display:flex;flex-direction:column;gap:6px}
@@ -583,7 +580,6 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <button class="chip" data-act="filtre" data-v="okunacak">Okunacak</button>
     <button class="chip" data-act="filtre" data-v="bitti">Bitti</button>
     <button class="chip" data-act="filtre" data-v="yarim">Yarım kaldı</button>
-    <button class="chip" data-act="filtre" data-v="odunc">Ödünçte</button>
     <button class="chip" data-act="filtre" data-v="puansiz">Puansız</button>
     <div class="vm-chips" id="vmSahiplikChips">
       <button class="vm-chip" data-act="vm-sahiplik" data-v="hepsi">Tüm raf</button>
@@ -1131,7 +1127,8 @@ function sirtRenk(ad){
   return SIRT_RENK[h % SIRT_RENK.length];
 }
 function kitapBul(id){ return veri.kitaplar.find(k => k.id === id); }
-function aktifOdunc(k){ return (k.odunc||[]).find(o => !o.donus) || null; }
+/* aktifOdunc v40'ta kaldırıldı (ödünç UI söküldü); veri modeli (kitapNormalize.odunc)
+   ve senkron.js dizi birleşimi bilinçli olarak YAŞIYOR — bkz. detay yorumu. */
 let toastZaman = null;
 function toast(m){
   const t = document.getElementById('toast');
@@ -1164,7 +1161,6 @@ function listeCiz(){
   const q = katla(durum.arama);
   let ks = veri.kitaplar.filter(k => {
     const durumUy = durum.filtre === 'hepsi' ? true
-      : durum.filtre === 'odunc' ? !!aktifOdunc(k)
       : durum.filtre === 'puansiz' ? (k.durum === 'bitti' && !k.puan)
       : k.durum === durum.filtre;
     const etiketUy = !durum.etiket || (k.etiketler||[]).includes(durum.etiket);
@@ -1197,14 +1193,13 @@ function listeCiz(){
   if(!ks.length){
     const bosMesaj = veri.kitaplar.length
       ? '<p>Bu filtreyle eşleşen kitap yok.</p>'
-      : '<p>Raf henüz boş.</p><small>Sağ alttaki + ile ilk kitabını ekle. Kitap adını yazıp "Ara" dersen yazar, sayfa ve kapağı ben doldururum.</small>';
+      : '<p>Raf henüz boş.</p><small>Sağ alttaki + ile ilk kitabını ekle. Adını yazmaya başladığında yazar, sayfa ve kapak kendiliğinden gelir; barkodunu da okutabilirsin.</small>';
     kap.innerHTML = `<div class="bos"><div class="b-ikon">${ikon('kitap')}</div>${bosMesaj}</div>`;
     return;
   }
 
   kap.innerHTML = ks.map(k => {
     const rSinif = { okunuyor:'r-okunuyor', bitti:'r-bitti', okunacak:'r-okunacak', yarim:'r-yarim' }[k.durum];
-    const od = aktifOdunc(k);
     let ilerlemeHtml = '';
     if(k.durum === 'okunuyor' && k.sayfa > 0){
       const p = Math.min(100, Math.round((k.guncelSayfa||0) / k.sayfa * 100));
@@ -1232,7 +1227,6 @@ function listeCiz(){
         ${k.yazar ? `<div class="kart-yazar">${esc(k.yazar)}</div>` : ''}
         <div class="kart-alt">
           <span class="rozet ${rSinif}">${DURUM_AD[k.durum]}</span>
-          ${od ? `<span class="rozet r-odunc">Ödünçte: ${esc(od.kisi)}</span>` : ''}
           ${k.sahiplik === 'istek' ? `<span class="vm-rozet">İstek listesi</span>` : ''}
           ${((k.durum === 'bitti' || k.durum === 'yarim') && k.puan) ? `<span class="puan-mini">★ ${k.puan}</span>` : ''}
           ${notSayi ? `<span class="etiket-mini">✎ ${notSayi}</span>` : ''}
@@ -1558,7 +1552,6 @@ function detayAc(id){
   durum.detayId = id;
   const kap = document.getElementById('detayIcerik');
   const rSinif = { okunuyor:'r-okunuyor', bitti:'r-bitti', okunacak:'r-okunacak', yarim:'r-yarim' }[k.durum];
-  const od = aktifOdunc(k);
   const hz = hizAnaliz(k);
 
   /* Puan şeridi — form açmadan doğrudan puanlama. bitti + yarim'da görünür:
@@ -1658,25 +1651,10 @@ function detayAc(id){
       </div></div></details>`;
   }
 
-  // ödünç — nadir bölüm: katlanabilir; aktif ödünç varsa özet başlıkta görünür
-  let oduncHtml = `<details class="d-katla" id="dOduncKatla"><summary><span>${od
-    ? `Ödünçte: ${esc(od.kisi)} · ${gunFarki(od.verilis, bugun())} gün`
-    : 'Ödünç'}</span></summary><div class="d-katla-ic">`;
-  if(od){
-    oduncHtml += `<div class="odunc-aktif"><b>${esc(od.kisi)}</b>'de — ${trTarih(od.verilis)} tarihinden beri (${gunFarki(od.verilis, bugun())} gün)
-      <button class="btn btn-cerceve" style="margin-top:10px" data-act="odunc-al">Geri aldım</button></div>`;
-  }else{
-    oduncHtml += `<div class="ilerleme-guncelle">
-        <input id="d-odunc-kisi" placeholder="Kime verdin?" style="flex:1;width:auto">
-        <button class="btn btn-cerceve btn-kucuk" data-act="odunc-ver">Ödünç ver</button>
-      </div>`;
-  }
-  const gecmisOdunc = (k.odunc||[]).filter(o => o.donus);
-  if(gecmisOdunc.length){
-    oduncHtml += `<div class="odunc-gecmis">Geçmiş: ` +
-      gecmisOdunc.map(o => `${esc(o.kisi)} (${trTarih(o.verilis)}–${trTarih(o.donus)})`).join(' · ') + `</div>`;
-  }
-  oduncHtml += `</div></details>`;
+  /* Ödünç bölümü KALDIRILDI (v40 kararı: "ödünç vermiyorum hiç") — yalnız UI.
+     Veri modeli (kitapNormalize.odunc) ve senkron birleştirme kuralı YAŞIYOR:
+     alanı silmek parmak izini değiştirir, ANLIK_SURUM turu + göç vakası
+     gerektirirdi — sıfır kazanç için risk; görünmez alan maliyetsizdir. */
 
   const tarihHtml = [
     k.baslamaTarihi ? `Başlama: ${trTarih(k.baslamaTarihi)}` : '',
@@ -1714,7 +1692,6 @@ function detayAc(id){
         <div class="detay-meta">
           <span class="rozet ${rSinif}">${DURUM_AD[k.durum]}</span>
           ${((k.durum === 'bitti' || k.durum === 'yarim') && k.puan) ? `<span class="puan-mini">★ ${k.puan}</span>` : ''}
-          ${od ? `<span class="rozet r-odunc">Ödünçte: ${esc(od.kisi)}</span>` : ''}
           ${k.tur ? `<span style="font-size:.75rem;color:var(--muted)">${esc(k.tur)}</span>` : ''}
           ${k.sayfa ? `<span style="font-size:.75rem;color:var(--muted)">${k.sayfa} sayfa</span>` : ''}
           ${k.yayinevi ? `<span style="font-size:.75rem;color:var(--muted)">${esc(k.yayinevi)}${k.yil ? ' · ' + k.yil : ''}</span>` : (k.yil ? `<span style="font-size:.75rem;color:var(--muted)">${k.yil}</span>` : '')}
@@ -1743,7 +1720,6 @@ function detayAc(id){
     </div>
     ${seriHtml}
     ${gecmisHtml}
-    ${oduncHtml}
     <details class="d-katla" id="dDigerKatla"><summary><span>Düzenle &amp; diğer</span></summary><div class="d-katla-ic">
       <div class="form-alt" style="margin-top:0">
         <button class="btn btn-cerceve" data-act="duzenle" style="flex:1">Düzenle</button>
@@ -2252,7 +2228,7 @@ function anaCiz(){
   if(!veri.kitaplar.length){
     kap.innerHTML = `<div class="bos"><div class="b-ikon">${ikon('kitap')}</div>
         <p>Kütüphanen henüz boş.</p>
-        <small>İlk kitabını ekle — adını yazıp arattığında yazar, sayfa ve kapak kendiliğinden gelir.
+        <small>İlk kitabını ekle — adını yazmaya başladığında yazar, sayfa ve kapak kendiliğinden gelir.
         Goodreads'ten geliyorsan bütün kitaplığını olduğu gibi aktarabilirsin.</small></div>
       <div class="as-blok"><div class="as-eylem">
         <button class="btn btn-brass" data-act="yeni">Kitap ekle</button>
@@ -2668,7 +2644,7 @@ document.addEventListener('click', e => {
         if(window.__oturum && window.__oturum.durumKapat) window.__oturum.durumKapat(k.id, true);
         depoKaydet(); hepsiniCiz();
         // Detayda kal: puan sorusu artık formda değil, birincil blokta (puan şeridi).
-        detayAc(k.id); toast('Tebrikler! Puanını üstteki şeritten verebilirsin'); }
+        detayAc(k.id); toast('Tebrikler! İstersen puanını hemen verebilirsin'); }
       break; }
     case 'yarim-birak': {
       const k = kitapBul(durum.detayId);
@@ -2724,18 +2700,6 @@ document.addEventListener('click', e => {
         seansEkle(k, k.guncelSayfa || 0, yeni);
         if(k.guncelSayfa !== yeni){ k.guncelSayfa = yeni; k.gsG = Date.now(); }
         depoKaydet(); hepsiniCiz(); detayAc(k.id); toast('İlerleme kaydedildi'); }
-      break; }
-    case 'odunc-ver': {
-      const k = kitapBul(durum.detayId);
-      const kisi = document.getElementById('d-odunc-kisi').value.trim();
-      if(!kisi){ toast('Kime verdiğini yaz'); break; }
-      if(k){ k.odunc = k.odunc || []; k.odunc.push({ kisi, verilis: bugun(), donus: null });
-        depoKaydet(); hepsiniCiz(); detayAc(k.id); toast(`${kisi} kitabı aldı — kayıtlara geçti`); }
-      break; }
-    case 'odunc-al': {
-      const k = kitapBul(durum.detayId);
-      const od = k && aktifOdunc(k);
-      if(od){ od.donus = bugun(); depoKaydet(); hepsiniCiz(); detayAc(k.id); toast('Kitap rafa döndü'); }
       break; }
     case 'not-tip': durum.notTip = v;
       document.querySelectorAll('.not-tip-sec .mini-chip').forEach(c =>

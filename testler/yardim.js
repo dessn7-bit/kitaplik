@@ -31,14 +31,27 @@ function sahteKitap(ek) {
 async function tohumla(page, kitaplar, ekstra) {
   const v = Array.isArray(kitaplar) ? { kitaplar, hedef: {} } : kitaplar;
   const ek = {};
-  for (const [anahtar, deger] of Object.entries(ekstra || {}))
+  for (const [anahtar, deger] of Object.entries(ekstra || {})) {
+    if (deger === null) continue;   // null = "bu anahtarı HİÇ tohumlama" (v40 sentineli)
     ek[anahtar] = typeof deger === 'string' ? deger : JSON.stringify(deger);
-  await page.addInitScript(([veriJson, ekObj]) => {
+  }
+  /* v40 GÖÇ (davranış-koruyucu): Kütüphane varsayılanı artık İZGARA. Eski
+     vakalar liste GÖRÜNÜMÜNÜN İÇERİĞİNİ sınıyor (görünüm seçimini değil) —
+     tohumla, tercih belirtilmemişse liste tercihini basar ki yüzlerce vaka
+     amacını korusun. İki istisna: (1) {kk_gorunum_v1: null} sentineli hiç
+     tohumlamaz (g34 varsayılan-izgara vakaları); (2) anahtar localStorage'da
+     ZATEN varsa (başka bir addInitScript basmışsa — g12/g16 izgaraAc deseni)
+     ezilmez. */
+  const gorunumVarsayilan = ('kk_gorunum_v1' in (ekstra || {}))
+    ? null : '{"izgara":false,"rafGrupla":false}';
+  await page.addInitScript(([veriJson, ekObj, gorunumV]) => {
     if (localStorage.getItem('__kk_tohumlandi')) return;
     localStorage.setItem('__kk_tohumlandi', '1');
     localStorage.setItem('kk_kitaplik_v1', veriJson);
     for (const [a, d] of Object.entries(ekObj)) localStorage.setItem(a, d);
-  }, [JSON.stringify(v), ek]);
+    if (gorunumV && localStorage.getItem('kk_gorunum_v1') === null)
+      localStorage.setItem('kk_gorunum_v1', gorunumV);
+  }, [JSON.stringify(v), ek, gorunumVarsayilan]);
 }
 
 /* --- Sprint IA gezinme yardimcilari ---

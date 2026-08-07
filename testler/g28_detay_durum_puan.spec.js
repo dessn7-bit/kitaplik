@@ -49,20 +49,17 @@ test.describe('G28 M1 — detay hiyerarşisi', () => {
     expect(await page.evaluate(() => veri.kitaplar.length)).toBe(0);
   });
 
-  test('nadir bölümler (ödünç, düzenle) katlı başlar; ödünç formu sürekli açık değil', async ({ page }) => {
+  test('ödünç arayüzü v40\'ta YOK; düzenle bölümü katlı başlar', async ({ page }) => {
+    // GÖÇ (v40): ödünç UI kaldırıldı ("ödünç vermiyorum hiç") — veri modeli ve
+    // senkron birleşimi yaşıyor (g26 + g34). Eski vaka ödünç AKIŞINI sınıyordu;
+    // yeni sözleşme: ödünç yüzeyi detayda HİÇ yok.
     await tohumla(page, [sahteKitap({ ad: 'Katlı' })]);
     await rafAc(page);
     await detayAc(page);
-    expect(await page.locator('#dOduncKatla[open]').count()).toBe(0);
-    await expect(page.locator('#d-odunc-kisi')).toBeHidden();
-    // açınca ödünç verilebilir
-    await page.click('#dOduncKatla summary');
-    await page.fill('#d-odunc-kisi', 'Ali');
-    await page.click('[data-act="odunc-ver"]');
-    await expect(page.locator('#toast')).toContainText('Ali kitabı aldı');
-    // aktif ödünç künye rozetinde ve katlanır başlıkta görünür (bilgi kaybolmaz)
-    await expect(page.locator('#detayIcerik .detay-meta .r-odunc')).toContainText('Ali');
-    await expect(page.locator('#dOduncKatla summary')).toContainText('Ödünçte: Ali');
+    await expect(page.locator('#dOduncKatla')).toHaveCount(0);
+    await expect(page.locator('#d-odunc-kisi')).toHaveCount(0);
+    await expect(page.locator('[data-act="odunc-ver"]')).toHaveCount(0);
+    expect(await page.locator('#dDigerKatla[open]').count()).toBe(0);   // düzenle hâlâ katlı
   });
 
   test('kapak eylemi künyenin parçası: 📷 düğmesi kapak sütununda', async ({ page }) => {

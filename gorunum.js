@@ -16,10 +16,16 @@
   function kitapBulL(id){ return (veri.kitaplar||[]).find(k => k.id === id); }
 
   function ayarYukle(){
+    /* v40 KARAR: Kütüphane bir RAF — varsayılan görünüm İZGARA (kapak duvarı;
+       "elimdeki bütün kitapları göreyim, hangisini okuyacağımı seçeyim").
+       Kayıtlı tercih VARSA ona saygı duyulur (daha önce listeyi seçen listede
+       kalır); anahtar hiç yazılmamışsa izgara. */
     try{
-      const a = JSON.parse(localStorage.getItem(GORUNUM_ANAHTAR)) || {};
+      const ham = localStorage.getItem(GORUNUM_ANAHTAR);
+      if(ham === null){ izgara = true; rafGrupla = false; return; }
+      const a = JSON.parse(ham) || {};
       izgara = !!a.izgara; rafGrupla = !!a.rafGrupla;
-    }catch(e){}
+    }catch(e){ izgara = true; }
   }
   function ayarYaz(){
     try{ localStorage.setItem(GORUNUM_ANAHTAR, JSON.stringify({ izgara, rafGrupla })); }catch(e){}
@@ -30,7 +36,10 @@
     const s = document.createElement('style');
     s.id = 'gorunumStil';
     s.textContent = `
-      #liste.izgara{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:12px}
+      /* v40: min sütun 104→96px — kapak duvarı yoğunluğu: 412px ekranda 3 sütun
+         ~118px, 360px'te 3 sütun ~101px (104 minimumu 360'ta 2 dev sütuna
+         düşürüyordu; ~100px kapak tanıma için yeterli, Goodreads mobil dengi). */
+      #liste.izgara{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px}
       #liste.izgara .kart{flex-direction:column;background:transparent;border:none;box-shadow:none;padding:0}
       #liste.izgara .kart .kart-ic{padding:6px 2px 0}
       #liste.izgara .kart-baslik{font-size:.82rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -38,9 +47,17 @@
       #liste.izgara .kart-alt,#liste.izgara .ilerleme-txt{display:none}
       #liste.izgara .iz-kapak{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:var(--r-mini);
         border:1px solid var(--border);background:var(--surface2);box-shadow:var(--yukselti-2)}
+      /* v40: liste sırtıyla AYNI cilt dili — sağ iç gölge + sol ışık çizgisi.
+         İçerik TAM AD kalır (bilinçli): ~100px+ genişlikte ad okunur ve kapak
+         duvarında seçime yardım eder; baş harfe indirgemek bilgi kaybettirirdi
+         (listenin 52px kılıfında baş harf zorunluluktu). */
       #liste.izgara .iz-yedek{width:100%;aspect-ratio:2/3;border-radius:var(--r-mini);display:flex;align-items:flex-end;
-        padding:8px;font-family:var(--serif);font-size:.8rem;color:var(--uzeri);line-height:1.3;
-        box-shadow:var(--yukselti-2);overflow:hidden}
+        padding:8px;font-family:var(--serif);font-size:.8rem;font-weight:600;color:var(--uzeri);line-height:1.3;
+        box-shadow:var(--yukselti-2),inset -12px 0 14px -10px rgba(0,0,0,.38),inset 3px 0 0 rgba(255,253,247,.28);
+        overflow:hidden}
+      /* v40: okunmuş (bitti) kitap raf duvarında sönük — okunmamışlar öne çıkar */
+      #liste.izgara .kart.iz-okundu .iz-kapak,
+      #liste.izgara .kart.iz-okundu .iz-yedek{opacity:.55;filter:grayscale(.4)}
       .vm-iz-istek{position:absolute;top:6px;right:6px;background:var(--mavi);color:var(--uzeri);
         font-size:.6rem;padding:2px 6px;border-radius:999px;z-index:2;letter-spacing:.02em}
       .raf-basligi{grid-column:1/-1;font-size:.8rem;color:var(--muted);margin:6px 0 -4px;letter-spacing:.03em}
@@ -91,7 +108,12 @@
   function rafDugmeTazele(){
     const r = document.getElementById('rafGrupBtn');
     if(!r) return;
-    r.style.display = izgara ? '' : 'none';
+    /* v40: raf verisi HİÇ yoksa düğme gösterilmez (işlevsiz düğme keşfedilebilirliği
+       düşürür); raf girilmiş kitap varsa izgarada görünür — listeCiz sarmalayıcısı
+       her çizimde çağırdığı için raf eklendiği anda belirir. */
+    const rafVar = (typeof veri === 'object' && Array.isArray(veri.kitaplar))
+      && veri.kitaplar.some(k => k.raf && String(k.raf).trim());
+    r.style.display = (izgara && rafVar) ? '' : 'none';
     r.classList.toggle('aktif', rafGrupla);
   }
 
@@ -169,7 +191,10 @@
     // istek işareti sağ üstte küçük bir pil olarak duruyor (kapak üstünde okunur kalsın diye dolu zemin).
     const istek = k.sahiplik === 'istek'
       ? '<div class="vm-iz-istek">İstek</div>' : '';
-    return '<button class="kart" data-act="detay" data-id="' + k.id + '" style="position:relative">' +
+    /* v40: bitmiş kitap raf duvarında SÖNÜK (iz-okundu) — okunmamışlar göze
+       çarpsın diye; başlık tam opak kalır (bilgi kaybolmaz), ek rozet yok. */
+    return '<button class="kart' + (k.durum === 'bitti' ? ' iz-okundu' : '')
+      + '" data-act="detay" data-id="' + k.id + '" style="position:relative">' +
       gorsel + rozet + istek +
       '<div class="kart-ic"><div class="kart-baslik">' + kacir(k.ad) + '</div>' +
       (k.yazar ? '<div class="kart-yazar">' + kacir(k.yazar) + '</div>' : '') +
