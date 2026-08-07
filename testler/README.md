@@ -1,6 +1,6 @@
 # Kitaplık Regresyon Test Paketi (Playwright)
 
-301 vaka, 24 grup. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
+441 vaka, 30 grup dosyasi. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
 kırarsa bu paket kırmızıya döner. (Mutasyon denetiminden geçti: 11 el-yapımı mutasyon +
 G12'nin 3 kritik düzeltmesi geri alındığında ilgili vakalar kırmızıya düşüyor.)
 
@@ -46,6 +46,12 @@ koşar (temiz localStorage), service worker **engellidir** (`serviceWorkers:'blo
 | g22_aria_rapor | tam ARIA dialog (role/aria-modal/labelledby, inert katmanları), rapor.js yıl sonu raporu + PNG |
 | g23_kapak_foto | kapak.js: kendi kapak fotoğrafı — IndexedDB deposu, boyut/kalite işleme, yerel>uzak>sırt önceliği, silme kancaları, senkron/yedek dışında kalma, tembel yükleme |
 | g24_oneri | oneri.js: "Ne okusam?" — açıklanabilir skorlama (yazar/tür/seri/etiket/uzunluk/bekleme), çeşitlilik kotası, "Şimdi değil" ertelemesi, az-veri dürüstlüğü, neden-veri tutarlılığı, zar regresyonu |
+| g25_tekrar | tekrar.js: aralıklı alıntı tekrarı (×2.2 merdiven, günlük 10, yayılma 8/gün) |
+| g26_senkron_birlesim | alan/dizi bazlı birleştirme, mezar taşları, LWW etiket/fikir, şema koruması |
+| g27_senkron_guvence | TOCTOU (ETag/if-match), gsG damgası, eski istemci penceresi, PUT uçuşu koruması |
+| g28_detay_durum_puan | detay hiyerarşisi, durum eylemleri, d-puan şeridi, istatistik dürüstlüğü |
+| g29_birincil_eylem | birincil eylem tekliği: kapsam başına en fazla 1 görünür `.btn-brass` |
+| g30_bilgi_mimarisi | Ana Sayfa · Kütüphane · Ayarlar penceresi: açılış sekmesi, ana sayfa bölümleri, boş durum, eski Yedek işlevleri, sahiplik varsayılanı, derin bağlantı, eklenti tetikleme, 500 kitap ölçümü |
 
 **Yeni kitap alanı eklerken:** `kitapNormalize`'a eklemeyi unutma — yoksa alan yenilemede
 sessizce silinir. Her yeni alan için "yenilemede korunur" vakası zorunlu (g15 deseni).
@@ -78,13 +84,20 @@ yoksa o kaynağa giden her istek testleri düşürür (bilinçli tasarım).
 (goto'dan ÖNCE çağır). Barkod okutmak: `page.evaluate(k => window.__sahteKod = k, '978...')`.
 Akış kapanınca `window.__akisDurdu` true olur. `kameraYok(page)` desteksiz cihaz taklididir.
 
-## Veri tohumlama
+## Veri tohumlama ve açılış sekmesi
 
 ```js
-const { tohumla, sahteKitap } = require('./yardim');
+const { tohumla, sahteKitap, rafAc, rafYenile, ayarlarAc } = require('./yardim');
 await tohumla(page, [sahteKitap({ ad: 'X', durum: 'okunuyor' })], { kk_oturum_v1: {...} });
-await page.goto('/');
+await rafAc(page);            // goto + Kütüphane sekmesine BAS
 ```
+
+**Uygulama Ana Sayfa'da açılır** (Sprint IA). Kitap listesine bakan her vaka
+`rafAc(page)` ile açar; yenilemeden sonra listeye dönüyorsa `rafYenile(page)`.
+Bunlar nav düğmesine basar — `?sekme=raf` derin bağlantı kestirmesi bilinçli
+olarak kullanılmaz, yoksa ürünün varsayılan sekme davranışı hiçbir vakada
+sınanmamış kalırdı. **Ana Sayfa'yı SINAYAN vakalar doğrudan `page.goto('/')`
+çağırır.** Eski "Yedek sekmesi" artık bir pencere: `ayarlarAc(page)`.
 
 Tohum yalnız İLK yüklemede yazılır — reload testlerinde uygulamanın kaydettiği
 veri ezilmez (`__kk_tohumlandi` bayrağı).
@@ -100,6 +113,14 @@ Görsel dili korumak için stilleri kopyala, seçici adlarını yenile.
 **Seçiciler her zaman kapsamlı olsun:** `page.locator('#panel-alinti .fa-kart')` gibi.
 Belge geneli sınıf seçicisi (`page.locator('.vm-rozet')`) bugün tek eşleşme bulsa bile,
 aynı sınıf ikinci bir yerde kullanıldığı anda strict-mode ihlaliyle kırılır — üç kez yaşandı.
+
+**Kural `data-act` için de geçerli, ve orada daha sinsi.** Ana Sayfa aynı eylemleri
+yeniden kullanıyor (`yeni`, `zar`, `seri-ac`, `detay`) — kopya mantık yazmamak için
+doğru karar, ama çıplak `[data-act="yeni"]` artık birden çok öğe eşliyor. `page.click`
+strict değildir: DOM'daki İLK eşleşmeyi alır, o da gizli olabilir ve test "element is
+not visible" ile 30 sn'de düşer (44 vaka böyle kırıldı). Bu yüzden hangi yüzeyin
+kastedildiği yazılır: `.fab[data-act="yeni"]`, `.search-row [data-act="zar"]`,
+`#ortuAyar [data-act="seri-ac"]`.
 
 ## Yeni vaka ekleme
 
