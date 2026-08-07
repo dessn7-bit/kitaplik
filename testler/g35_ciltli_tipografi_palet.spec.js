@@ -77,7 +77,13 @@ test.describe('G35 Ciltli tipografi + Palet A', () => {
       document.body.appendChild(span);
       const en = span.getBoundingClientRect().width;
       span.remove();
+      // salt-LATIN kapsam da ayrı sınanır (mutasyon sertleştirmesi: latin yüz
+      // silinirse latin-ext TR gliflerini hâlâ karşılar — bu iddialar yakalar)
+      await document.fonts.load('16px "Cormorant Garamond"', 'Abc');
+      await document.fonts.load('16px Lora', 'Abc');
       return {
+        loraLatin: document.fonts.check('16px Lora', 'Abc'),
+        cormorantLatin: document.fonts.check('16px "Cormorant Garamond"', 'Abc'),
         lora: document.fonts.check('16px Lora'),
         loraTR: document.fonts.check('16px Lora', TR),
         loraItalik: document.fonts.check('italic 16px Lora', TR),
@@ -87,6 +93,8 @@ test.describe('G35 Ciltli tipografi + Palet A', () => {
         trGenislik: en
       };
     });
+    expect(r.loraLatin, 'Lora latin kapsamı').toBe(true);
+    expect(r.cormorantLatin, 'Cormorant latin kapsamı').toBe(true);
     expect(r.lora).toBe(true);
     expect(r.loraTR, 'Lora Türkçe glifler').toBe(true);
     expect(r.loraItalik, 'Lora italik Türkçe').toBe(true);
