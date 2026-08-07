@@ -78,11 +78,11 @@ test.describe('G21 M1 — karanlık tema', () => {
   test('theme-color meta etiketi temayı izler', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await rafAc(page);
-    // GÖÇ (görsel dil sprinti): palet güncellendi — koyu #141210, açık #F0E8D5
+    // GÖÇ (v41 Palet A): koyu #141210 (değişmedi), açık #F2EFE7 (Soluk Parşömen)
     expect(await page.getAttribute('#temaRengi', 'content')).toBe('#141210');
     await ayarlarAc(page);
     await page.click('#tmSecim [data-act="tm-tema"][data-v="acik"]');
-    expect(await page.getAttribute('#temaRengi', 'content')).toBe('#F0E8D5');
+    expect(await page.getAttribute('#temaRengi', 'content')).toBe('#F2EFE7');
   });
 
   test('karanlık temada metin kontrastları AA (4.5) eşiğini geçer', async ({ page }) => {

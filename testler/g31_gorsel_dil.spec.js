@@ -102,7 +102,8 @@ test.describe('G31 görsel dil', () => {
     await page.goto('/');
     const aile = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
     expect(aile).not.toMatch(/system-ui|-apple-system/);
-    expect(aile).toMatch(/Segoe UI|Roboto|Noto Sans|Arial/);
+    // GÖÇ (v41): gövde artık gömülü Lora (Ciltli tipografi)
+    expect(aile).toMatch(/Lora/);
   });
 
   /* ---------- M2 ikon dili ---------- */

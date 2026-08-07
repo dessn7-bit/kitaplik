@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F0E8D5" id="temaRengi">
+<meta name="theme-color" content="#F2EFE7" id="temaRengi">
 <script>
 /* Tema ilk boyamadan ÖNCE uygulanır (aksi halde açık tema bir an yanıp söner).
    Tercih: acik | karanlik | sistem (varsayılan). data-tema ÇÖZÜLMÜŞ değeri taşır. */
@@ -24,7 +24,7 @@
     var cozum = window.temaCoz();
     document.documentElement.setAttribute('data-tema', cozum);
     var m = document.getElementById('temaRengi');
-    if(m) m.setAttribute('content', cozum === 'karanlik' ? '#141210' : '#F0E8D5');
+    if(m) m.setAttribute('content', cozum === 'karanlik' ? '#141210' : '#F2EFE7');
     return cozum;
   };
   window.temaTercihi = tercih;
@@ -45,20 +45,40 @@
 <link rel="icon" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <style>
-/* ---------- Gömülü sans (D3 — italik salgını KESİN çözüm) ----------
-   Cihazın font teması aile ADLARINI da yeniden eşleyebiliyor ('Roboto' isteyip
-   eğik tema fontu alıyorduk) — gömülü dosyayı eşleyemez. Inter değişken ağırlık
-   (400-700 tek dosyada), latin + latin-ext (Türkçe ıİşŞğĞüÜöÖçÇ tam), YEREL
-   dosya: dış istek yok, sw önbellekli, toplam 133 KB. Serif'e DOKUNULMADI:
-   kullanıcının ekranında serif dik — sorun yalnız sans eşlemesinde. */
+/* ---------- Gömülü tipografi ("Ciltli", v41) ----------
+   Başlıklar Cormorant Garamond (Google değişken dosya: 400-600 tek woff2),
+   gövde Lora 400 + 400 italik. İkisi de SIL OFL, YEREL dosya (dış istek yok,
+   sw önbellekli). latin + latin-ext: Türkçe ıİşŞğĞüÜöÖçÇ tam (fonts.check ile
+   vaka altında). Cihaz font teması gömülü dosyayı eşleyemez — italik salgını
+   çözümü (v39) bu ailelerle de korunur. Toplam 6 dosya ≈ 140 KB (Inter çıktı). */
 @font-face{
-  font-family:'Kitaplik Sans';font-style:normal;font-weight:400 700;font-display:swap;
-  src:url('./font/inter-latin.woff2') format('woff2');
+  font-family:'Cormorant Garamond';font-style:normal;font-weight:400 600;font-display:swap;
+  src:url('./font/cormorant-latin.woff2') format('woff2');
   unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 @font-face{
-  font-family:'Kitaplik Sans';font-style:normal;font-weight:400 700;font-display:swap;
-  src:url('./font/inter-latin-ext.woff2') format('woff2');
+  font-family:'Cormorant Garamond';font-style:normal;font-weight:400 600;font-display:swap;
+  src:url('./font/cormorant-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face{
+  font-family:'Lora';font-style:normal;font-weight:400;font-display:swap;
+  src:url('./font/lora-latin.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face{
+  font-family:'Lora';font-style:normal;font-weight:400;font-display:swap;
+  src:url('./font/lora-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face{
+  font-family:'Lora';font-style:italic;font-weight:400;font-display:swap;
+  src:url('./font/lora-italik-latin.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face{
+  font-family:'Lora';font-style:italic;font-weight:400;font-display:swap;
+  src:url('./font/lora-italik-latin-ext.woff2') format('woff2');
   unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 /* ---------- Tema ----------
@@ -67,20 +87,22 @@
    --uzeri = pirinç/mavi/kırmızı ZEMİN üzerindeki metin: açık temada krem,
    karanlıkta koyu (karanlıkta vurgu renkleri açık olduğu için ters çevrilir). */
 :root{
-  /* Görsel dil sprinti: sayfa zemini kartlardan bilinçli KOYU (yüzey ayrımı);
-     surface2 "açık kuyu" — bg'den açık, surface'ten koyu: girdi/iç kutu kenarlıkla
-     ayrışır, üstündeki TÜM vurgu renkleri AA kalır (en zor çift drop/surface2 4.74;
-     muted/muted2 koyulaştırıldı, bütün çiftler kontrast.js ile yeniden hesaplandı). */
-  --bg:#F0E8D5; --surface:#FDFAF3; --surface2:#F3EDDE;
-  --border:#D8CCAF; --brass:#846225; --brass-dim:#A27E35; --paper:#2E2618;
-  --muted:#6E6147; --muted2:#6C5F4A;
+  /* PALET A — "Soluk parşömen" (v41). Değişken ADLARI değişmedi, yalnız
+     değerler. Metin rolleri AA (4.5): paper 14.30, muted 5.15, muted2 4.93,
+     brass 4.61, ok 4.92, drop 4.82, mavi 4.82 (hepsi en koyu zemin bg'de;
+     surface/surface2'de daha yüksek). Grafik rolleri 3.0: brass-dim/surface2
+     3.92, brass/surface2 4.78. border dekoratif (eşiğe tabi değil, 1.38).
+     surface2 "açık kuyu" düzeni korunur (bg < surface2 < surface). */
+  --bg:#F2EFE7; --surface:#FAF8F3; --surface2:#F6F3EC;
+  --border:#DBD5C6; --brass:#8A6524; --brass-dim:#96742E; --paper:#221F19;
+  --muted:#6B6357; --muted2:#6E6659;
   --ok:#586E3D; --drop:#A25232; --mavi:#556A86;
-  --uzeri:#FFFDF7; --toast-zemin:#2E2618; --toast-metin:#FDFAF3;
+  --uzeri:#FFFDF7; --toast-zemin:#221F19; --toast-metin:#FAF8F3;
   /* KUSUR ONARIMI: bu 6 değişken kendine referanslıydı (a81f31d'den beri) —
      CSS'te döngü = geçersiz; açık temada örtü perdesi, nav zemini ve gölgeler
      fiilen yoktu. Değerler karanlık-tema öncesi sabitlerden geri alındı. */
-  --ortu-perde:rgba(62,52,36,.45); --nav-zemin:rgba(253,250,243,.97);
-  --header-fade:rgba(240,232,213,.92); --golge:rgba(90,75,50,.1);
+  --ortu-perde:rgba(52,46,36,.45); --nav-zemin:rgba(250,248,243,.97);
+  --header-fade:rgba(242,239,231,.92); --golge:rgba(80,70,52,.1);
   --golge-orta:rgba(90,75,50,.18); --golge-guclu:rgba(120,90,40,.35);
   --kamera-zemin:#000; --kamera-cerceve:rgba(255,253,247,.85);
   /* Yükselti dili TEK: kart = surface + 1px border + --yukselti-1.
@@ -91,11 +113,12 @@
   --yukselti-3:0 4px 16px var(--golge-guclu);
   /* Yarıçap ölçeği: 6 küçük görsel · 10 iç öğe/düğme/girdi · 12 kart · 18 sheet · 999 hap */
   --radius:12px; --r-ic:10px; --r-mini:6px; --r-sheet:18px;
-  --serif:'Iowan Old Style',Georgia,'Times New Roman',serif;
-  /* İtalik salgını onarımı: system-ui/-apple-system cihazın font temasına düşer;
-     kullanıcının sistem teması eğikse TÜM sans metin eğik görünüyordu. Açık
-     aile adları cihaz temasını atlar; dışarıdan font YÜKLENMEZ (çevrimdışı şartı). */
-  --sans:'Kitaplik Sans','Segoe UI','Roboto','Noto Sans','Helvetica Neue',Arial,sans-serif;
+  /* "Ciltli" tipografi (v41): başlık = Cormorant Garamond, gövde = Lora.
+     Değişken ADLARI (--serif/--sans) korunur — tüm eklentiler bunları kullanır;
+     --sans artık bilinçli olarak bir SERIF gövde fontuna işaret eder (kasıtlı,
+     görsel dil tamamen serif). Gömülü dosya cihaz font temasını atlar. */
+  --serif:'Cormorant Garamond','Iowan Old Style',Georgia,serif;
+  --sans:'Lora',Georgia,'Times New Roman',serif;
 }
 :root[data-tema="karanlik"]{
   --bg:#141210; --surface:#221F1A; --surface2:#2B2722;
@@ -122,6 +145,11 @@ textarea{resize:vertical;min-height:60px}
 label{display:block;font-size:.8rem;color:var(--muted);margin:14px 0 4px;letter-spacing:.03em}
 input::placeholder,textarea::placeholder{color:var(--muted2);font-style:normal}
 img{display:block}
+/* v41: rakamlar TABULAR — sayfa sayısı, yüzde, istatistik/sayaç değerleri
+   hizalı otursun (Lora oransal rakamlarla geliyor). */
+.ist-sayi,.as-sayi,.bar-deger,.bar-ad,.ilerleme-txt,.puan-mini,.count-label,
+.tk-ist,.tk-rozet-sayi,.hiz-kutu,.d-tarih,.vm-okuma-satir,
+input[type="number"],input[type="date"]{font-variant-numeric:tabular-nums}
 /* ---------- İkon dili: tek çizgi ağırlığında inline SVG ----------
    Dış dosya/font YOK (çevrimdışı şartı). stroke=currentColor, 24×24 viewBox;
    dolu noktalar (zar gözleri) fill=currentColor + stroke=none taşır. */
@@ -191,12 +219,12 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
    en güçlü işaret), PUAN = dolgu hap + yıldız, raf/etiket/not sayısı = sessiz
    çıplak metin. Tint üstü metin kontrastları AA yeniden hesaplandı (≥4.6). */
 .rozet{font-size:.75rem;padding:3px 10px;border-radius:999px;letter-spacing:.03em}
-.r-okunuyor{color:var(--brass);background:color-mix(in srgb,var(--brass) 10%,transparent)}
-.r-bitti{color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent)}
-.r-okunacak{color:var(--muted);background:color-mix(in srgb,var(--muted) 10%,transparent)}
-.r-yarim{color:var(--drop);background:color-mix(in srgb,var(--drop) 10%,transparent)}
+.r-okunuyor{color:var(--brass);background:color-mix(in srgb,var(--brass) 7%,transparent)}
+.r-bitti{color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,transparent)}
+.r-okunacak{color:var(--muted);background:color-mix(in srgb,var(--muted) 7%,transparent)}
+.r-yarim{color:var(--drop);background:color-mix(in srgb,var(--drop) 7%,transparent)}
 .puan-mini{font-size:.75rem;font-weight:600;color:var(--brass);padding:3px 10px;
-  border-radius:999px;background:color-mix(in srgb,var(--brass) 10%,transparent)}
+  border-radius:999px;background:color-mix(in srgb,var(--brass) 7%,transparent)}
 .etiket-mini{font-size:.75rem;color:var(--muted2)}
 .ilerleme{height:4px;background:var(--surface2);border-radius:999px;margin-top:8px;overflow:hidden}
 .ilerleme > div{height:100%;background:var(--brass);border-radius:999px}
@@ -295,7 +323,9 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .gunun-alintisi{background:linear-gradient(135deg,var(--surface),var(--surface2));
   border:1px solid var(--brass-dim);border-radius:var(--radius);padding:18px;box-shadow:var(--yukselti-1)}
 .ga-etiket{font-size:.7rem;color:var(--brass);letter-spacing:.08em;text-transform:uppercase}
-.ga-metin{font-family:var(--serif);font-style:italic;font-size:1.05rem;line-height:1.6;margin-top:10px}
+/* v41: alıntı metinleri GÖVDE italik (Lora 400 italic — gerçek italik glifler);
+   Cormorant italik gömülmedi, --serif kalsaydı tarayıcı sahte-eğik üretirdi. */
+.ga-metin{font-family:var(--sans);font-style:italic;font-size:1.05rem;line-height:1.6;margin-top:10px}
 .ga-kaynak{font-size:.8rem;color:var(--muted);margin-top:10px}
 
 .yedek-wrap{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
@@ -369,7 +399,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .not-kart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
   padding:12px 14px;margin-top:8px;position:relative;box-shadow:var(--yukselti-1)}
 .not-kart.alinti{border-left:3px solid var(--brass)}
-.not-kart.alinti .not-metin{font-family:var(--serif);font-style:italic}
+.not-kart.alinti .not-metin{font-family:var(--sans);font-style:italic}
 .not-metin{font-size:.9rem;line-height:1.55;white-space:pre-wrap;overflow-wrap:break-word;padding-right:26px}
 .not-tarih{font-size:.7rem;color:var(--muted2);margin-top:8px}
 .not-sil{position:absolute;top:8px;right:8px;color:var(--muted2);font-size:.95rem;padding:4px}
@@ -415,7 +445,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   background:transparent;color:var(--muted2);font-size:.75rem}
 .vm-chip.vm-secili{border-style:solid;border-color:var(--brass);color:var(--brass);font-weight:600}
 .vm-rozet{font-size:.75rem;padding:3px 10px;border-radius:999px;color:var(--mavi);
-  background:color-mix(in srgb,var(--mavi) 10%,transparent)}
+  background:color-mix(in srgb,var(--mavi) 7%,transparent)}
 .vm-seri-kutu{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-ic);
   padding:12px 14px;margin-top:8px;font-size:.85rem;color:var(--muted);line-height:1.6}
 .vm-seri-kutu b{color:var(--brass);font-weight:600}
@@ -501,7 +531,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .on-btn{padding:8px 12px;border-radius:var(--r-ic);border:1px solid var(--border);background:var(--surface);color:var(--paper);font-size:.8rem;font-weight:600}
 .on-btn-birincil{background:var(--brass);color:var(--uzeri);border-color:var(--brass)}
 .on-rozet{font-size:.75rem;color:var(--brass);border-radius:999px;padding:3px 10px;
-  background:color-mix(in srgb,var(--brass) 10%,transparent)}
+  background:color-mix(in srgb,var(--brass) 7%,transparent)}
 .on-bolum-baslik{font-size:.8rem;font-weight:600;color:var(--muted);margin:16px 0 2px}
 .on-mesaj{font-size:.85rem;color:var(--muted);line-height:1.5;padding:10px 0}
 /* ---------- Aralıklı alıntı tekrarı (tk-) — mantık tekrar.js'te ---------- */
@@ -513,7 +543,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .tk-baslik-not{font-weight:400;color:var(--muted2);font-size:.75rem;letter-spacing:0}
 .tk-kart{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--brass);
   border-radius:var(--radius);padding:12px 14px;box-shadow:var(--yukselti-1)}
-.tk-metin{font-family:var(--serif);font-style:italic;font-size:.95rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:break-word}
+.tk-metin{font-family:var(--sans);font-style:italic;font-size:.95rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:break-word}
 .tk-kaynak{font-size:.8rem;color:var(--muted);margin-top:8px}
 .tk-git{color:var(--brass);margin-left:6px;font-size:.8rem}
 .tk-eylem{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
@@ -916,7 +946,9 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 /* ============ Kitaplık v2 ============ */
 const DEPO = 'kk_kitaplik_v1';
 const DURUM_AD = { okunacak:'Okunacak', okunuyor:'Okunuyor', bitti:'Bitti', yarim:'Yarım kaldı' };
-const SIRT_RENK = ['#C89B4B','#8FA86B','#B06A4A','#7E8FA6','#A67E9E','#8A6A33','#6BA0A8','#B58F5E'];
+/* v41: sırt paleti Soluk Parşömen'e uyarlandı — 8 renk de üzeri (#FFFDF7) metinle
+   AA (5.20-7.05) ve zeminden net ayrık (bg'ye karşı 4.61-6.24). */
+const SIRT_RENK = ['#8A6524','#5C7040','#96502E','#53667E','#7B5871','#6A5433','#40707A','#8C4A38'];
 
 let veri = depoYukle();
 /* sekme:'ana' — açılış Ana Sayfa. KARAR: son sekme HATIRLANMAZ (kalıcı anahtar

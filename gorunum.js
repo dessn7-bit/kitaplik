@@ -118,7 +118,8 @@
   }
 
   function sirtRenkL(ad){
-    const renkler = ['#C89B4B','#8FA86B','#B06A4A','#7E8FA6','#A67E9E','#8A6A33','#6BA0A8','#B58F5E'];
+    /* v41: index.html SIRT_RENK ile AYNI liste (parşömen uyumu, üzeri metin AA) */
+    const renkler = ['#8A6524','#5C7040','#96502E','#53667E','#7B5871','#6A5433','#40707A','#8C4A38'];
     let h = 0;
     for(const ch of String(ad)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
     return renkler[h % renkler.length];

@@ -176,7 +176,7 @@
       .fa-deger{flex:0 0 74px;text-align:right;font-size:.72rem;color:var(--muted2)}
       .fa-kesisim-not{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--brass);
         border-radius:var(--r-ic);padding:9px 11px;margin-top:8px}
-      .fa-kesisim-metin{font-family:var(--serif);font-style:italic;font-size:.95rem;line-height:1.6;color:var(--paper)}
+      .fa-kesisim-metin{font-family:var(--sans);font-style:italic;font-size:.95rem;line-height:1.6;color:var(--paper)}
       .fa-kesisim-kaynak{font-size:.72rem;color:var(--brass);margin-top:6px}
       .fa-kapat{margin-top:10px;padding:8px 12px;border-radius:var(--r-ic);border:1px solid var(--border);
         background:var(--surface2);color:var(--muted);font-size:.78rem}

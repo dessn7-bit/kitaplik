@@ -199,38 +199,52 @@ test.describe('G33 barkod + form + font', () => {
       }
       return { yuzler, govdeFont: getComputedStyle(document.body).fontFamily };
     });
-    const bizim = ff.yuzler.filter(y => y.aile.includes('Kitaplik Sans'));
-    expect(bizim.length).toBe(2);   // latin + latin-ext
-    for (const y of bizim) expect(y.src).toContain('font/inter-');
-    for (const y of bizim) expect(y.src).not.toContain('http');   // dış istek YOK
-    expect(ff.govdeFont.replace(/["']/g, '').startsWith('Kitaplik Sans')).toBe(true);
+    // GÖÇ (v41 "Ciltli"): gövde Lora (2 normal + 2 italik yüz), başlık Cormorant
+    // Garamond (2 yüz — Google değişken dosyası 400-600'ü tek woff2'de taşır)
+    const lora = ff.yuzler.filter(y => y.aile.includes('Lora'));
+    const cormorant = ff.yuzler.filter(y => y.aile.includes('Cormorant Garamond'));
+    expect(lora.length).toBe(4);
+    expect(cormorant.length).toBe(2);
+    for (const y of [...lora, ...cormorant]){
+      expect(y.src).toContain('font/');
+      expect(y.src).not.toContain('http');   // dış istek YOK
+    }
+    expect(ff.govdeFont.replace(/["']/g, '').startsWith('Lora')).toBe(true);
   });
 
-  test('D3c: font dosyaları sunuluyor ve tarayıcıya yüklendi', async ({ page }) => {
+  test('D3c: font dosyaları sunuluyor ve iki aile de tarayıcıya yüklendi', async ({ page }) => {
     await tohumla(page, []);
     await page.goto('/');
     const r = await page.evaluate(async () => {
-      const yanit = await fetch('./font/inter-latin.woff2');
-      const boyut = (await yanit.arrayBuffer()).byteLength;
-      const yanit2 = await fetch('./font/inter-latin-ext.woff2');
-      const boyut2 = (await yanit2.arrayBuffer()).byteLength;
+      const oku = async (yol) => { const y = await fetch(yol); return { ok: y.ok, boyut: (await y.arrayBuffer()).byteLength }; };
+      const lora = await oku('./font/lora-latin.woff2');
+      const cormorant = await oku('./font/cormorant-latin.woff2');
+      const italik = await oku('./font/lora-italik-latin-ext.woff2');
       await document.fonts.ready;
-      return { ok: yanit.ok, boyut, ok2: yanit2.ok, boyut2,
-        yuklu: document.fonts.check('16px "Kitaplik Sans"') };
+      // italik o sayfada kullanılmıyor — load() ile çek, sonra check()
+      await document.fonts.load('italic 16px Lora', 'ığş');
+      return { lora, cormorant, italik,
+        loraYuklu: document.fonts.check('16px Lora'),
+        cormorantYuklu: document.fonts.check('16px "Cormorant Garamond"'),
+        italikYuklu: document.fonts.check('italic 16px Lora') };
     });
-    expect(r.ok).toBe(true);
-    expect(r.ok2).toBe(true);
-    expect(r.boyut).toBeGreaterThan(10000);
-    expect(r.boyut2).toBeGreaterThan(10000);
-    expect(r.yuklu).toBe(true);
+    for (const d of [r.lora, r.cormorant, r.italik]){
+      expect(d.ok).toBe(true);
+      expect(d.boyut).toBeGreaterThan(5000);
+    }
+    expect(r.loraYuklu).toBe(true);
+    expect(r.cormorantYuklu).toBe(true);
+    expect(r.italikYuklu).toBe(true);
   });
 
-  test('D3d: sw önbellek listesi font + zxing dosyalarını içeriyor', async ({ page }) => {
+  test('D3d: sw önbellek listesi güncel — yeni fontlar var, Inter yok', async ({ page }) => {
     await tohumla(page, []);
     await page.goto('/');
     const sw = await page.evaluate(async () => (await fetch('./sw.js')).text());
-    expect(sw).toContain('./font/inter-latin.woff2');
-    expect(sw).toContain('./font/inter-latin-ext.woff2');
+    for (const f of ['cormorant-latin', 'cormorant-latin-ext', 'lora-latin',
+      'lora-latin-ext', 'lora-italik-latin', 'lora-italik-latin-ext'])
+      expect(sw).toContain('./font/' + f + '.woff2');
+    expect(sw).not.toContain('inter-');
     expect(sw).toContain('./zxing.min.js');
   });
 
