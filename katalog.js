@@ -98,7 +98,8 @@
   }
 
   function kameraVar(){
-    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && 'BarcodeDetector' in window;
+    // Yedek tarayıcı (barkod.js motoru) sayesinde BarcodeDetector şart değil
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   }
   function ortuEkle(){
     if(document.getElementById('seriOrtu')) return;
@@ -232,23 +233,48 @@
       not.textContent = 'Bu cihaz barkod kamerasını desteklemiyor — ISBN\'leri elle girebilirsin.';
       return;
     }
+    /* Tarama motoru barkod.js'te ORTAK ('isbn' enum kusuru burada da vardı —
+       geçersiz format constructor'ı düşürüyor, seri tarama hiç okuyamıyordu).
+       Yerli tarayıcı kurulamazsa ZXing yedeği aynı döngüde kare çözer;
+       calisiyor kilidi ve 500ms aralık AYNEN korunur (g11 M7 sözleşmesi). */
+    const M = window.__barkod || {};
     try{
-      akis = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      akis = await navigator.mediaDevices.getUserMedia(
+        M.kameraKisitlari ? M.kameraKisitlari() : { video: { facingMode: 'environment' } });
       const v = document.getElementById('seriVideo');
       v.srcObject = akis; await v.play();
-      tarayici = new window.BarcodeDetector({ formats: ['ean_13','ean_8','isbn'] });
+      if(M.odaklan) M.odaklan(akis);
+      tarayici = M.tarayiciKur ? await M.tarayiciKur() : null;
+      let tuval = null;
+      if(!tarayici){
+        not.textContent = 'Yedek tarayıcı yükleniyor…';
+        const ok = M.yedekYukle ? await M.yedekYukle() : false;
+        if(!ok){
+          not.textContent = 'Barkod tarayıcı yüklenemedi — ISBN\'leri elle girebilirsin.';
+          return;
+        }
+        if(!akis) return;   // yükleme sürerken pencere kapatıldıysa
+        tuval = document.createElement('canvas');
+      }
       not.textContent = 'Hazır — barkodu çerçeveye getir.';
       dongu = setInterval(async () => {
         if(calisiyor) return;
         calisiyor = true;
         try{
-          const b = await tarayici.detect(v);
-          if(b && b.length) await kodIsle(b[0].rawValue);
+          if(tarayici){
+            const b = await tarayici.detect(v);
+            if(b && b.length) await kodIsle(b[0].rawValue);
+          }else{
+            const kod = M.yedekVideoCoz ? M.yedekVideoCoz(v, tuval) : null;
+            if(kod) await kodIsle(kod);
+          }
         }catch(e){}
         calisiyor = false;
       }, 500);
     }catch(e){
-      not.textContent = 'Kamera açılamadı (izin verilmemiş olabilir) — ISBN\'leri elle girebilirsin.';
+      not.textContent = 'Kamera açılamadı: '
+        + (M.kameraHataAdi ? M.kameraHataAdi(e) : 'izin verilmemiş olabilir')
+        + ' — ISBN\'leri elle girebilirsin.';
     }
   }
   function seriKapat(){

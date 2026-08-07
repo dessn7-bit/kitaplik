@@ -181,5 +181,13 @@ const test = temel.extend({
   }
 });
 
+/* D2 (form katlama): ikincil form alanları #fAyrintilar içinde, yeni kitapta
+   KAPALI gelir. Bu yardımcı idempotenttir — kapalıysa açar, açıksa dokunmaz
+   (düzenleme modunda açık gelir; koşulsuz summary tıklaması onu KAPATIRDI). */
+async function ayrintilarAc(page) {
+  const d = page.locator('#fAyrintilar');
+  if (!(await d.evaluate(e => e.open))) await page.click('#fAyrintilar summary');
+}
+
 module.exports = { test, expect, tohumla, sahteKitap, agTaklit, kameraTaklit, kameraYok,
-  onaylariKabulEt, bugunISO, rafAc, rafaGec, rafYenile, ayarlarAc };
+  onaylariKabulEt, bugunISO, rafAc, rafaGec, rafYenile, ayarlarAc, ayrintilarAc };

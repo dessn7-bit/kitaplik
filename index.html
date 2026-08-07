@@ -45,6 +45,22 @@
 <link rel="icon" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <style>
+/* ---------- Gömülü sans (D3 — italik salgını KESİN çözüm) ----------
+   Cihazın font teması aile ADLARINI da yeniden eşleyebiliyor ('Roboto' isteyip
+   eğik tema fontu alıyorduk) — gömülü dosyayı eşleyemez. Inter değişken ağırlık
+   (400-700 tek dosyada), latin + latin-ext (Türkçe ıİşŞğĞüÜöÖçÇ tam), YEREL
+   dosya: dış istek yok, sw önbellekli, toplam 133 KB. Serif'e DOKUNULMADI:
+   kullanıcının ekranında serif dik — sorun yalnız sans eşlemesinde. */
+@font-face{
+  font-family:'Kitaplik Sans';font-style:normal;font-weight:400 700;font-display:swap;
+  src:url('./font/inter-latin.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face{
+  font-family:'Kitaplik Sans';font-style:normal;font-weight:400 700;font-display:swap;
+  src:url('./font/inter-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
 /* ---------- Tema ----------
    Metin renkleri WCAG AA (4.5:1) eşiğine göre seçildi; en zor zemin --surface2.
    Eski değerler küçük metinde eşiğin altındaydı (muted2 2.88, brass 3.03).
@@ -79,7 +95,7 @@
   /* İtalik salgını onarımı: system-ui/-apple-system cihazın font temasına düşer;
      kullanıcının sistem teması eğikse TÜM sans metin eğik görünüyordu. Açık
      aile adları cihaz temasını atlar; dışarıdan font YÜKLENMEZ (çevrimdışı şartı). */
-  --sans:'Segoe UI','Roboto','Noto Sans','Helvetica Neue',Arial,sans-serif;
+  --sans:'Kitaplik Sans','Segoe UI','Roboto','Noto Sans','Helvetica Neue',Arial,sans-serif;
 }
 :root[data-tema="karanlik"]{
   --bg:#141210; --surface:#221F1A; --surface2:#2B2722;
@@ -220,9 +236,12 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 /* Son bitirdiklerin şeridi (D4) — yatay mini kapak dizisi */
 .as-kapak-serit{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
 .as-kapak-serit::-webkit-scrollbar{display:none}
-.as-kapak-btn{flex:0 0 auto;padding:0;border:none}
+.as-kapak-btn{flex:0 0 auto;padding:0;border:none;position:relative}
 .as-kapak{width:56px;height:84px;object-fit:cover;border-radius:var(--r-mini);
   border:1px solid var(--border);background:var(--surface2);display:block}
+/* Kapak img'i baş-harf yedeğinin ÜSTÜNE biner; yüklenmemiş img boyanmaz (şeffaf
+   zemin), alttaki yedek görünür — boş beyaz kart hiçbir arıza modunda kalmaz */
+.as-kapak-ust{position:absolute;inset:0;background:transparent}
 .as-kapak-yok{display:flex;align-items:center;justify-content:center;border:none;
   font-family:var(--serif);font-size:.9rem;font-weight:600;letter-spacing:.03em;color:var(--uzeri);
   box-shadow:inset -10px 0 12px -9px rgba(0,0,0,.38),inset 2px 0 0 rgba(255,253,247,.28)}
@@ -689,6 +708,35 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <div class="ol-durum" id="olDurum"></div>
     <div class="ol-sonuc" id="olSonuc"></div>
 
+    <div class="kapak-onizle" id="kapakOnizle" style="display:none">
+      <img id="kapakImg" alt="Kapak">
+      <span style="font-size:.8rem;color:var(--muted)">Kapak bulundu</span>
+      <button data-act="kapak-kaldir">Kaldır</button>
+    </div>
+
+    <label>Durum</label>
+    <div class="durum-secim" id="fDurum">
+      <button class="durum-btn secili" data-act="f-durum" data-v="okunacak">Okunacak</button>
+      <button class="durum-btn" data-act="f-durum" data-v="okunuyor">Okunuyor</button>
+      <button class="durum-btn" data-act="f-durum" data-v="bitti">Bitti</button>
+      <button class="durum-btn" data-act="f-durum" data-v="yarim">Yarım</button>
+    </div>
+
+    <div id="fPuanBlok" style="display:none">
+      <label>Puan (1–10)</label>
+      <div class="puan-secim" id="fPuan"></div>
+    </div>
+
+    <!-- D2: form sisliği — "zaten aratarak buluyorum, kendi doluyor oralar".
+         BİRİNCİL yüzey: arama modu + kitap adı + durum + Kaydet. Kalan her alan
+         bu katlanır bölümde, VARSAYILAN KAPALI; aramadan/barkoddan gelen veri
+         kapalıyken de dolar, özet satırı hangi alanların dolduğunu söyler.
+         Düzenleme modunda AÇIK gelir (formAc): düzenlemeye gelen kullanıcı belli
+         bir alanı değiştirmeye gelir, alanlar gizli gelirse kayboldu sanılır. -->
+    <details class="d-katla" id="fAyrintilar">
+      <summary><span id="fAyrintiOzet">Ayrıntılar</span></summary>
+      <div class="d-katla-ic">
+
     <label for="f-yazar">Yazar</label>
     <input id="f-yazar" autocomplete="off">
 
@@ -767,28 +815,9 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <label for="f-etiket">Etiketler (virgülle ayır)</label>
     <input id="f-etiket" placeholder="ör. varoluşçuluk, çeviri, tekrar-okunacak" autocomplete="off">
 
-    <div class="kapak-onizle" id="kapakOnizle" style="display:none">
-      <img id="kapakImg" alt="Kapak">
-      <span style="font-size:.8rem;color:var(--muted)">Kapak bulundu</span>
-      <button data-act="kapak-kaldir">Kaldır</button>
-    </div>
-
     <div class="kp-form-satir">
       <button type="button" class="kp-kucuk-btn" data-act="kp-form-cek"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.6" y="7" width="16.8" height="12.6" rx="2.4"/><path d="m8.7 7 1.4-2.4h3.8L15.3 7"/><circle cx="12" cy="13" r="3.4"/></svg> Kapak fotoğrafı çek/seç</button>
       <div class="kp-form-durum" id="kpFormDurum"></div>
-    </div>
-
-    <label>Durum</label>
-    <div class="durum-secim" id="fDurum">
-      <button class="durum-btn secili" data-act="f-durum" data-v="okunacak">Okunacak</button>
-      <button class="durum-btn" data-act="f-durum" data-v="okunuyor">Okunuyor</button>
-      <button class="durum-btn" data-act="f-durum" data-v="bitti">Bitti</button>
-      <button class="durum-btn" data-act="f-durum" data-v="yarim">Yarım</button>
-    </div>
-
-    <div id="fPuanBlok" style="display:none">
-      <label>Puan (1–10)</label>
-      <div class="puan-secim" id="fPuan"></div>
     </div>
 
     <div class="form-iki">
@@ -801,6 +830,9 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
         <input id="f-bit" type="date">
       </div>
     </div>
+
+      </div>
+    </details>
 
     <div class="form-alt">
       <button class="btn btn-cerceve" data-act="form-kapat" style="flex:1">Vazgeç</button>
@@ -1355,6 +1387,7 @@ function olSec(i){
   durum.formKapak = a.kapak;
   kapakOnizleCiz();
   sonucTemizle();
+  fAyrintiOzetGuncelle();   // katlanmış alanlar doldu — özet bunu söylesin
   document.getElementById('olDurum').textContent = 'Form dolduruldu — kontrol edip kaydet.';
 }
 function kapakOnizleCiz(){
@@ -1405,6 +1438,11 @@ function formAc(id){
   durum.formDurum = k ? k.durum : 'okunacak';
   durum.formPuan = k ? (k.puan||null) : null;
   durum.formKapak = k ? (k.kapak||null) : null;
+  /* D2: yeni kitapta ayrıntılar KAPALI (birincil yüzey: ad+durum+kaydet),
+     düzenlemede AÇIK — kullanıcı belli bir alanı değiştirmeye gelir. */
+  const fAyr = document.getElementById('fAyrintilar');
+  if(fAyr) fAyr.open = !!k;
+  fAyrintiOzetGuncelle();
   formDurumCiz(); puanCiz(); kapakOnizleCiz();
   if(window.__kapak) window.__kapak.formAcildi(); // bekleyen fotoğraf durumunu sıfırla + şeridi çiz
   // Öneri paneli açıkken form açılırsa (öneri → detay → bitir/düzenle) form DOM'da
@@ -1414,6 +1452,26 @@ function formAc(id){
   if(ortuOneriEl) ortuOneriEl.classList.remove('acik');
   document.getElementById('ortuForm').classList.add('acik');
 }
+/* D2: katlanır bölümün özet satırı — kapalıyken hangi alanların dolduğunu
+   söyler ("Ayrıntılar · yazar, sayfa dolu"). Aramadan (olSec), barkoddan
+   (formuDoldur kancası) ve elle girişten (input dinleyicisi) tazelenir. */
+const F_AYRINTI_ALANLAR = [
+  ['f-yazar','yazar'], ['f-yayinevi','yayınevi'], ['f-yil','yıl'], ['f-sayfa','sayfa'],
+  ['f-tur','tür'], ['f-cevirmen','çevirmen'], ['f-dil','dil'], ['f-seri','seri'],
+  ['f-cilt','cilt'], ['f-isbn','ISBN'], ['f-etiket','etiket'], ['f-raf','raf'],
+  ['f-bas','tarih'], ['f-bit','tarih']
+];
+function fAyrintiOzetGuncelle(){
+  const el = document.getElementById('fAyrintiOzet');
+  if(!el) return;
+  const dolu = [], gorulen = new Set();
+  for(const [id, ad] of F_AYRINTI_ALANLAR){
+    const g = document.getElementById(id);
+    if(g && String(g.value || '').trim() && !gorulen.has(ad)){ gorulen.add(ad); dolu.push(ad); }
+  }
+  el.textContent = 'Ayrıntılar' + (dolu.length ? ' · ' + dolu.join(', ') + ' dolu' : '');
+}
+window.__formAyrintiGuncelle = fAyrintiOzetGuncelle;   // barkod.js formuDoldur çağırır
 function formDurumCiz(){
   document.querySelectorAll('#fDurum .durum-btn').forEach(b =>
     b.classList.toggle('secili', b.dataset.v === durum.formDurum));
@@ -2307,13 +2365,18 @@ function anaCiz(){
     bloklar.push(`<div class="as-blok" id="asSonBiten">
       <div class="as-blok-bas"><h2>Son bitirdiklerin</h2></div>
       <div class="as-kapak-serit">${sonBiten.map(k => {
-        const gorsel = k.kapakYerel && window.__kapak
-          ? `<img class="as-kapak kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt="">`
+        /* D4: baş-harfli sırt HER öğede ALT KATMAN olarak durur; kapak img'i
+           üstüne mutlak konumla biner. Yüklenmeyen/asılı kalan/hata veren
+           kapakta altta yedek görünür — beyaz boş kart HİÇBİR arıza modunda
+           kalamaz (error olayı hiç ateşlenmese bile). */
+        const yedek = `<div class="as-kapak as-kapak-yok" style="background:${sirtRenk(k.ad)}" aria-hidden="true">${esc(basHarf(k.ad))}</div>`;
+        const ust = k.kapakYerel && window.__kapak
+          ? `<img class="as-kapak as-kapak-ust kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt="">`
           : k.kapak
-          ? `<img class="as-kapak" src="${escAttr(k.kapak)}" alt="" loading="lazy">`
-          : `<div class="as-kapak as-kapak-yok" style="background:${sirtRenk(k.ad)}" aria-hidden="true">${esc(basHarf(k.ad))}</div>`;
+          ? `<img class="as-kapak as-kapak-ust" src="${escAttr(k.kapak)}" alt="" loading="lazy">`
+          : '';
         return `<button class="as-kapak-btn" data-act="detay" data-id="${escAttr(k.id)}"
-          title="${escAttr(k.ad)}" aria-label="${escAttr(k.ad)}">${gorsel}</button>`;
+          title="${escAttr(k.ad)}" aria-label="${escAttr(k.ad)}">${yedek}${ust}</button>`;
       }).join('')}</div></div>`);
   }
 
@@ -2329,20 +2392,11 @@ function anaCiz(){
   kap.innerHTML = bloklar.join('');
   asKapakHata(kap);
 }
-/* Son-bitenler şeridinde kapak yüklenemezse baş-harfli sırt (listeKapakHata eşi) */
+/* Son-bitenler şeridinde kapak hatasında üst katman KALDIRILIR — alttaki
+   baş-harfli sırt görünür (D4; listeKapakHata'nın katmanlı eşi) */
 function asKapakHata(kap){
-  kap.querySelectorAll('#asSonBiten img.as-kapak').forEach(img => {
-    const dugme = img.closest('.as-kapak-btn');
-    const ad = dugme ? (dugme.getAttribute('title') || '') : '';
-    const dus = () => {
-      if(!img.parentNode) return;
-      const d = document.createElement('div');
-      d.className = 'as-kapak as-kapak-yok';
-      d.style.background = sirtRenk(ad);
-      d.setAttribute('aria-hidden', 'true');
-      d.textContent = basHarf(ad);
-      img.parentNode.replaceChild(d, img);
-    };
+  kap.querySelectorAll('#asSonBiten img.as-kapak-ust').forEach(img => {
+    const dus = () => { if(img.parentNode) img.remove(); };
     img.addEventListener('error', dus, { once: true });
     if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) dus();
   });
@@ -2817,6 +2871,11 @@ function cipKaydirmaKur(){
   });
 }
 cipKaydirmaKur();
+/* D2: ayrıntı alanlarında elle yazım da özet satırını tazeler */
+(function(){
+  const fAyr = document.getElementById('fAyrintilar');
+  if(fAyr) fAyr.addEventListener('input', fAyrintiOzetGuncelle);
+})();
 
 /* Paylaş hedefinden gelindiyse paneli aç; kısayoldan gelindiyse sekmeyi seç.
    Sıra korunuyor: paylaşım parametresi varsa ?sekme= hiç okunmaz. */

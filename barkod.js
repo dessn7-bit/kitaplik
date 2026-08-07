@@ -98,6 +98,8 @@
     const dEl = document.getElementById('olDurum'), sEl = document.getElementById('olSonuc');
     if(sEl) sEl.innerHTML = '';
     if(dEl) dEl.textContent = 'ISBN ' + isbn + ' bulundu — kontrol edip kaydet.';
+    // D2: alanlar katlanmış bölümde dolduruldu — özet satırı bunu söylesin
+    if(window.__formAyrintiGuncelle) window.__formAyrintiGuncelle();
   }
 
   async function isbnIsle(isbn, kaynakMetni){
@@ -121,39 +123,154 @@
     return true;
   }
 
-  /* ---------- kamera ---------- */
+  /* ---------- tarama motoru (barkod + katalog seri tarama ortak) ----------
+     TEŞHİS (v38'e kadar canlıdaki kusur): BarcodeDetector'e formats olarak
+     'isbn' veriliyordu. 'isbn' BarcodeFormat enum'unda YOKTUR — WebIDL enum
+     doğrulaması constructor'ı HER gerçek cihazda TypeError ile düşürür, dıştaki
+     catch de bunu "Kamera açılamadı (izin verilmemiş olabilir)" diye yanlış
+     raporluyordu: kamera açılıyor ama tarayıcı hiç kurulamıyordu. Test sahtesi
+     (kameraTaklit) her formatı kabul ettiği için paket bunu yakalayamadı.
+     İkinci bilinen arıza modu: bazı cihazlarda nesne var ama detect() hep
+     hata/boş döner (ML Kit yok) — her iki mod için ZXing YEREL yedeği var. */
+  const YEDEK_DOSYA = './zxing.min.js';
+  let yedekYukSozu = null, yedekOkuyucu = null;
+
+  function durumYaz(m){ const n = document.getElementById('barkodNot'); if(n) n.textContent = m; }
+  function kameraHataAdi(e){
+    const ad = e && e.name;
+    return ad === 'NotAllowedError' ? 'izin verilmedi'
+      : ad === 'NotFoundError' ? 'kamera bulunamadı'
+      : ad === 'NotReadableError' ? 'kamera başka bir uygulamada'
+      : ad === 'OverconstrainedError' ? 'istenen kamera yok'
+      : (ad || 'bilinmeyen hata');
+  }
+  /* Yerli tarayıcı: 'in window' kontrolü YETMEZ — format desteği
+     getSupportedFormats ile doğrulanır, istek listesi desteklenenle kesilir. */
+  async function tarayiciKur(){
+    if(!('BarcodeDetector' in window)) return null;
+    try{
+      const f = await window.BarcodeDetector.getSupportedFormats();
+      if(!f || !f.includes('ean_13')) return null;
+      const istenen = ['ean_13','ean_8','upc_a'].filter(x => f.includes(x));
+      return new window.BarcodeDetector({ formats: istenen });
+    }catch(e){ return null; }
+  }
+  /* ZXing yedeği: yalnız gerekince yüklenen YEREL dosya (CDN yok, sw önbellekli) */
+  function yedekYukle(){
+    if(window.ZXing) return Promise.resolve(true);
+    if(yedekYukSozu) return yedekYukSozu;
+    yedekYukSozu = new Promise(coz => {
+      const s = document.createElement('script');
+      s.src = YEDEK_DOSYA;
+      s.onload = () => coz(!!window.ZXing);
+      s.onerror = () => { yedekYukSozu = null; coz(false); };
+      document.head.appendChild(s);
+    });
+    return yedekYukSozu;
+  }
+  function yedekOkuyucuKur(){
+    if(yedekOkuyucu) return yedekOkuyucu;
+    const Z = window.ZXing;
+    if(!Z) return null;
+    const r = new Z.MultiFormatReader();
+    const ipucu = new Map();
+    ipucu.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8]);
+    ipucu.set(Z.DecodeHintType.TRY_HARDER, true);
+    r.setHints(ipucu);
+    yedekOkuyucu = r;
+    return r;
+  }
+  /* Tek kareyi çöz (test kancası da burası: sahte EAN-13 tuvali verilebilir) */
+  function yedekKareCoz(tuval){
+    const Z = window.ZXing, r = yedekOkuyucuKur();
+    if(!Z || !r) return null;
+    try{
+      const kaynak = new Z.HTMLCanvasElementLuminanceSource(tuval);
+      const bitmap = new Z.BinaryBitmap(new Z.HybridBinarizer(kaynak));
+      const s = r.decode(bitmap);
+      return s && s.getText ? s.getText() : null;
+    }catch(e){ return null; }              // NotFoundException = bu karede barkod yok
+    finally{ try{ r.reset(); }catch(e){} }
+  }
+  function yedekVideoCoz(v, tuval){
+    if(!v.videoWidth) return null;
+    tuval.width = v.videoWidth; tuval.height = v.videoHeight;
+    tuval.getContext('2d').drawImage(v, 0, 0);
+    return yedekKareCoz(tuval);
+  }
+  /* Kare kalitesi: 1280×720 hedefi + destekliyorsa sürekli odak — düşük
+     çözünürlük/odaksız karede EAN çubukları ayrışmıyor, tarayıcı "okumuyor" gibi
+     görünüyordu. */
+  function kameraKisitlari(){
+    return { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } };
+  }
+  async function odaklan(ak){
+    try{
+      const iz = ak.getVideoTracks()[0];
+      const yet = iz && iz.getCapabilities ? iz.getCapabilities() : {};
+      if(yet.focusMode && yet.focusMode.includes('continuous'))
+        await iz.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+    }catch(e){}
+  }
+
+  /* ---------- kamera (tekil barkod penceresi) ---------- */
   function kameraVar(){
-    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && 'BarcodeDetector' in window;
+    // Yedek tarayıcı sayesinde BarcodeDetector artık ŞART değil — kamera yeter
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   }
   async function kameraAc(){
     const ortu = document.getElementById('barkodOrtu');
-    const not = document.getElementById('barkodNot');
     ortu.classList.add('acik');
     if(!kameraVar()){
-      not.textContent = 'Bu cihaz/tarayıcı barkod kamerasını desteklemiyor — ISBN\'i elle yazabilirsin.';
+      durumYaz('Bu cihaz/tarayıcı kamera erişimini desteklemiyor — ISBN\'i elle yazabilirsin.');
       return;
     }
     try{
-      akis = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      const v = document.getElementById('barkodVideo');
-      v.srcObject = akis; await v.play();
-      tarayici = new window.BarcodeDetector({ formats: ['ean_13','ean_8','isbn'] });
-      not.textContent = 'Barkodu çerçeveye getir…';
+      akis = await navigator.mediaDevices.getUserMedia(kameraKisitlari());
+    }catch(e){
+      durumYaz('Kamera açılamadı: ' + kameraHataAdi(e) + ' — ISBN\'i elle yazabilirsin.');
+      return;
+    }
+    const v = document.getElementById('barkodVideo');
+    v.srcObject = akis;
+    try{ await v.play(); }catch(e){}
+    odaklan(akis);
+    tarayici = await tarayiciKur();
+    if(tarayici){
+      durumYaz('Kamera açık — barkod aranıyor…');
+      let ustUsteHata = 0;
       dongu = setInterval(async () => {
         try{
           const bulunan = await tarayici.detect(v);
-          if(bulunan && bulunan.length){
+          ustUsteHata = 0;
+          if(bulunan && bulunan.length && isbnGecerli(bulunan[0].rawValue)){
             const kod = bulunan[0].rawValue;
-            if(isbnGecerli(kod)){
-              kameraKapat();
-              await isbnIsle(kod, 'Barkod');
-            }
+            kameraKapat();
+            await isbnIsle(kod, 'Barkod');
           }
-        }catch(e){}
-      }, 400);
-    }catch(e){
-      not.textContent = 'Kamera açılamadı (izin verilmemiş olabilir) — ISBN\'i elle yazabilirsin.';
+        }catch(e){
+          // "nesne var ama çalışmıyor" modu: 5 üst üste hata → yedeğe düş
+          if(++ustUsteHata >= 5){ clearInterval(dongu); dongu = null; yedegeGec(v); }
+        }
+      }, 300);
+    }else{
+      yedegeGec(v);
     }
+  }
+  async function yedegeGec(v){
+    durumYaz('Bu tarayıcı barkod API\'sini desteklemiyor — yedek tarayıcı yükleniyor…');
+    const ok = await yedekYukle();
+    if(!ok){ durumYaz('Yedek tarayıcı yüklenemedi — ISBN\'i elle yazabilirsin.'); return; }
+    if(!akis) return;   // yükleme sürerken pencere kapatıldıysa
+    durumYaz('Kamera açık — barkod aranıyor (yedek tarayıcı)…');
+    const tuval = document.createElement('canvas');
+    dongu = setInterval(async () => {
+      const kod = yedekVideoCoz(v, tuval);
+      if(kod && isbnGecerli(kod)){
+        kameraKapat();
+        await isbnIsle(kod, 'Barkod');
+      }
+    }, 350);
   }
   function kameraKapat(){
     clearInterval(dongu); dongu = null;
@@ -188,8 +305,8 @@
           '<video id="barkodVideo" playsinline muted style="width:100%;max-height:44vh;object-fit:cover;display:block"></video>' +
           '<div style="position:absolute;inset:22% 12%;border:2px solid var(--kamera-cerceve);border-radius:10px;pointer-events:none"></div>' +
         '</div>' +
-        '<div id="barkodNot" style="font-size:.85rem;color:var(--muted);margin-top:10px"></div>' +
-        '<label for="barkodElle">ISBN\'i elle yaz</label>' +
+        '<div id="barkodNot" style="font-size:.85rem;color:var(--muted);margin-top:10px" role="status" aria-live="polite"></div>' +
+        '<label for="barkodElle" style="font-weight:600;color:var(--paper)">Okutamıyor musun? ISBN\'i elle yaz</label>' +
         '<div style="display:flex;gap:8px">' +
           '<input id="barkodElle" inputmode="numeric" placeholder="978…" autocomplete="off" style="flex:1">' +
           '<button class="btn btn-brass" style="width:auto" data-act="barkod-elle">Bul</button>' +
@@ -221,5 +338,8 @@
   if(document.getElementById('araTipSec')) baslat();
   else document.addEventListener('DOMContentLoaded', baslat);
 
-  window.__barkod = { isbnGecerli, isbnTemizle, isbnAra, isbnIsle, formuDoldur, kameraVar };
+  window.__barkod = { isbnGecerli, isbnTemizle, isbnAra, isbnIsle, formuDoldur, kameraVar,
+    /* tarama motoru — katalog.js seri taraması da bunları kullanır (aynı 'isbn'
+       enum kusuru oradaydı); testler yedekKareCoz'a sahte EAN-13 tuvali verir */
+    tarayiciKur, yedekYukle, yedekKareCoz, yedekVideoCoz, kameraKisitlari, odaklan, kameraHataAdi };
 })();

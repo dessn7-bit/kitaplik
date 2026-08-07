@@ -1,6 +1,6 @@
 'use strict';
 const { test, expect, tohumla, sahteKitap,
-  onaylariKabulEt, rafAc, rafYenile, ayarlarAc } = require('./yardim');
+  onaylariKabulEt, rafAc, rafYenile, ayarlarAc, ayrintilarAc } = require('./yardim');
 
 /* G23 — kendi kapak fotoğrafı (kapak.js, kp- ad alanı)
    Fotoğraflar IndexedDB'de (kk_kapak_v1), localStorage ve senkron gövdesine girmez;
@@ -278,6 +278,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     await tohumla(page, []);
     await rafAc(page);
     await page.click('.fab[data-act="yeni"]');
+    await ayrintilarAc(page);
     await page.fill('#f-ad', 'Formdan Fotoğraflı');
     const b64 = await buyukGorselB64(page, 1600, 2400);
     await fotoSec(page, '#ortuForm [data-act="kp-form-cek"]', b64);

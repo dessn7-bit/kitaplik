@@ -1,6 +1,6 @@
 'use strict';
 const { test, expect, tohumla, sahteKitap,
-  onaylariKabulEt, bugunISO, rafAc } = require('./yardim');
+  onaylariKabulEt, bugunISO, rafAc, ayrintilarAc } = require('./yardim');
 
 test.describe('G1 çekirdek', () => {
 
@@ -21,6 +21,7 @@ test.describe('G1 çekirdek', () => {
   test('kitap ekleme: listede görünür ve localStorage\'a yazılır', async ({ page }) => {
     await rafAc(page);
     await page.click('.fab[data-act="yeni"]');
+    await ayrintilarAc(page);
     await page.fill('#f-ad', 'Varlık ve Zaman');
     await page.fill('#f-yazar', 'Martin Heidegger');
     await page.click('[data-act="form-kaydet"]');
@@ -126,6 +127,7 @@ test.describe('G1 çekirdek', () => {
   test('bitiş tarihi başlamadan önceyse kayıt reddedilir', async ({ page }) => {
     await rafAc(page);
     await page.click('.fab[data-act="yeni"]');
+    await ayrintilarAc(page);
     await page.fill('#f-ad', 'Tarih Testi');
     await page.click('[data-act="f-durum"][data-v="bitti"]');
     await page.fill('#f-bas', '2026-08-02');

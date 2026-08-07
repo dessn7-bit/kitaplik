@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('fs');
 const { test, expect, tohumla, sahteKitap, kameraTaklit,
-  bugunISO, rafAc, rafYenile, ayarlarAc } = require('./yardim');
+  bugunISO, rafAc, rafYenile, ayarlarAc, ayrintilarAc } = require('./yardim');
 
 const YIL = new Date().getFullYear();
 const ISBN = '9780132350884';
@@ -9,6 +9,7 @@ const ISBN = '9780132350884';
 async function formAc(page) {
   await rafAc(page);
   await page.click('.fab[data-act="yeni"]');
+  await ayrintilarAc(page);
 }
 function gbIsbnYanit(k) {
   return { totalItems: 1, items: [{ volumeInfo: { title: k.ad, authors: [k.yazar || 'Y'],
@@ -101,6 +102,7 @@ test.describe('G15 M2 — elle ISBN', () => {
     await tohumla(page, [sahteKitap({ ad: 'İlk Baskı', isbn: ISBN })]);
     await rafAc(page);
     await page.click('.fab[data-act="yeni"]');
+    await ayrintilarAc(page);
     await page.fill('#f-ad', 'İkinci Baskı');
     await page.fill('#f-isbn', ISBN);
     await page.click('[data-act="form-kaydet"]');
