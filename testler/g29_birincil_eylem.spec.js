@@ -22,24 +22,24 @@ function gorunurBrass(page, kapsam) {
 
 test.describe('G29 — detayda durum başına tek birincil', () => {
 
-  test('okunacak: tek pirinç = "Okumaya başla" (çekirdek); oturum düğmesi çerçeveli', async ({ page }) => {
+  test('okunacak: tek pirinç = "Okumaya başla" (çekirdek); oturum başlatma ghost', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Bekleyen' })]);
     await rafAc(page);
     await detayAcVeBekle(page);
     await expect(gorunurBrass(page, '#detayIcerik')).toHaveCount(1);
     await expect(gorunurBrass(page, '#detayIcerik').first()).toHaveAttribute('data-act', 'baslat');
-    await expect(page.locator('#oturumBlok [data-act="oturum-basla"]')).toHaveClass(/btn-cerceve/);
+    await expect(page.locator('#oturumBlok [data-act="oturum-basla"]')).toHaveClass(/d-ghost/);
   });
 
-  /* v45 birincil tablosu: okunuyor → "Sayfa işaretle" (ilerleme-kaydet);
-     oturum başlatma artık HER durumda çerçeveli (oturum.js). */
-  test('okunuyor (oturum yok): tek pirinç = Sayfa işaretle; oturum/Bitirdim/Ekle çerçeveli', async ({ page }) => {
+  /* v46 birincil tablosu: okunuyor → "Sayfa işaretle" (d-sayfa-ac, girişi açar);
+     oturum başlatma artık ghost bağlantı (tam genişlik düğme değil). */
+  test('okunuyor (oturum yok): tek pirinç = Sayfa işaretle; oturum ghost, Bitirdim/Ekle çerçeveli', async ({ page }) => {
     await tohumla(page, [okunuyorK()]);
     await rafAc(page);
     await detayAcVeBekle(page);
     await expect(gorunurBrass(page, '#detayIcerik')).toHaveCount(1);
-    await expect(gorunurBrass(page, '#detayIcerik').first()).toHaveAttribute('data-act', 'ilerleme-kaydet');
-    await expect(page.locator('#oturumBlok [data-act="oturum-basla"]')).toHaveClass(/btn-cerceve/);
+    await expect(gorunurBrass(page, '#detayIcerik').first()).toHaveAttribute('data-act', 'd-sayfa-ac');
+    await expect(page.locator('#oturumBlok [data-act="oturum-basla"]')).toHaveClass(/d-ghost/);
     await expect(page.locator('#detayIcerik [data-act="bitir"]')).toHaveClass(/btn-cerceve/);
     await expect(page.locator('#detayIcerik [data-act="not-ekle"]')).toHaveClass(/btn-cerceve/);
   });

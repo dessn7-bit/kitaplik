@@ -142,24 +142,28 @@
        o yüzden sahne onun. Oturum kapanınca çekirdek kutusu kendiliğinden geri gelir. */
     const cekirdekKutu = kap.querySelector('#dIlerlemeKutu');
     if(cekirdekKutu) cekirdekKutu.style.display = bende ? 'none' : '';
+    // v46: açık kalmış sayfa-giriş satırı da kapanır (çifte giriş engeli aynen)
+    const sayfaSatir = kap.querySelector('#dSayfaSatir');
+    if(sayfaSatir && bende) sayfaSatir.hidden = true;
     const sr = toplamSure(k), hz = hizSayfaSaat(k);
+    /* v46: özet kutu değil SESSİZ satır — yığılma diyeti (metinler aynen) */
     const ozet = sr > 0
-      ? '<div class="hiz-kutu">Bu kitapla geçirdiğin süre: <b>' + sureMetni(sr) + '</b>'
-        + (hz ? '<br>Okuma hızın: <b>' + hz + ' sayfa/saat</b>' : '')
+      ? '<div class="d-oturum-ozet">Bu kitapla geçirdiğin süre: <b>' + sureMetni(sr) + '</b>'
+        + (hz ? ' · Okuma hızın: <b>' + hz + ' sayfa/saat</b>' : '')
         + ((hz && k.sayfa && k.guncelSayfa < k.sayfa)
-            ? '<br>Kalan ' + (k.sayfa - k.guncelSayfa) + ' sayfa ≈ <b>'
+            ? ' · Kalan ' + (k.sayfa - k.guncelSayfa) + ' sayfa ≈ <b>'
               + sureMetni((k.sayfa - k.guncelSayfa) / hz * 3600000) + '</b>' : '')
         + '</div>'
       : '';
 
-    /* v45 Ciltli: blok kicker etiketli ("OKUMA OTURUMU") ince yapı. Birincil
-       eylem tekliği YENİ tablo: okunuyor'un birincili artık çekirdeğin "Sayfa
-       işaretle"si — oturum başlatma HER durumda çerçeveli. Oturum AÇIKKEN
-       çekirdek kutusu gizlendiği için görünür tek pirinç buradaki "Bitir". */
-    const kickerHtml = '<span class="kicker" style="display:block;margin-bottom:8px">Okuma oturumu</span>';
+    /* v46 D2: KAPALIYKEN ana yüzeyde tam genişlik düğme YOK — kicker satırı +
+       sağda ghost "Süre tut" bağlantısı (etiket bölümündeki "+ Etiket" deseni).
+       AÇIKKEN sayaç + sayfa girişi + Bitir (tek görünür pirinç, çekirdek kutusu
+       gizli — g19) + İptal sessiz bağlantı. */
     if(bende){
       const gecen = Date.now() - o.b;
-      blok.innerHTML = kickerHtml
+      blok.innerHTML =
+        '<div class="d-bolum-bas" style="margin-bottom:6px"><span class="kicker">Okuma oturumu</span></div>'
         + '<div class="hiz-kutu" style="border-color:var(--brass)">Okuyorsun — <b id="oturumSayac">'
         + sureMetni(gecen) + '</b> (başlangıç sayfası: ' + (o.sa||0) + ')</div>'
         + '<div class="ilerleme-guncelle" style="margin-top:10px">'
@@ -168,16 +172,19 @@
         + '<span>' + (k.sayfa ? '/ ' + k.sayfa + ' sayfada kaldım' : 'sayfada kaldım') + '</span>'
         + '<button class="btn btn-brass btn-kucuk" data-act="oturum-bitir">Bitir</button>'
         + '</div>'
-        + '<button class="btn btn-cerceve" style="margin-top:8px" data-act="oturum-iptal">Oturumu iptal et</button>'
+        + '<button class="d-sessiz" data-act="oturum-iptal">Oturumu iptal et</button>'
         + ozet;
       sayacBaslat();
     }else{
       const baskaKitap = o && o.kitapId !== k.id;
-      blok.innerHTML = kickerHtml
+      blok.innerHTML =
+        '<div class="d-bolum-bas" style="margin-bottom:6px"><span class="kicker">Okuma oturumu</span>'
+        + (baskaKitap ? '' : '<button class="d-ghost" data-act="oturum-basla">'
+            + (window.ikon?window.ikon('oynat'):'') + ' Süre tut</button>')
+        + '</div>'
         + (baskaKitap
-            ? '<div class="hiz-kutu">Başka bir kitapta açık oturum var. Önce onu bitir.</div>'
-            : '<button class="btn btn-cerceve" data-act="oturum-basla">'
-              + (window.ikon?window.ikon('oynat'):'') + ' Okumaya başla (süre tut)</button>')
+            ? '<div class="d-oturum-ozet">Başka bir kitapta açık oturum var. Önce onu bitir.</div>'
+            : '')
         + ozet;
       sayacDurdur();
     }

@@ -85,6 +85,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
     await tohumla(page, [okunuyorKitap()]);
     await rafAc(page);
     await detayAc(page);
+    await page.click('#dDigerKatla summary');  // v46: durum eylemleri nadir bölümde
     await page.click('[data-act="yarim-birak"]');
     await expect(page.locator('#toast')).toContainText('sf. 120');
     const k = await page.evaluate(() => veri.kitaplar[0]);
@@ -102,6 +103,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
     await tohumla(page, [okunuyorKitap()]);
     await rafAc(page);
     await detayAc(page);
+    await page.click('#dDigerKatla summary');  // v46: durum eylemleri nadir bölümde
     await page.click('[data-act="okunacak-al"]');
     await expect(page.locator('#toast')).toContainText('Okunacaklara alındı');
     const k = await page.evaluate(() => veri.kitaplar[0]);
@@ -118,6 +120,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
     await tohumla(page, [okunuyorKitap({ durum: 'yarim', puan: 4, bitisTarihi: bugunISO(-2) })]);
     await rafAc(page);
     await detayAc(page);
+    await page.click('#dDigerKatla summary');  // v46: durum eylemleri nadir bölümde
     await page.click('[data-act="okunacak-al"]');
     const k = await page.evaluate(() => veri.kitaplar[0]);
     expect(k.durum).toBe('okunacak');
@@ -129,6 +132,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
     await tohumla(page, [bittiKitap(), okunuyorKitap({ ad: 'Bırakılacak' })]);
     await rafAc(page);
     await detayAc(page, await page.evaluate(() => veri.kitaplar[1].id));
+    await page.click('#dDigerKatla summary');  // v46: durum eylemleri nadir bölümde
     await page.click('[data-act="yarim-birak"]');
     await page.click('[data-act="detay-kapat"]');
     await page.click('[data-act="sekme"][data-v="ist"]');
@@ -147,6 +151,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
     await rafAc(page);
     await detayAc(page);
     const gOnce = await page.evaluate(() => veri.kitaplar[0].g);
+    await page.click('#dDigerKatla summary');  // v46: durum eylemleri nadir bölümde
     await page.click('[data-act="yarim-birak"]');
     const gSonra = await page.evaluate(() => veri.kitaplar[0].g);
     expect(gSonra).toBeGreaterThan(gOnce);
@@ -161,6 +166,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
     await detayAc(page);
     await page.click('[data-act="oturum-basla"]');
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('kk_oturum_v1')))).not.toBeNull();
+    await page.click('#dDigerKatla summary');  // v46: durum eylemleri nadir bölümde
     await page.click('[data-act="yarim-birak"]');
     // oturum kapandı, süre gerçek oturum olarak yazıldı, sayfa korundu
     expect(await page.evaluate(() => localStorage.getItem('kk_oturum_v1'))).toBeNull();
@@ -177,6 +183,7 @@ test.describe('G28 M2 — durum eylemleri (form açmadan)', () => {
     await rafAc(page);
     await detayAc(page);
     await page.click('[data-act="oturum-basla"]');
+    await page.click('#dDigerKatla summary');  // v46: durum eylemleri nadir bölümde
     await page.click('[data-act="okunacak-al"]');
     expect(await page.evaluate(() => localStorage.getItem('kk_oturum_v1'))).toBeNull();
     const k = await page.evaluate(() => veri.kitaplar[0]);

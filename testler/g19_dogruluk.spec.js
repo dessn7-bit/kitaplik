@@ -100,11 +100,15 @@ test.describe('G19 M2 — oturum açıkken tek sayfa girişi', () => {
   const okunan = () => sahteKitap({ ad: 'Okunan Kitap', durum: 'okunuyor',
     sayfa: 300, guncelSayfa: 40, baslamaTarihi: bugunISO(-3) });
 
-  test('oturum yokken çekirdek kutusu görünür', async ({ page }) => {
+  /* v46: sayfa girişi "Sayfa işaretle"ye basınca açılır (yığılma diyeti) —
+     tek-giriş sözleşmesi aynen: oturum yokken giriş ÇEKİRDEKTE. */
+  test('oturum yokken çekirdek kutusu görünür; giriş Sayfa işaretle ile açılır', async ({ page }) => {
     await tohumla(page, [okunan()]);
     await rafAc(page);
     await page.click('#liste .kart');
     await expect(page.locator('#detayIcerik #dIlerlemeKutu')).toBeVisible();
+    await expect(page.locator('#detayIcerik #d-sayfa')).toBeHidden();  // kapalı başlar
+    await page.click('#detayIcerik [data-act="d-sayfa-ac"]');
     await expect(page.locator('#detayIcerik #d-sayfa')).toBeVisible();
     expect(await page.locator('#detayIcerik #oturumSayfa').count()).toBe(0);
   });
@@ -136,8 +140,9 @@ test.describe('G19 M2 — oturum açıkken tek sayfa girişi', () => {
   test('her iki yol da guncelSayfa yazar', async ({ page }) => {
     await tohumla(page, [okunan()]);
     await rafAc(page);
-    // 1) çekirdek yolu
+    // 1) çekirdek yolu (v46: giriş satırını önce aç)
     await page.click('#liste .kart');
+    await page.click('#detayIcerik [data-act="d-sayfa-ac"]');
     await page.fill('#detayIcerik #d-sayfa', '75');
     await page.click('#detayIcerik [data-act="ilerleme-kaydet"]');
     expect(await page.evaluate(() => veri.kitaplar[0].guncelSayfa)).toBe(75);

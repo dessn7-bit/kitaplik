@@ -152,6 +152,7 @@ test.describe('G27 senkron güvence: TOCTOU + gsG + eski istemci + borçlar', ()
     await tohumla(page, [k]);
     await rafAc(page);
     await page.click('#liste .kart');
+    await page.click('[data-act="d-sayfa-ac"]');   // v46: giriş satırı açılır
     await page.fill('#d-sayfa', '50');
     await page.click('[data-act="ilerleme-kaydet"]');
     const s1 = await page.evaluate(() => ({ gs: veri.kitaplar[0].guncelSayfa, d: veri.kitaplar[0].gsG }));

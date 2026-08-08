@@ -101,7 +101,10 @@
   /* KUSUR ONARIMI: bu 6 değişken kendine referanslıydı (a81f31d'den beri) —
      CSS'te döngü = geçersiz; açık temada örtü perdesi, nav zemini ve gölgeler
      fiilen yoktu. Değerler karanlık-tema öncesi sabitlerden geri alındı. */
-  --ortu-perde:rgba(52,46,36,.45); --nav-zemin:rgba(250,248,243,.97);
+  /* Perde (v46): parşömen kimliğine uygun SICAK kağıt gölgesi — eski rgba(52,46,36,.45)
+     düşük doygunlukta griye okunuyordu. Kanal farkı belirgin (R-B=31), alfa .52:
+     alttaki içerik net soluyor, pencere kenarı (bg+çizgi) kaybolmuyor. */
+  --ortu-perde:rgba(51,39,20,.52); --nav-zemin:rgba(250,248,243,.97);
   --header-fade:rgba(242,239,231,.92); --golge:rgba(80,70,52,.1);
   --golge-orta:rgba(90,75,50,.18); --golge-guclu:rgba(120,90,40,.35);
   --kamera-zemin:#000; --kamera-cerceve:rgba(255,253,247,.85);
@@ -131,7 +134,8 @@
   --muted:#B3A88F; --muted2:#9A8F78;
   --ok:#8FB265; --drop:#E0805C; --mavi:#8FA8C4;
   --uzeri:#141210; --toast-zemin:#EDE6D8; --toast-metin:#171512;
-  --ortu-perde:rgba(0,0,0,.62); --nav-zemin:rgba(34,31,26,.97);
+  /* v46: karanlıkta da sıcak perde (salt siyah nötrdü) */
+  --ortu-perde:rgba(26,19,9,.68); --nav-zemin:rgba(34,31,26,.97);
   --header-fade:rgba(20,18,16,.92); --golge:rgba(0,0,0,.35);
   --golge-orta:rgba(0,0,0,.45); --golge-guclu:rgba(0,0,0,.55);
 }
@@ -508,6 +512,24 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .d-etiket-giris-satir{display:flex;gap:8px;margin-top:10px;align-items:center}
 .d-etiket-giris-satir[hidden]{display:none}
 .d-etiket-giris-satir input{flex:1;width:auto}
+/* v46: eylem alanı diyeti — İlerleme→künye arası iki tasarım satırını aşmaz */
+.d-eylem-satir{display:flex;gap:8px}
+.d-eylem-satir .btn{flex:1;width:auto}
+#detayIcerik .d-eylem{margin-top:12px}
+#oturumBlok{margin-top:10px}
+#oturumBlok .d-bolum-bas{margin-bottom:0}
+#dKunyeBlok{margin-top:12px}
+/* v46: sayfa girişi "Sayfa işaretle"ye basınca açılan satır */
+#dIlerlemeKutu{flex:1;display:flex}
+#dIlerlemeKutu .btn{flex:1;width:auto}
+.d-sayfa-satir{display:flex;gap:8px;margin-top:8px;align-items:center}
+.d-sayfa-satir[hidden]{display:none}
+.d-sayfa-satir input{width:96px}
+.d-sayfa-satir span{font-size:.85rem;color:var(--muted);white-space:nowrap}
+.d-hiz-not{font-size:.75rem;color:var(--muted2);margin-top:4px;line-height:1.5}
+.d-hiz-not b{color:var(--muted);font-weight:600}
+.d-oturum-ozet{font-size:.75rem;color:var(--muted2);margin-top:6px;line-height:1.5}
+.d-oturum-ozet b{color:var(--muted);font-weight:600}
 /* Detay hiyerarşisi: d-eylem = duruma göre TEK birincil blok, d-sessiz = sessiz
    ikincil durum eylemleri, d-katla = nadir bölümler (seri/geçmiş/ödünç/düzenle). */
 .d-eylem{margin-top:20px}
@@ -1918,28 +1940,29 @@ function detayAc(id){
      · yarim → "Devam et" · bitti → "Yeniden oku". Oturum düğmeleri artık HER
      durumda çerçeveli (oturum.js) — oturum AÇIKKEN #dIlerlemeKutu gizlendiği
      için görünür tek pirinç oturum "Bitir"i olur (g19/g29 koreografisi). */
+  /* Eylem alanı (v46 D2): İLERLEME altında TEK satır, en fazla İKİ düğme —
+     okunuyor: [Sayfa işaretle brass][Bitirdim cerceve] (sayfasızda Bitirdim
+     brass tek başına); okunacak/yarim/bitti: tek brass. Sayfa girişi ayrı blok
+     değil: "Sayfa işaretle" basınca açılan satır (#dSayfaSatir). Yarım/geri-al
+     sessiz eylemleri dDigerKatla'ya taşındı; oturum başlatma oturum bloğunun
+     kicker satırındaki ghost bağlantı (tam genişlik düğme yığını bitti). */
   let eylemHtml = '';
   if(k.durum === 'okunuyor'){
-    let hizHtml = '';
-    if(hz){
-      hizHtml = `<div class="hiz-kutu">Okuma hızın: <b>${hz.hiz} sayfa/gün</b> (${hz.gun} günde ${hz.toplam} sayfa)`
-        + (hz.tahmin ? `<br>Bu tempoyla tahmini bitiş: <b>${trTarih(hz.tahmin.tarih)}</b> (~${hz.tahmin.gun} gün)` : '')
-        + `</div>`;
-    }
-    eylemHtml = `<div class="d-blok d-eylem">
-      <div id="dIlerlemeKutu">
-        <div class="ilerleme-guncelle">
-          <input type="number" inputmode="numeric" min="0" ${k.sayfa?`max="${k.sayfa}"`:''} id="d-sayfa" value="${k.guncelSayfa||0}" aria-label="Güncel sayfa">
-          <span>${k.sayfa ? '/ ' + k.sayfa + ' sayfa' : 'sayfa'}</span>
-        </div>
-        <button class="btn btn-brass" style="margin-top:8px" data-act="ilerleme-kaydet">Sayfa işaretle</button>
+    /* #dIlerlemeKutu yalnız SAYFA GİRİŞİ tarafını kapsar (oturum açıkken
+       gizlenen budur — g19); "Bitirdim" bağımsız kalır ki açık oturumda da
+       kitap bitirilebilsin (oturumu kaydederek kapatır — g28 sözleşmesi). */
+    eylemHtml = k.sayfa ? `<div class="d-blok d-eylem">
+      <div class="d-eylem-satir">
+        <div id="dIlerlemeKutu"><button class="btn btn-brass" data-act="d-sayfa-ac">Sayfa işaretle</button></div>
+        <button class="btn btn-cerceve" data-act="bitir">${ikon('onay')} Bitirdim</button>
       </div>
-      <button class="btn btn-cerceve" style="margin-top:8px" data-act="bitir">${ikon('onay')} Kitabı bitirdim</button>
-      ${hizHtml}
-      <div class="d-durum-sec">
-        <button class="d-sessiz" data-act="yarim-birak">Yarım bıraktım</button>
-        <button class="d-sessiz" data-act="okunacak-al">Okunacağa geri al</button>
+      <div class="d-sayfa-satir" id="dSayfaSatir" hidden>
+        <input type="number" inputmode="numeric" min="0" max="${k.sayfa}" id="d-sayfa" value="${k.guncelSayfa||0}" aria-label="Güncel sayfa">
+        <span>/ ${k.sayfa} sayfa</span>
+        <button class="btn btn-cerceve btn-kucuk" data-act="ilerleme-kaydet">Kaydet</button>
       </div>
+    </div>` : `<div class="d-blok d-eylem">
+      <button class="btn btn-brass" data-act="bitir">${ikon('onay')} Kitabı bitirdim</button>
     </div>`;
   }
   if(k.durum === 'okunacak'){
@@ -1949,9 +1972,6 @@ function detayAc(id){
     eylemHtml = `<div class="d-blok d-eylem">
       ${k.guncelSayfa ? `<div class="mini-not" style="margin-top:0">Kaldığın yer: sf. ${k.guncelSayfa}${k.sayfa ? ' / ' + k.sayfa : ''} — ilerlemen duruyor.</div>` : ''}
       <button class="btn btn-brass" data-act="baslat">${k.guncelSayfa ? 'Devam et' : 'Tekrar başla'}</button>
-      <div class="d-durum-sec">
-        <button class="d-sessiz" data-act="okunacak-al">Okunacağa geri al</button>
-      </div>
       ${puanHtml()}
     </div>`;
   }
@@ -1963,12 +1983,14 @@ function detayAc(id){
     </div>`;
   }
   /* İLERLEME bölümü (v45): sayfa bilgisi olan kitapta, okunacak HARİÇ (henüz
-     ilerleme yok). Panelin TEK .ilerleme çubuğu burada (g28 sözleşmesi). */
+     ilerleme yok). Panelin TEK .ilerleme çubuğu burada (g28 sözleşmesi).
+     v46: hız analizi kutu değil SESSİZ satır — ilerlemenin doğal parçası. */
   const ilerlemeHtml = (k.sayfa > 0 && k.durum !== 'okunacak')
     ? `<div class="d-blok" id="dIlerlemeBolum">
         <span class="kicker">İlerleme</span>
         <div class="ilerleme" style="margin-top:6px"><div style="width:${p}%"></div></div>
         <div class="ilerleme-txt d-ilerleme-sayi"><span>${k.guncelSayfa||0} / ${k.sayfa} sayfa</span><span>%${p}</span></div>
+        ${(hz && k.durum === 'okunuyor') ? `<div class="d-hiz-not">Okuma hızın <b>${hz.hiz} sayfa/gün</b> (${hz.gun} günde ${hz.toplam} sayfa)${hz.tahmin ? ` · tahmini bitiş ${trTarih(hz.tahmin.tarih)} (~${hz.tahmin.gun} gün)` : ''}</div>` : ''}
       </div>` : '';
   /* KÜNYE TABLOSU (v45): kıl payı çizgili satırlar; BOŞ alan satır OLUŞTURMAZ.
      Sıra: kimlik (yazar) → fiziksel (sayfa, ilk basım) → sınıflama (tür, seri)
@@ -2107,6 +2129,13 @@ function detayAc(id){
     ${seriHtml}
     ${gecmisHtml}
     <details class="d-katla" id="dDigerKatla"><summary><span>Kapak, düzenle &amp; diğer</span></summary><div class="d-katla-ic">
+      ${k.durum === 'okunuyor' ? `<div class="d-durum-sec" style="justify-content:flex-start;margin:0 0 6px">
+        <button class="d-sessiz" data-act="yarim-birak">Yarım bıraktım</button>
+        <button class="d-sessiz" data-act="okunacak-al">Okunacağa geri al</button>
+      </div>` : ''}
+      ${k.durum === 'yarim' ? `<div class="d-durum-sec" style="justify-content:flex-start;margin:0 0 6px">
+        <button class="d-sessiz" data-act="okunacak-al">Okunacağa geri al</button>
+      </div>` : ''}
       <div class="form-alt" style="margin-top:0">
         <button class="btn btn-cerceve" data-act="kp-cek" style="flex:1">${ikon('kamera')} Kapak fotoğrafı</button>
         ${k.kapakYerel ? `<button class="btn btn-cerceve" data-act="kp-detay-kaldir" style="flex:1">Fotoğrafı kaldır</button>` : ''}
@@ -3002,6 +3031,14 @@ document.addEventListener('click', e => {
         if(window.__oturum && window.__oturum.durumKapat) window.__oturum.durumKapat(k.id, true);
         depoKaydet(); hepsiniCiz(); detayAc(k.id);
         toast('Yeniden okumaya başladın — önceki okuman geçmişe kaydedildi');
+      }
+      break; }
+    /* d-sayfa-ac (v46): "Sayfa işaretle" giriş satırını açar/kapar */
+    case 'd-sayfa-ac': {
+      const s = document.getElementById('dSayfaSatir');
+      if(s){
+        s.hidden = !s.hidden;
+        if(!s.hidden){ const g = document.getElementById('d-sayfa'); if(g){ g.focus(); g.select(); } }
       }
       break; }
     /* d-etiket (v45): detaydan etiket ekleme/silme */
