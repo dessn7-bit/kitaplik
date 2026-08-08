@@ -111,8 +111,13 @@
   --yukselti-1:0 1px 3px var(--golge);
   --yukselti-2:0 2px 6px var(--golge-orta);
   --yukselti-3:0 4px 16px var(--golge-guclu);
-  /* Yarıçap ölçeği: 6 küçük görsel · 10 iç öğe/düğme/girdi · 12 kart · 18 sheet · 999 hap */
-  --radius:12px; --r-ic:10px; --r-mini:6px; --r-sheet:18px;
+  /* Yarıçap ölçeği (v42 Ciltli): 2 çip/etiket · 4 düğme/girdi · 7 sheet.
+     Eski --radius/--r-ic/--r-mini henüz Ciltli'ye geçmemiş ekranlarda (Ana Sayfa,
+     Alıntılar, İstatistik kartları) yaşıyor — sonraki sprintlerde emekli olacak. */
+  --radius:12px; --r-ic:10px; --r-mini:6px; --r-sheet:7px;
+  --r-sm:2px; --r-md:4px; --r-lg:7px;
+  /* Ciltli ayraç: metin renginin %16 saydamı — tema değişince kendiliğinden uyar */
+  --cizgi:color-mix(in srgb,var(--paper) 16%,transparent);
   /* "Ciltli" tipografi (v41): başlık = Cormorant Garamond, gövde = Lora.
      Değişken ADLARI (--serif/--sans) korunur — tüm eklentiler bunları kullanır;
      --sans artık bilinçli olarak bir SERIF gövde fontuna işaret eder (kasıtlı,
@@ -138,8 +143,8 @@ html{font-size:16px;font-style:normal}
 body{background:var(--bg);color:var(--paper);font-family:var(--sans);font-style:normal;min-height:100vh;
   padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 button{font-family:inherit;font-style:normal;cursor:pointer;border:none;background:none;color:inherit}
-input,select,textarea{font-family:inherit;font-style:normal;font-size:1rem;background:var(--surface2);
-  color:var(--paper);border:1px solid var(--border);border-radius:var(--r-ic);padding:10px 12px;width:100%}
+input,select,textarea{font-family:inherit;font-style:normal;font-size:1rem;background:transparent;
+  color:var(--paper);border:1px solid var(--cizgi);border-radius:var(--r-md);padding:10px 12px;width:100%}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--brass);outline-offset:-1px;border-color:var(--brass)}
 textarea{resize:vertical;min-height:60px}
 label{display:block;font-size:.8rem;color:var(--muted);margin:14px 0 4px;letter-spacing:.03em}
@@ -169,12 +174,17 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 /* Ayarlar başlık satırında, arama satırında DEĞİL: arama satırı yalnız Kütüphane
    sekmesinde görünüyor (sekmeGec), ayarlar ise her sekmeden erişilebilmeli. */
 .baslik-satir{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.ayar-btn{flex:0 0 40px;width:40px;height:40px;border-radius:var(--r-ic);background:var(--surface);
-  border:1px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center}
-.search-row{display:flex;gap:8px;margin-top:8px}
-.search-row input{flex:1;background:var(--surface)}
+.ayar-btn{flex:0 0 40px;width:40px;height:40px;border-radius:var(--r-md);background:transparent;
+  border:1px solid var(--cizgi);color:var(--muted);display:flex;align-items:center;justify-content:center}
+.search-row{display:flex;gap:8px;margin-top:8px;position:relative}
+/* Ciltli arama: kontur + altın büyüteç ikonu (soldan içeride). Yazı .9rem —
+   ikon dolgusuna rağmen placeholder 360px'te sığar (D1 vakası ölçer). */
+.search-row input{flex:1;background:transparent;padding-left:36px;font-size:.9rem}
+.ara-ikon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--brass);
+  pointer-events:none;display:flex}
+.ara-ikon .ikon{width:17px;height:17px}
 /* 46→40px (D1): arama girdisine 12px kazandırır, 40px dokunma hedefi korunur */
-.zar-btn{flex:0 0 40px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-ic);
+.zar-btn{flex:0 0 40px;background:transparent;border:1px solid var(--cizgi);border-radius:var(--r-md);
   color:var(--muted);display:flex;align-items:center;justify-content:center}
 .zar-btn:active{transform:rotate(20deg) scale(.9)}
 
@@ -190,45 +200,110 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
   mask-image:linear-gradient(90deg,transparent,#000 36px)}
 .chips.kayar-bas.kayar-son{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent);
   mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent)}
-.chip{flex:0 0 auto;padding:8px 14px;border-radius:999px;border:1px solid var(--border);
-  background:var(--surface);color:var(--muted);font-size:.85rem}
-.chip.active{background:var(--brass);color:var(--uzeri);border-color:var(--brass);font-weight:600}
-.sort-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 16px 0}
-.sort-row select{width:auto;font-size:.85rem;padding:6px 10px;background:var(--surface);max-width:46%}
+/* Ciltli çip: hap değil KUTU (r-sm), dolgu yok; aktif = altın kontur + altın
+   metin + %7 tint (v41 AA ölçümü: brass/%7-tint 4.57). */
+.chip{flex:0 0 auto;padding:8px 12px;border-radius:var(--r-sm);border:1px solid var(--cizgi);
+  background:transparent;color:var(--muted);font-size:.8rem;letter-spacing:.02em}
+.chip.active{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
+  border-color:var(--brass);font-weight:600}
+.sort-row{display:flex;align-items:center;justify-content:space-between;gap:8px;row-gap:6px;
+  flex-wrap:wrap;padding:6px 16px 0}
+.sort-row select{width:auto;font-size:.85rem;padding:6px 10px;background:transparent;max-width:46%}
 .count-label{font-size:.8rem;color:var(--muted2);white-space:nowrap}
 
 /* Alt dolgu 88px (D3): FAB sabit katmanı (bottom 84 + 56 boy) son kartın metnini
    örtmesin — gövde dolgusu (76) + bu 88 = 164px > FAB üst kenarı (140). */
-#liste{padding:10px 16px 88px;display:flex;flex-direction:column;gap:12px}
-.kart{position:relative;display:flex;background:var(--surface);border:1px solid var(--border);box-shadow:var(--yukselti-1);
-  border-radius:var(--radius);overflow:hidden;text-align:left;width:100%}
-.kart:active{transform:scale(.985)}
-/* Kapaksız kitap: boş şerit yerine ANLAMLI yer tutucu — sırt rengi + baş
-   harfler (ızgaradaki .iz-yedek deseninin liste karşılığı). Sağ kenardaki
-   iç gölge + sol ışık çizgisi cilt sırtı hissi verir. */
-.sirt{flex:0 0 52px;width:52px;display:flex;align-items:center;justify-content:center;
-  font-family:var(--serif);font-size:1.05rem;font-weight:600;letter-spacing:.04em;
-  color:var(--uzeri);overflow:hidden;
-  box-shadow:inset -12px 0 14px -10px rgba(0,0,0,.38),inset 3px 0 0 rgba(255,253,247,.28)}
-.kapak-mini{flex:0 0 52px;width:52px;object-fit:cover;background:var(--surface2)}
-.kart-ic{flex:1;padding:12px 14px;min-width:0}
+#liste{padding:4px 16px 88px;display:flex;flex-direction:column}
+/* Ciltli liste (v42): kart kutusu yerine ÇİZGİ — satırlar 1px ayraçla ayrılır,
+   kutu/gölge/yarıçap yok. .kart sınıf adı ve data-act="detay" sözleşmesi korunur
+   (çoklu seçim + tüm testler bu yüzeye bakar). */
+.kart{position:relative;display:flex;gap:12px;align-items:flex-start;background:transparent;
+  border:none;box-shadow:none;border-radius:0;border-bottom:1px solid var(--cizgi);
+  overflow:hidden;text-align:left;width:100%;padding:12px 0}
+.kart:active{background:color-mix(in srgb,var(--paper) 7%,transparent)}
+/* Kapaksız kitap (v42): renkli sırt/baş-harf dili emekli — kapak levhası içinde
+   kesikli çerçeve (p-bos) "kapak yok" der; ad zaten satırın kendisinde. */
+.plate.p-mini{width:44px;height:64px;border-width:4px}
+.kart-ic{flex:1;padding:2px 0 0;min-width:0}
 .kart-baslik{font-family:var(--serif);font-size:1.05rem;font-weight:600;line-height:1.3;overflow-wrap:break-word}
 .kart-yazar{font-size:.8rem;color:var(--muted);margin-top:3px}
 .kart-alt{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
 /* Rozet hiyerarşisi: DURUM = yumuşak dolgu hap (tint zemin, kenarlıksız —
    en güçlü işaret), PUAN = dolgu hap + yıldız, raf/etiket/not sayısı = sessiz
    çıplak metin. Tint üstü metin kontrastları AA yeniden hesaplandı (≥4.6). */
-.rozet{font-size:.75rem;padding:3px 10px;border-radius:999px;letter-spacing:.03em}
+.rozet{font-size:.75rem;padding:3px 10px;border-radius:var(--r-sm);letter-spacing:.03em}
 .r-okunuyor{color:var(--brass);background:color-mix(in srgb,var(--brass) 7%,transparent)}
 .r-bitti{color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,transparent)}
 .r-okunacak{color:var(--muted);background:color-mix(in srgb,var(--muted) 7%,transparent)}
 .r-yarim{color:var(--drop);background:color-mix(in srgb,var(--drop) 7%,transparent)}
 .puan-mini{font-size:.75rem;font-weight:600;color:var(--brass);padding:3px 10px;
-  border-radius:999px;background:color-mix(in srgb,var(--brass) 7%,transparent)}
-.etiket-mini{font-size:.75rem;color:var(--muted2)}
-.ilerleme{height:4px;background:var(--surface2);border-radius:999px;margin-top:8px;overflow:hidden}
-.ilerleme > div{height:100%;background:var(--brass);border-radius:999px}
+  border-radius:var(--r-sm);background:color-mix(in srgb,var(--brass) 7%,transparent)}
+.etiket-mini{font-size:.75rem;color:var(--muted2);letter-spacing:.02em}
+/* Ciltli ilerleme çizgisi: ray dolgusu yok — 1px altın konturlu boş kanal,
+   dolum aynı altında iç katman (tasarımdaki tek kalıp). */
+.ilerleme{height:3px;background:transparent;border:1px solid var(--brass);border-radius:2px;
+  margin-top:8px;overflow:hidden}
+.ilerleme > div{height:100%;background:var(--brass)}
 .ilerleme-txt{font-size:.75rem;color:var(--muted2);margin-top:4px}
+
+/* ---------- Ciltli Kütüphane üst blokları (kt-) + paylaşılan desenler ---------- */
+/* Küçük büyük-harf bölüm etiketi. Gövde fontunda (Lora) kalır; Lora küçük
+   puntoda iri düştüğü için punto kısıldı + harf aralığı açıldı (tasarım kuralı). */
+.kicker{font-family:var(--sans);font-size:.66rem;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--brass)}
+/* Kapak levhası: 6px yüzey paspartusu + 1px ayraç konturu + sepya filtresi.
+   Kapaksız kitapta p-bos kesikli iç çerçeve çizer (tasarımdaki "Kapak" yer
+   tutucusu). Renkli sırt/baş-harf deseni Kütüphane'de v42 ile emekli. */
+.plate{box-sizing:border-box;position:relative;border:6px solid var(--surface);
+  outline:1px solid var(--cizgi);background:var(--surface);
+  filter:sepia(.22) saturate(.82) contrast(1.05);flex:0 0 auto}
+.plate img{width:100%;height:100%;object-fit:cover;display:block}
+.p-bos::after{content:'';position:absolute;inset:2px;border:1.5px dashed currentColor;
+  opacity:.35;pointer-events:none}
+.kt-ust{padding:2px 16px 0}
+.kt-baslik-satir{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.kt-baslik{font-family:var(--serif);font-size:1.8rem;font-weight:400;line-height:1.15}
+.kt-cilt{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  white-space:nowrap;font-variant-numeric:tabular-nums}
+.kt-tarih{font-size:.75rem;color:var(--muted);margin-top:3px;letter-spacing:.02em}
+.kt-bolum{padding:12px 0 14px;border-bottom:1px solid var(--cizgi)}
+/* Ciltli ilerleme kalıbı bölüm içinde: .ilerleme ile aynı dil (kanal + dolum) */
+.kt-hedef{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:0}
+.kt-hedef-ic{flex:1;min-width:0;display:block}
+.kt-hedef-ic .ilerleme{margin-top:7px}
+.kt-hedef-sayi{font-family:var(--serif);font-size:.95rem;font-weight:600;color:var(--paper);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.kt-devam-kart{display:flex;gap:14px;text-align:left}
+.kt-dkapak{width:88px;height:132px}
+.kt-devam-ic{flex:1;min-width:0;display:flex;flex-direction:column}
+.kt-devam-ad{font-family:var(--serif);font-size:1.3rem;font-weight:400;line-height:1.15;overflow-wrap:break-word}
+.kt-devam-yazar{font-family:var(--sans);font-style:italic;font-size:.78rem;color:var(--muted);margin-top:2px}
+.kt-devam-alt{margin-top:auto;padding-top:8px}
+.kt-devam-alt .ilerleme{margin-top:0}
+.kt-devam-sayfa{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);
+  margin-top:5px;font-variant-numeric:tabular-nums}
+.kt-devam-dugme{display:flex;gap:8px;margin-top:12px}
+.kt-devam-dugme .btn{padding:10px 12px;font-size:.9rem;width:auto;flex:1}
+.kt-sayfa-satir{display:flex;gap:8px;margin-top:10px;align-items:center}
+/* display:flex, UA'nın [hidden]{display:none} kuralını ezer — açıkça geri verilir */
+.kt-sayfa-satir[hidden]{display:none}
+.kt-sayfa-satir input{width:96px}
+.kt-serit{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px}
+.kt-serit::-webkit-scrollbar{display:none}
+.kt-serit .kt-devam-kart{flex:0 0 88%}
+.kt-bolum-bas{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
+.kt-adet{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.kt-sira-plate{width:76px;height:114px;padding:8px;display:flex;flex-direction:column;
+  justify-content:space-between;gap:4px;text-align:left;color:var(--paper)}
+.kt-sira-plate.kt-sira-kapakli{padding:0}
+.kt-sira-ad{font-family:var(--serif);font-size:.72rem;font-weight:600;line-height:1.2;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:break-word}
+.kt-sira-yazar{font-size:.56rem;letter-spacing:.02em;text-transform:uppercase;opacity:.7;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+/* Keşfet iskeleti (v42): sekme var, motor sonraki sprintte taşınacak */
+.kesfet-bos{padding:36px 20px;display:flex;flex-direction:column;gap:10px;max-width:560px}
+.kesfet-bos p{font-family:var(--serif);font-size:1.15rem;line-height:1.5}
+.kesfet-bos small{font-size:.8rem;color:var(--muted);line-height:1.5}
 
 .bos{text-align:center;padding:70px 30px;color:var(--muted)}
 .bos .b-ikon{margin-bottom:14px;opacity:.6}
@@ -277,18 +352,24 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 .as-eylem .zar-btn{flex:0 0 40px;height:auto}
 
 nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
-  background:var(--nav-zemin);backdrop-filter:blur(10px);border-top:1px solid var(--border);
+  background:var(--nav-zemin);backdrop-filter:blur(10px);border-top:1px solid var(--cizgi);
   padding-bottom:env(safe-area-inset-bottom)}
-.nav-btn{flex:1;padding:10px 0 8px;display:flex;flex-direction:column;align-items:center;gap:3px;
-  color:var(--muted2);font-size:.7rem}
+/* Ciltli sekme dili (v42): küçük büyük-harf etiket + ikon; aktif = altın metin
+   + etiketin altında 1px altın çizgi. Harf aralığı .05em (Lora küçük punto ayarı). */
+.nav-btn{flex:1;padding:9px 0 10px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  color:var(--muted2);font-size:.66rem;letter-spacing:.05em;text-transform:uppercase}
 .nav-btn .n-ikon{line-height:1;display:flex}
+.nav-btn .n-etiket{border-bottom:1px solid transparent;padding-bottom:2px;white-space:nowrap}
 .nav-btn.active{color:var(--brass)}
+.nav-btn.active .n-etiket{border-bottom-color:var(--brass)}
 
+/* Ciltli FAB (v42): dolgu yok — zemin renginde disk + 1px altın kontur + altın "+" */
 .fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:29;
-  width:56px;height:56px;border-radius:999px;background:var(--brass);color:var(--uzeri);
+  width:54px;height:54px;border-radius:999px;background:var(--bg);color:var(--brass);
+  border:1px solid var(--brass);font-family:var(--serif);
   font-size:1.9rem;display:flex;align-items:center;justify-content:center;
-  box-shadow:var(--yukselti-3)}
-.fab:active{transform:scale(.93)}
+  box-shadow:var(--yukselti-1)}
+.fab:active{transform:scale(.93);background:color-mix(in srgb,var(--brass) 12%,var(--bg))}
 
 .panel{display:none;animation:fadein .18s ease}
 .panel.active{display:block}
@@ -334,10 +415,17 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .yedek-kart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--yukselti-1)}
 .yedek-kart h3{font-family:var(--serif);font-size:1rem;margin-bottom:6px}
 .yedek-kart p{font-size:.85rem;color:var(--muted);line-height:1.5;margin-bottom:12px}
+/* Ciltli düğme dili (v42): DOLGU YOK — tüm düğmeler kontur. Birincil (.btn-brass)
+   = altın kontur + altın metin; ikincil (.btn-cerceve) = ayraç kontur + normal
+   metin. Basılı hal %12-22 saydam zemin (color-mix). Sınıf ADLARI korunur:
+   g29/g30 sayımları ve tüm eklentiler bu adlara bakar. */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;
-  border-radius:var(--r-ic);font-size:.9rem;font-weight:600;width:100%}
-.btn-brass{background:var(--brass);color:var(--uzeri)}
-.btn-cerceve{border:1px solid var(--border);color:var(--paper);background:var(--surface2)}
+  border-radius:var(--r-md);font-family:var(--serif);font-size:.95rem;font-weight:600;width:100%;
+  background:transparent;border:1px solid transparent}
+.btn-brass{border-color:var(--brass);color:var(--brass)}
+.btn-brass:active{background:color-mix(in srgb,var(--brass) 18%,transparent)}
+.btn-cerceve{border-color:var(--cizgi);color:var(--paper)}
+.btn-cerceve:active{background:color-mix(in srgb,var(--paper) 12%,transparent)}
 .btn-tehlike{border:1px solid var(--drop);color:var(--drop);background:transparent}
 .btn:active{transform:scale(.98)}
 /* Girdi yanı kompakt onay düğmesi — eskiden 3 farklı inline padding taşıyordu */
@@ -353,7 +441,8 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .tutamac{width:38px;height:4px;background:var(--muted2);border-radius:999px;margin:6px auto 12px}
 .sheet-baslik{font-family:var(--serif);font-size:1.28rem;line-height:1.3;padding-right:34px}
 .sheet-kapat{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:999px;
-  background:var(--surface2);color:var(--muted);font-size:1.05rem;display:flex;align-items:center;justify-content:center;z-index:2}
+  background:transparent;border:1px solid var(--cizgi);color:var(--muted);font-size:1.05rem;
+  display:flex;align-items:center;justify-content:center;z-index:2}
 .detay-ust{display:flex;gap:14px;margin-top:4px}
 .detay-kapak{flex:0 0 84px;width:84px;height:124px;object-fit:cover;border-radius:var(--r-mini);
   border:1px solid var(--border);background:var(--surface2)}
@@ -366,8 +455,8 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .d-durum-sec{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-top:8px}
 .d-sessiz{font-size:.8rem;color:var(--muted);padding:10px 10px;border-radius:var(--r-ic);
   text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--muted2)}
-.d-katla{margin-top:12px;border:1px solid var(--border);border-radius:var(--radius);
-  background:var(--surface);box-shadow:var(--yukselti-1)}
+.d-katla{margin-top:12px;border:1px solid var(--cizgi);border-radius:var(--r-md);
+  background:transparent;box-shadow:none}
 .d-katla summary{list-style:none;cursor:pointer;padding:12px 14px;font-size:.85rem;
   color:var(--muted);letter-spacing:.03em;display:flex;align-items:center;
   justify-content:space-between;gap:8px}
@@ -389,13 +478,15 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   font-size:inherit;padding:4px}
 .form-iki{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .durum-secim{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
-.durum-btn{padding:9px 4px;border-radius:var(--r-ic);border:1px solid var(--border);font-size:.75rem;
-  color:var(--muted);background:var(--surface2)}
-.durum-btn.secili{background:var(--brass);color:var(--uzeri);border-color:var(--brass);font-weight:600}
+.durum-btn{padding:9px 4px;border-radius:var(--r-md);border:1px solid var(--cizgi);font-size:.75rem;
+  color:var(--muted);background:transparent}
+.durum-btn.secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
+  border-color:var(--brass);font-weight:600}
 .puan-secim{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
-.puan-btn{width:40px;height:40px;border-radius:var(--r-ic);border:1px solid var(--border);
-  background:var(--surface2);color:var(--muted);font-size:.9rem}
-.puan-btn.secili{background:var(--brass);color:var(--uzeri);border-color:var(--brass);font-weight:600}
+.puan-btn{width:40px;height:40px;border-radius:var(--r-md);border:1px solid var(--cizgi);
+  background:transparent;color:var(--muted);font-size:.9rem}
+.puan-btn.secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
+  border-color:var(--brass);font-weight:600}
 .not-kart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
   padding:12px 14px;margin-top:8px;position:relative;box-shadow:var(--yukselti-1)}
 .not-kart.alinti{border-left:3px solid var(--brass)}
@@ -405,8 +496,9 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .not-sil{position:absolute;top:8px;right:8px;color:var(--muted2);font-size:.95rem;padding:4px}
 .not-ekle-satir{display:flex;gap:8px;margin-top:10px;align-items:flex-start}
 .not-tip-sec{display:flex;gap:6px;margin-top:8px;align-items:center}
-.mini-chip{padding:6px 12px;border-radius:999px;border:1px solid var(--border);font-size:.75rem;color:var(--muted)}
-.mini-chip.secili{background:var(--brass);color:var(--uzeri);border-color:var(--brass);font-weight:600}
+.mini-chip{padding:6px 12px;border-radius:var(--r-sm);border:1px solid var(--cizgi);font-size:.75rem;color:var(--muted)}
+.mini-chip.secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
+  border-color:var(--brass);font-weight:600}
 .sayfa-input{width:86px !important;font-size:.85rem;padding:6px 10px;margin-left:auto}
 .form-alt{display:flex;gap:10px;margin-top:24px}
 .ilerleme-guncelle{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}
@@ -432,19 +524,20 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 
 /* tema seçici — kendi ad alanı (tm-) */
 .tm-secim{display:flex;gap:8px;flex-wrap:wrap}
-.tm-dugme{flex:1 1 auto;padding:10px 12px;border-radius:var(--r-ic);border:1px solid var(--border);
-  background:var(--surface2);color:var(--muted);font-size:.85rem}
-.tm-dugme.tm-secili{background:var(--brass);color:var(--uzeri);border-color:var(--brass);font-weight:600}
+.tm-dugme{flex:1 1 auto;padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--cizgi);
+  background:transparent;color:var(--muted);font-size:.85rem}
+.tm-dugme.tm-secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
+  border-color:var(--brass);font-weight:600}
 
 /* veri modeli sprinti — kendi ad alanı (vm-) */
 /* D2: artık .chips kaydırıcısının İÇİNDE yaşar (ayrı satır/kaydırıcı değil);
    sol kenarlık iki çip ailesini ayırır. kayar-* maskeleri dış kaydırıcıda. */
 .vm-chips{display:flex;gap:6px;align-items:center;flex:0 0 auto;
   padding-left:10px;margin-left:2px;border-left:1px solid var(--border)}
-.vm-chip{flex:0 0 auto;padding:6px 12px;border-radius:999px;border:1px dashed var(--border);
+.vm-chip{flex:0 0 auto;padding:6px 12px;border-radius:var(--r-sm);border:1px dashed var(--cizgi);
   background:transparent;color:var(--muted2);font-size:.75rem}
 .vm-chip.vm-secili{border-style:solid;border-color:var(--brass);color:var(--brass);font-weight:600}
-.vm-rozet{font-size:.75rem;padding:3px 10px;border-radius:999px;color:var(--mavi);
+.vm-rozet{font-size:.75rem;padding:3px 10px;border-radius:var(--r-sm);color:var(--mavi);
   background:color-mix(in srgb,var(--mavi) 7%,transparent)}
 .vm-seri-kutu{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-ic);
   padding:12px 14px;margin-top:8px;font-size:.85rem;color:var(--muted);line-height:1.6}
@@ -478,7 +571,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 /* ---------- Geniş ekran ----------
    Mobil (varsayılan) düzen HİÇ değişmez; kırılımlar yalnız üstüne ekler. */
 @media (min-width:700px){
-  header > *, .chips, .sort-row, #liste, .ist-wrap, .alinti-wrap, .yedek-wrap{
+  header > *, .chips, .sort-row, #liste, .kt-ust, .ist-wrap, .alinti-wrap, .yedek-wrap{
     max-width:1100px;margin-left:auto;margin-right:auto}
   #liste{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
   .ortu{align-items:center}
@@ -492,10 +585,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   #liste{grid-template-columns:1fr 1fr 1fr}
   .ist-grid{grid-template-columns:1fr 1fr 1fr 1fr}
 }
+/* Ciltli toast (v42): koyu dolgu yerine zemin + altın kontur (tasarım kalıbı) */
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);
-  background:var(--toast-zemin);border:1px solid var(--toast-zemin);color:var(--toast-metin) !important;
-  padding:10px 18px;border-radius:var(--r-ic);font-size:.85rem;z-index:60;opacity:0;transition:opacity .2s;
-  pointer-events:none;max-width:88vw;text-align:center}
+  background:var(--bg);border:1px solid var(--brass);color:var(--paper) !important;
+  padding:10px 18px;border-radius:var(--r-md);font-size:.85rem;z-index:60;opacity:0;transition:opacity .2s;
+  pointer-events:none;max-width:88vw;text-align:center;box-shadow:var(--yukselti-2)}
 .toast.goster{opacity:1}
 /* ---------- Kendi kapak fotoğrafı (kp-) ---------- */
 .kp-bekliyor{background:var(--surface2)}
@@ -514,7 +608,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .kp-not{font-size:.8rem;color:var(--muted);margin-top:10px;line-height:1.5}
 .kp-depo-satir{font-size:.85rem;color:var(--muted);margin:10px 0}
 /* ---------- Ne okusam? önerileri (on-) — stiller zar-btn'den kopya, seçici yeni ---------- */
-.on-ac-btn{flex:0 0 40px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-ic);
+.on-ac-btn{flex:0 0 40px;background:transparent;border:1px solid var(--cizgi);border-radius:var(--r-md);
   color:var(--muted);display:flex;align-items:center;justify-content:center}
 .on-ac-btn:active{transform:scale(.9)}
 .on-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
@@ -579,6 +673,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <!-- Placeholder KISA tutulur (D1): arama zaten ad/yazar/yayınevi/raf/çevirmen/
          seri/etiket alanlarının hepsinde çalışır — placeholder örnekleyicidir,
          kapsam sözleşmesi değil; uzun hali 412px'te kesiliyordu. -->
+    <span class="ara-ikon" aria-hidden="true"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="5.2"/><path d="m15 15 4.4 4.4"/></svg></span>
     <input type="search" id="arama" placeholder="Kitap, yazar, etiket ara…" autocomplete="off">
     <button class="zar-btn" data-act="zar" title="Okunacaklardan rastgele öner"
       aria-label="Okunacaklardan rastgele kitap öner"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="4" width="16" height="16" rx="3.6"/><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.4" fill="currentColor" stroke="none"/></svg></button>
@@ -601,6 +696,9 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
      `raf` değişseydi #panel-raf, durum.sekme varsayılanı, ?sekme=raf derin
      bağlantısı ve puansiz-git köprüsü birlikte kırılırdı — kazancı sıfır. -->
 <section class="panel" id="panel-raf">
+  <!-- Ciltli üst blokları (v42): başlık + cilt sayısı + tarih + yıl hedefi +
+       devam eden okuma + sırada. rafUstCiz() çizer (listeCiz her koştuğunda). -->
+  <div class="kt-ust" id="ktUst"></div>
   <!-- D2: sahiplik çipleri AYRI SATIR değil, durum çipi kaydırıcısının devamı —
        üstteki kontrol yığını bir satır kısaldı. #vmSahiplikChips kapsayıcısı ve
        tüm seçiciler korunur (dispatcher + testler ona bakar); işlev aynı. -->
@@ -631,6 +729,18 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   <div id="liste"></div>
 </section>
 
+<!-- ===== KEŞFET (v42) =====
+     Şimdilik İSKELET: sekme + anlamlı boş durum. Öneri motoru (oneri.js) bir
+     sonraki sprintte buraya taşınacak — bu sprint yalnız yüzeyi açar, işlev
+     taşımaz (çakışma olmasın diye ampul düğmesine işaret eder). -->
+<section class="panel" id="panel-kesfet">
+  <div class="kesfet-bos">
+    <div class="kicker">Keşfet</div>
+    <p>Burası, kütüphanenden yola çıkan keşif köşesi olacak: sana göre öneriler, seri devamları ve rafındaki örüntüler.</p>
+    <small>Öneri motoru bir sonraki adımda buraya taşınacak. O güne kadar "Ne okusam?" önerileri Kütüphane'deki ampul düğmesinde.</small>
+  </div>
+</section>
+
 <!-- ===== ALINTILAR ===== -->
 <section class="panel" id="panel-alinti">
   <!-- Aralıklı tekrar kutusu (tk-, tekrar.js): #alintiIcerik'in DIŞINDA çünkü
@@ -647,10 +757,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 <button class="fab" data-act="yeni" aria-label="Kitap ekle">+</button>
 
 <nav>
-  <button class="nav-btn active" data-act="sekme" data-v="ana"><span class="n-ikon"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.8 10.7 12 4l8.2 6.7"/><path d="M6 9.4v10.1h12V9.4"/><path d="M10 19.5v-5h4v5"/></svg></span>Ana Sayfa</button>
-  <button class="nav-btn" data-act="sekme" data-v="raf"><span class="n-ikon"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 4.5h3.4v15H4.5z"/><path d="M10.2 4.5h3.4v15h-3.4z"/><path d="m16 5.8 3.1-.7 2.9 13.9-3.1.7z"/></svg></span>Kütüphane</button>
-  <button class="nav-btn" data-act="sekme" data-v="alinti"><span class="n-ikon"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10.6 7.2C8.1 8.2 6.7 10 6.7 12.6v4.2h4.6v-4.6H8.6c.1-1.9 1-3.2 2.7-4z"/><path d="M20 7.2c-2.5 1-3.9 2.8-3.9 5.4v4.2h4.6v-4.6H18c.1-1.9 1-3.2 2.7-4z"/></svg></span>Alıntılar</button>
-  <button class="nav-btn" data-act="sekme" data-v="ist"><span class="n-ikon"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20h16"/><path d="M7.2 20v-5.4"/><path d="M12 20V7.5"/><path d="M16.8 20v-8.6"/></svg></span>İstatistik</button>
+  <button class="nav-btn active" data-act="sekme" data-v="ana"><span class="n-ikon"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.8 10.7 12 4l8.2 6.7"/><path d="M6 9.4v10.1h12V9.4"/><path d="M10 19.5v-5h4v5"/></svg></span><span class="n-etiket">Ana Sayfa</span></button>
+  <button class="nav-btn" data-act="sekme" data-v="raf"><span class="n-ikon"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 4.5h3.4v15H4.5z"/><path d="M10.2 4.5h3.4v15h-3.4z"/><path d="m16 5.8 3.1-.7 2.9 13.9-3.1.7z"/></svg></span><span class="n-etiket">Kütüphane</span></button>
+  <button class="nav-btn" data-act="sekme" data-v="kesfet"><span class="n-ikon"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.2"/><path d="m14.9 9.1-1.7 4.1-4.1 1.7 1.7-4.1z"/></svg></span><span class="n-etiket">Keşfet</span></button>
+  <button class="nav-btn" data-act="sekme" data-v="alinti"><span class="n-ikon"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10.6 7.2C8.1 8.2 6.7 10 6.7 12.6v4.2h4.6v-4.6H8.6c.1-1.9 1-3.2 2.7-4z"/><path d="M20 7.2c-2.5 1-3.9 2.8-3.9 5.4v4.2h4.6v-4.6H18c.1-1.9 1-3.2 2.7-4z"/></svg></span><span class="n-etiket">Alıntılar</span></button>
+  <button class="nav-btn" data-act="sekme" data-v="ist"><span class="n-ikon"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20h16"/><path d="M7.2 20v-5.4"/><path d="M12 20V7.5"/><path d="M16.8 20v-8.6"/></svg></span><span class="n-etiket">İstatistik</span></button>
 </nav>
 
 <!-- ===== AYARLAR (eski "Yedek" sekmesi) =====
@@ -1129,7 +1240,10 @@ const IKON_YOL = {
   liste:'<path d="M4.5 7h15M4.5 12h15M4.5 17h15"/>',
   izgara:'<rect x="4.5" y="4.5" width="6.4" height="6.4" rx="1.4"/><rect x="13.1" y="4.5" width="6.4" height="6.4" rx="1.4"/><rect x="4.5" y="13.1" width="6.4" height="6.4" rx="1.4"/><rect x="13.1" y="13.1" width="6.4" height="6.4" rx="1.4"/>',
   raf:'<rect x="4" y="4.5" width="16" height="15" rx="1.6"/><path d="M4 9.8h16M4 14.6h16"/>',
-  gorsel:'<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m5 17 4.5-4.5 3 3 2.5-2.5L19 17"/>'
+  gorsel:'<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m5 17 4.5-4.5 3 3 2.5-2.5L19 17"/>',
+  pusula:'<circle cx="12" cy="12" r="8.2"/><path d="m14.9 9.1-1.7 4.1-4.1 1.7 1.7-4.1z"/>',
+  ara:'<circle cx="11" cy="11" r="5.2"/><path d="m15 15 4.4 4.4"/>',
+  yogun:'<path d="M4.5 6h15M4.5 10h15M4.5 14h15M4.5 18h15"/>'
 };
 function ikon(ad){
   return '<svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
@@ -1187,8 +1301,120 @@ function hizAnaliz(k){
   return { hiz: Math.round(hiz * 10) / 10, toplam, gun, tahmin };
 }
 
+/* ---------- Kütüphane üst blokları (kt-, v42 Ciltli) ----------
+   Başlık + cilt sayısı + tarih + yıl hedefi + devam eden okuma + sırada.
+   listeCiz her çizimde çağırır (veri değişince bloklar bayat kalmaz).
+   Tarih adları ELLE: toLocaleDateString'in ICU'suna güvenmek test ortamında
+   saat dilimi/locale sürprizi üretebiliyor (g30/v40 dersi). */
+const KT_AY = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const KT_GUN = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+function ktPlate(k, sinif){
+  // Kapak önceliği listeyle aynı: yerel foto > uzak URL > kesikli yer tutucu.
+  if(k.kapakYerel && window.__kapak)
+    return `<div class="plate ${sinif}"><img class="kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt=""></div>`;
+  if(k.kapak)
+    return `<div class="plate ${sinif}"><img src="${escAttr(k.kapak)}" alt="" loading="lazy"></div>`;
+  return `<div class="plate ${sinif} p-bos" aria-hidden="true"></div>`;
+}
+/* Levha içindeki kapak yüklenemezse img kalkar, kesikli çerçeve (p-bos) kalır.
+   Satır içi onerror KULLANILMAZ (g12 XSS kararı). */
+function ktPlateHata(kap){
+  kap.querySelectorAll('.plate > img').forEach(img => {
+    const dus = () => { const p = img.parentNode; if(!p) return; p.classList.add('p-bos'); img.remove(); };
+    img.addEventListener('error', dus, { once: true });
+    if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) dus();
+  });
+}
+function rafUstCiz(){
+  const kap = document.getElementById('ktUst');
+  if(!kap) return;
+  const ks = veri.kitaplar;
+  const ciltSayi = ks.filter(k => (k.sahiplik || 'sahip') !== 'istek').length;
+  const simdi = new Date();
+  let html = `<div class="kt-baslik-satir">
+      <h2 class="kt-baslik">Kütüphanem</h2>
+      <span class="kt-cilt">${ciltSayi} cilt</span>
+    </div>
+    <div class="kt-tarih">${simdi.getDate()} ${KT_AY[simdi.getMonth()]} ${simdi.getFullYear()} · ${KT_GUN[simdi.getDay()]}</div>`;
+  // YIL HEDEFİ — hedef yoksa bölüm çizilmez; sayı İstatistik'le AYNI motor (istKayit)
+  const yil = simdi.getFullYear();
+  const hedef = veri.hedef[yil] || 0;
+  if(hedef > 0){
+    const biten = ks.map(istKayit).filter(Boolean)
+      .filter(k => k.bitisTarihi && String(k.bitisTarihi).startsWith(String(yil))).length;
+    const p = Math.min(100, Math.round(biten / hedef * 100));
+    html += `<div class="kt-bolum" id="ktHedef">
+      <button class="kt-hedef" data-act="kt-ist" title="İstatistik'te hedefini düzenle">
+        <span class="kt-hedef-ic"><span class="kicker">${yil} hedefi</span>
+          <span class="ilerleme" style="display:block" aria-hidden="true"><span style="display:block;height:100%;background:var(--brass);width:${p}%"></span></span></span>
+        <span class="kt-hedef-sayi">${biten} / ${hedef}</span>
+      </button>
+    </div>`;
+  }
+  /* Arama yazılıyken devam/sırada blokları GİZLENİR (karar): aranan sonuç
+     listede — ambiyans blokları sonucu ekran dışına itmesin. Hedef kalır. */
+  if(!durum.arama){
+    const okunanlar = ks.filter(k => k.durum === 'okunuyor').sort((a,b) => (b.gsG||0) - (a.gsG||0));
+    if(okunanlar.length){
+      const kartlar = okunanlar.map(k => {
+        const sayfaVar = k.sayfa > 0;
+        const g = k.guncelSayfa || 0;
+        const p = sayfaVar ? Math.min(100, Math.round(g / k.sayfa * 100)) : 0;
+        return `<div class="kt-devam-kart">
+          ${ktPlate(k, 'kt-dkapak')}
+          <div class="kt-devam-ic">
+            <div class="kt-devam-ad">${esc(k.ad)}</div>
+            ${k.yazar ? `<div class="kt-devam-yazar">${esc(k.yazar)}</div>` : ''}
+            <div class="kt-devam-alt">
+              ${sayfaVar ? `<div class="ilerleme" aria-hidden="true"><div style="width:${p}%"></div></div>
+              <div class="kt-devam-sayfa"><span>${g} / ${k.sayfa} sayfa</span><span>%${p}</span></div>` : ''}
+              <div class="kt-devam-dugme">
+                <button class="btn btn-brass" data-act="kt-sayfa-ac" data-id="${k.id}">Sayfa işaretle</button>
+                <button class="btn btn-cerceve" data-act="kt-git" data-id="${k.id}">Kitaba git</button>
+              </div>
+              <div class="kt-sayfa-satir" id="ktSayfaKutu-${k.id}" hidden>
+                <input type="number" inputmode="numeric" min="0"${sayfaVar ? ` max="${k.sayfa}"` : ''} value="${g}" aria-label="Güncel sayfa">
+                <button class="btn btn-cerceve btn-kucuk" data-act="kt-sayfa-kaydet" data-id="${k.id}">Kaydet</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      });
+      html += `<div class="kt-bolum" id="ktDevam">
+        <div class="kicker" style="display:block;margin-bottom:12px">Devam eden okuma</div>
+        ${okunanlar.length > 1 ? `<div class="kt-serit">${kartlar.join('')}</div>` : kartlar[0]}
+      </div>`;
+    }
+    // SIRADA: okunacaklardan (istek listesi HARİÇ — rafta olmayan kitap sırada duramaz)
+    const sirada = ks.filter(k => k.durum === 'okunacak' && (k.sahiplik || 'sahip') !== 'istek')
+      .sort((a,b) => (b.eklenme||0) - (a.eklenme||0));
+    if(sirada.length){
+      html += `<div class="kt-bolum" id="ktSirada">
+        <div class="kt-bolum-bas"><span class="kicker">Sırada</span>
+          <span class="kt-adet">${sirada.length} kitap</span></div>
+        <div class="kt-serit" id="ktSiradaSerit">${sirada.slice(0, 12).map(k => {
+          const kapakli = k.kapak || (k.kapakYerel && window.__kapak);
+          if(kapakli){
+            const ic = (k.kapakYerel && window.__kapak)
+              ? `<img class="kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt="">`
+              : `<img src="${escAttr(k.kapak)}" alt="" loading="lazy">`;
+            return `<button class="plate kt-sira-plate kt-sira-kapakli" data-act="detay" data-id="${k.id}" title="${escAttr(k.ad)}">${ic}</button>`;
+          }
+          return `<button class="plate kt-sira-plate p-bos" data-act="detay" data-id="${k.id}">
+            <span class="kt-sira-ad">${esc(k.ad)}</span>
+            ${k.yazar ? `<span class="kt-sira-yazar">${esc(k.yazar)}</span>` : ''}
+          </button>`;
+        }).join('')}</div>
+      </div>`;
+    }
+  }
+  kap.innerHTML = html;
+  ktPlateHata(kap);
+}
+
 /* ---------- liste ---------- */
 function listeCiz(){
+  rafUstCiz();
   const kap = document.getElementById('liste');
   const q = katla(durum.arama);
   let ks = veri.kitaplar.filter(k => {
@@ -1240,17 +1466,11 @@ function listeCiz(){
       ilerlemeHtml = `<div class="ilerleme"><div style="width:${p}%"></div></div>
         <div class="ilerleme-txt">${k.guncelSayfa||0} / ${k.sayfa} · %${p}${tahminTxt}</div>`;
     }
-    // Kapak önceliği: yerel fotoğraf > uzak URL > sırt. Yerel img'nin src'sini
-    // kapak.js IndexedDB'den doldurur; blob yoksa data-kp-yedek (uzak) devralır,
-    // o da hata verirse error dinleyicisi (listeKapakHata) sırt yer tutucusuna
-    // düşürür. Satır içi onerror KULLANILMAZ: baş harfli yer tutucu metin taşıyor,
-    // öznitelik içinde kitap adı ikinci kez çözülüp kod çalıştırabilirdi
-    // (gorunum.js'te kapatılan XSS deseninin aynısı).
-    const sol = k.kapakYerel && window.__kapak
-      ? `<img class="kapak-mini kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt="">`
-      : k.kapak
-      ? `<img class="kapak-mini" src="${escAttr(k.kapak)}" alt="" loading="lazy">`
-      : `<div class="sirt" style="background:${sirtRenk(k.ad)}" aria-hidden="true">${esc(basHarf(k.ad))}</div>`;
+    // Kapak önceliği: yerel fotoğraf > uzak URL > kesikli yer tutucu (v42 plate).
+    // Yerel img'nin src'sini kapak.js IndexedDB'den doldurur; blob yoksa
+    // data-kp-yedek (uzak) devralır, o da hata verirse ktPlateHata kesikli
+    // çerçeveye düşürür. Satır içi onerror KULLANILMAZ (g12 XSS kararı).
+    const sol = ktPlate(k, 'p-mini');
     const notSayi = (k.notlar||[]).length;
     return `<button class="kart" data-act="detay" data-id="${k.id}">
       ${sol}
@@ -1269,28 +1489,7 @@ function listeCiz(){
       </div>
     </button>`;
   }).join('');
-  listeKapakHata(kap);
-}
-/* Kapak yüklenemezse baş harfli sırt yer tutucusunu DOM API'siyle kurar
-   (gorunum.js yedekSirtKoy deseninin liste karşılığı). */
-function listeKapakHata(kap){
-  kap.querySelectorAll('img.kapak-mini').forEach(img => {
-    const kart = img.closest('.kart');
-    const k = kart ? kitapBul(kart.dataset.id) : null;
-    const ad = k ? k.ad : '';
-    const dus = () => {
-      if(!img.parentNode) return;
-      const d = document.createElement('div');
-      d.className = 'sirt';
-      d.style.background = sirtRenk(ad);
-      d.setAttribute('aria-hidden', 'true');
-      d.textContent = basHarf(ad);
-      img.parentNode.replaceChild(d, img);
-    };
-    img.addEventListener('error', dus, { once: true });
-    // src'siz yerel-kapak img'leri (kapak.js dolduracak) erken-düşme sayılmaz
-    if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) dus();
-  });
+  ktPlateHata(kap);
 }
 
 function etiketFiltreDoldur(){
@@ -2643,6 +2842,37 @@ document.addEventListener('click', e => {
         if(window.__oturum && window.__oturum.durumKapat) window.__oturum.durumKapat(k.id, true);
         depoKaydet(); hepsiniCiz(); detayAc(k.id);
         toast('Yeniden okumaya başladın — önceki okuman geçmişe kaydedildi');
+      }
+      break; }
+    /* kt- (v42): Kütüphane üst bloklarının eylemleri */
+    case 'kt-ist': sekmeGec('ist'); break;
+    case 'kt-git': detayAc(el.dataset.id); break;
+    case 'kt-sayfa-ac': {
+      const id = el.dataset.id;
+      let ot = null;
+      try{ ot = JSON.parse(localStorage.getItem('kk_oturum_v1') || 'null'); }catch(e){}
+      if(ot && ot.kitapId === id){
+        // Açık oturumun TEK sayfa girişi oturum şerididir (çifte giriş engeli —
+        // oturum.js aynı kuralla çekirdek kutusunu gizliyor); detaya götür.
+        detayAc(id); toast('Okuma oturumu açık — sayfayı oturumu bitirirken gir');
+        break;
+      }
+      const kutu = document.getElementById('ktSayfaKutu-' + id);
+      if(kutu){
+        kutu.hidden = !kutu.hidden;
+        if(!kutu.hidden){ const g = kutu.querySelector('input'); if(g){ g.focus(); g.select(); } }
+      }
+      break; }
+    case 'kt-sayfa-kaydet': {
+      const k = kitapBul(el.dataset.id);
+      const kutu = document.getElementById('ktSayfaKutu-' + el.dataset.id);
+      const g = kutu ? (parseInt(kutu.querySelector('input').value) || 0) : 0;
+      if(k){
+        // Detaydaki ilerleme-kaydet ile AYNI üçlü: clamp + seans + gsG damgası
+        const yeni = k.sayfa ? Math.min(g, k.sayfa) : g;
+        seansEkle(k, k.guncelSayfa || 0, yeni);
+        if(k.guncelSayfa !== yeni){ k.guncelSayfa = yeni; k.gsG = Date.now(); }
+        depoKaydet(); hepsiniCiz(); toast('İlerleme kaydedildi');
       }
       break; }
     case 'vm-sahiplik':

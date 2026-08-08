@@ -172,12 +172,16 @@ test.describe('G35 Ciltli tipografi + Palet A', () => {
       ['#durumChips .chip.active', null, 'aktif çip'],
       ['#durumChips .chip:not(.active)', null, 'pasif çip'],
       ['.count-label', 'body', 'sayaç'],
-      ['#liste .sirt', null, 'liste sırt baş harfi']
+      // v42: renkli sırt emekli — yeni Ciltli üst bloğu metin rolleri ölçülür
+      ['#ktUst .kt-cilt', 'body', 'cilt sayısı etiketi'],
+      ['#ktUst .kicker', 'body', 'kicker (Sırada)'],
+      ['#ktUst .kt-adet', 'body', 'şerit adedi']
     ], 'kütüphane-liste');
-    await page.click('#izgaraBtn');
+    await page.click('#duzenIzgara');
     await ciftleriDogrula(page, [
-      ['#liste .iz-yedek', null, 'ızgara sırt karosu (tam ad)'],
-      ['#liste .kart-baslik', 'body', 'ızgara başlık']
+      ['#liste .iz-yedek', null, 'ızgara levha yer tutucusu (tam ad)'],
+      ['#liste .kart-baslik', 'body', 'ızgara başlık'],
+      ['#liste .iz-durum', 'body', 'ızgara durum satırı (v42)']
     ], 'kütüphane-ızgara');
   });
 

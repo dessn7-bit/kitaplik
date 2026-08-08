@@ -109,27 +109,41 @@ test.describe('G21 M1 — karanlık tema', () => {
       const kart = document.querySelector('#liste .kart');
       const baslik = kart.querySelector('.kart-baslik');
       const yazar = kart.querySelector('.kart-yazar');
-      const zemin = getComputedStyle(kart).backgroundColor;
+      // v42 Ciltli: satır dolgusuz (şeffaf) — etkin zemin gövde zeminidir
+      const govde = getComputedStyle(document.body).backgroundColor;
+      let zemin = getComputedStyle(kart).backgroundColor;
+      if(zemin === 'rgba(0, 0, 0, 0)' || zemin === 'transparent') zemin = govde;
       return { baslikRenk: getComputedStyle(baslik).color, kartZemin: zemin,
         yazarRenk: yazar ? getComputedStyle(yazar).color : null,
-        govdeZemin: getComputedStyle(document.body).backgroundColor };
+        govdeZemin: govde };
     });
     expect(kontrast(olcum.baslikRenk, olcum.kartZemin)).toBeGreaterThanOrEqual(4.5);
     expect(kontrast(olcum.yazarRenk, olcum.kartZemin),
       `kart yazar rengi ${olcum.yazarRenk} / ${olcum.kartZemin}`).toBeGreaterThanOrEqual(4.5);
-    /* SABİT RENK KAÇAĞI DENETİMİ: pirinç ZEMİN üzerindeki metin. Karanlıkta pirinç
-       açık renge döndüğü için sabit beyaz (#FFFDF7) metin okunmaz hale gelir —
-       değişkene (--uzeri) bağlı olmayan her kural burada yakalanır. */
+    /* SABİT RENK KAÇAĞI DENETİMİ (v42 kontur diline uyarlandı): dolu pirinç
+       zemin kalmadı — vurgu sınıflarının METNİ artık sayfa zemini üzerinde
+       ölçülür (%7 tint ihmal edilebilir; sabit-renk kaçağı yine yakalanır:
+       karanlıkta açık zemine sabit açık metin bu eşiği geçemez). */
     const pirincUstu = await page.evaluate(() => {
       const oge = [...document.querySelectorAll('.chip.active, .btn-brass, .durum-btn.secili, .mini-chip.secili, .tm-dugme.tm-secili')]
         .filter(e => e.offsetParent !== null);
-      return oge.map(e => ({ sinif: e.className, metin: getComputedStyle(e).color,
-        zemin: getComputedStyle(e).backgroundColor }));
+      const govde = getComputedStyle(document.body).backgroundColor;
+      return oge.map(e => {
+        let zemin = getComputedStyle(e).backgroundColor;
+        // dolgusuz/tint zemin → etkin zemin sayfa zemini. Alfa hem "rgba(r,g,b,a)"
+        // hem "color(srgb r g b / a)" (color-mix serilemesi) biçiminde gelebilir.
+        let alfa = 1;
+        const m1 = zemin && zemin.match(/rgba\([^)]*,\s*([\d.]+)\)$/);
+        const m2 = zemin && zemin.match(/\/\s*([\d.]+)\)$/);
+        if(m1) alfa = parseFloat(m1[1]); else if(m2) alfa = parseFloat(m2[1]);
+        if(!zemin || zemin === 'transparent' || alfa < 0.5) zemin = govde;
+        return { sinif: e.className, metin: getComputedStyle(e).color, zemin };
+      });
     });
     expect(pirincUstu.length).toBeGreaterThan(0);
     for (const o of pirincUstu) {
       expect(kontrast(o.metin, o.zemin),
-        `pirinç zeminli öğe (${o.sinif}): ${o.metin} / ${o.zemin}`).toBeGreaterThanOrEqual(4.5);
+        `vurgu öğesi (${o.sinif}): ${o.metin} / ${o.zemin}`).toBeGreaterThanOrEqual(4.5);
     }
     expect(parlaklik(olcum.govdeZemin)).toBeLessThan(0.1);
   });

@@ -4,18 +4,27 @@ const { test, expect, tohumla, sahteKitap,
 
 test.describe('G9 görünüm ve toplu işlem', () => {
 
-  test('ızgara/liste geçişi çalışır, tercih localStorage\'da saklanır', async ({ page }) => {
+  /* v42: iki-durumlu #izgaraBtn emekli — üç düzen anahtarı (#duzenIzgara/
+     #duzenListe/#duzenYogun) kendi düzenini SEÇER; tercih duzen alanında,
+     izgara boolean'ı geriye dönük yazılmaya devam eder. */
+  test('düzen anahtarı çalışır (izgara/liste/yoğun), tercih localStorage\'da saklanır', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Izgara Kitabı' })]);
     await rafAc(page);
     await expect(page.locator('#liste')).not.toHaveClass(/izgara/);
-    await page.click('#izgaraBtn');
+    await page.click('#duzenIzgara');
     await expect(page.locator('#liste')).toHaveClass(/izgara/);
     expect(await page.evaluate(() =>
       JSON.parse(localStorage.getItem('kk_gorunum_v1')).izgara)).toBe(true);
-    await page.click('#izgaraBtn');
+    expect(await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('kk_gorunum_v1')).duzen)).toBe('izgara');
+    await page.click('#duzenListe');
     await expect(page.locator('#liste')).not.toHaveClass(/izgara/);
     expect(await page.evaluate(() =>
       JSON.parse(localStorage.getItem('kk_gorunum_v1')).izgara)).toBe(false);
+    await page.click('#duzenYogun');
+    await expect(page.locator('#liste')).toHaveClass(/yogun/);
+    expect(await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('kk_gorunum_v1')).duzen)).toBe('yogun');
   });
 
   test('kapaksız kitapta yedek görsel çizilir', async ({ page }) => {

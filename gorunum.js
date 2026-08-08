@@ -1,34 +1,39 @@
 /* Kitaplık — raf görünümü eklentisi
    1) Çoklu seçim + toplu düzenleme (raf ata, etiket ekle, durum değiştir, sil)
-   2) Kapak ızgarası görünümü (isteğe bağlı rafa göre gruplama)
+   2) Görünüm düzenleri (v42 Ciltli): izgara (kapak levhası duvarı) / liste /
+      yoğun (küçük levhalı sık satır — çok kitaplı rafta hızlı tarama)
    Kendi kendine yeten modül: index.html'de tek satırlık script etiketiyle yüklenir. */
 'use strict';
 (function(){
   const GORUNUM_ANAHTAR = 'kk_gorunum_v1';
+  const DUZENLER = ['izgara', 'liste', 'yogun'];
   let secimModu = false;
   let secilenler = new Set();
-  let izgara = false, rafGrupla = false;
+  let duzen = 'izgara', rafGrupla = false;
   let basmaZaman = null, basmaId = null;
 
   const kacir = s => String(s ?? '').replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function bildir(m){ if(typeof toast === 'function') toast(m); }
   function kitapBulL(id){ return (veri.kitaplar||[]).find(k => k.id === id); }
+  function ik(ad){ return window.ikon ? window.ikon(ad) : ''; }
 
   function ayarYukle(){
-    /* v40 KARAR: Kütüphane bir RAF — varsayılan görünüm İZGARA (kapak duvarı;
-       "elimdeki bütün kitapları göreyim, hangisini okuyacağımı seçeyim").
-       Kayıtlı tercih VARSA ona saygı duyulur (daha önce listeyi seçen listede
-       kalır); anahtar hiç yazılmamışsa izgara. */
+    /* v40 KARAR: Kütüphane bir RAF — varsayılan görünüm İZGARA (kapak duvarı).
+       v42: iki-durumlu izgara/liste anahtarı üç-düzen seçiciye büyüdü
+       (izgara/liste/yogun). ESKİ ŞEMA ({izgara:bool}) GÖÇLE OKUNUR: eski cihaz
+       ve eski test tohumları kırılmaz; yazarken iki alan birden basılır. */
     try{
       const ham = localStorage.getItem(GORUNUM_ANAHTAR);
-      if(ham === null){ izgara = true; rafGrupla = false; return; }
+      if(ham === null){ duzen = 'izgara'; rafGrupla = false; return; }
       const a = JSON.parse(ham) || {};
-      izgara = !!a.izgara; rafGrupla = !!a.rafGrupla;
-    }catch(e){ izgara = true; }
+      duzen = DUZENLER.indexOf(a.duzen) >= 0 ? a.duzen : (a.izgara ? 'izgara' : 'liste');
+      rafGrupla = !!a.rafGrupla;
+    }catch(e){ duzen = 'izgara'; }
   }
   function ayarYaz(){
-    try{ localStorage.setItem(GORUNUM_ANAHTAR, JSON.stringify({ izgara, rafGrupla })); }catch(e){}
+    try{ localStorage.setItem(GORUNUM_ANAHTAR,
+      JSON.stringify({ duzen, izgara: duzen === 'izgara', rafGrupla })); }catch(e){}
   }
 
   function stilEkle(){
@@ -36,102 +41,130 @@
     const s = document.createElement('style');
     s.id = 'gorunumStil';
     s.textContent = `
-      /* v40: min sütun 104→96px — kapak duvarı yoğunluğu: 412px ekranda 3 sütun
-         ~118px, 360px'te 3 sütun ~101px (104 minimumu 360'ta 2 dev sütuna
-         düşürüyordu; ~100px kapak tanıma için yeterli, Goodreads mobil dengi). */
-      #liste.izgara{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px}
-      #liste.izgara .kart{flex-direction:column;background:transparent;border:none;box-shadow:none;padding:0}
+      /* ---- İZGARA (v42 Ciltli): kapak levhası duvarı + durum satırı ---- */
+      #liste.izgara{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:16px 12px}
+      #liste.izgara .kart{flex-direction:column;background:transparent;border:none;box-shadow:none;
+        padding:0;border-radius:0;gap:0}
       #liste.izgara .kart .kart-ic{padding:6px 2px 0}
       #liste.izgara .kart-baslik{font-size:.82rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
       #liste.izgara .kart-yazar{font-size:.72rem;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      #liste.izgara .kart-alt,#liste.izgara .ilerleme-txt{display:none}
-      #liste.izgara .iz-kapak{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:var(--r-mini);
-        border:1px solid var(--border);background:var(--surface2);box-shadow:var(--yukselti-2)}
-      /* v40: liste sırtıyla AYNI cilt dili — sağ iç gölge + sol ışık çizgisi.
-         İçerik TAM AD kalır (bilinçli): ~100px+ genişlikte ad okunur ve kapak
-         duvarında seçime yardım eder; baş harfe indirgemek bilgi kaybettirirdi
-         (listenin 52px kılıfında baş harf zorunluluktu). */
-      #liste.izgara .iz-yedek{width:100%;aspect-ratio:2/3;border-radius:var(--r-mini);display:flex;align-items:flex-end;
-        padding:8px;font-family:var(--serif);font-size:.8rem;font-weight:600;color:var(--uzeri);line-height:1.3;
-        box-shadow:var(--yukselti-2),inset -12px 0 14px -10px rgba(0,0,0,.38),inset 3px 0 0 rgba(255,253,247,.28);
-        overflow:hidden}
-      /* v40: okunmuş (bitti) kitap raf duvarında sönük — okunmamışlar öne çıkar */
-      #liste.izgara .kart.iz-okundu .iz-kapak,
-      #liste.izgara .kart.iz-okundu .iz-yedek{opacity:.55;filter:grayscale(.4)}
+      #liste.izgara .kart-alt,#liste.izgara .ilerleme,#liste.izgara .ilerleme-txt{display:none}
+      #liste.izgara .iz-plate{width:100%;height:150px}
+      /* Kapaksız karo: levha içinde kesikli çerçeve + TAM AD (bilinçli: ~100px
+         genişlikte ad okunur, kapak duvarında seçime yardım eder; g12 XSS metin
+         sözleşmesi de tam adı bekler). Renkli sırt v42'de emekli. */
+      #liste.izgara .iz-yedek{position:absolute;inset:0;padding:7px 8px;overflow:hidden;
+        font-family:var(--serif);font-size:.78rem;font-weight:600;color:var(--paper);
+        line-height:1.25;text-align:left;overflow-wrap:break-word}
+      /* v42: okunmuş işareti — sönükleştirme (opacity/grayscale) EMEKLİ.
+         Durum satırı taşır: Okundu ✓(SVG) sessiz, Okunuyor altın. AA korunur
+         (muted/muted2 zaten 4.9+); tasarımın %38-45 mürekkep karışımları küçük
+         puntoda AA'yı kırdığı için renk rolleri paletten seçildi. */
+      #liste.izgara .iz-durum{display:flex;align-items:center;gap:4px;margin-top:5px;
+        font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2)}
+      #liste.izgara .iz-durum .ikon{width:11px;height:11px;stroke-width:2.2}
+      #liste.izgara .iz-durum.d-okunuyor{color:var(--brass)}
+      #liste.izgara .iz-durum.d-bitti{color:var(--muted)}
+      #liste.izgara .iz-durum.d-yarim{color:var(--drop)}
+      /* ---- YOĞUN (v42): küçük levha + tek satır — hızlı tarama ---- */
+      #liste.yogun{display:flex;flex-direction:column;gap:0}
+      #liste.yogun .kart{background:transparent;border:none;box-shadow:none;border-radius:0;
+        border-bottom:1px solid var(--cizgi);padding:7px 0;gap:10px;align-items:center}
+      #liste.yogun .yg-plate{width:26px;height:38px;border-width:3px}
+      #liste.yogun .kart-ic{padding:0;display:flex;align-items:baseline;gap:8px;min-width:0;flex:1}
+      #liste.yogun .kart-baslik{font-family:var(--serif);font-size:.92rem;font-weight:600;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+      #liste.yogun .kart-yazar{font-size:.72rem;color:var(--muted);margin:0;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+      #liste.yogun .yg-durum{margin-left:auto;flex:0 0 auto;font-size:.6rem;
+        letter-spacing:.06em;text-transform:uppercase;color:var(--muted2)}
+      #liste.yogun .yg-durum.d-okunuyor{color:var(--brass)}
+      #liste.yogun .yg-durum.d-yarim{color:var(--drop)}
       .vm-iz-istek{position:absolute;top:6px;right:6px;background:var(--mavi);color:var(--uzeri);
-        font-size:.6rem;padding:2px 6px;border-radius:999px;z-index:2;letter-spacing:.02em}
-      .raf-basligi{grid-column:1/-1;font-size:.8rem;color:var(--muted);margin:6px 0 -4px;letter-spacing:.03em}
-      .kart.secili{outline:2px solid var(--brass);outline-offset:2px;border-radius:var(--radius)}
+        font-size:.6rem;padding:2px 6px;border-radius:var(--r-sm);z-index:2;letter-spacing:.02em}
+      .raf-basligi{grid-column:1/-1;font-size:.72rem;color:var(--muted);margin:8px 0 -6px;
+        letter-spacing:.08em;text-transform:uppercase;padding-bottom:4px;
+        border-bottom:1px solid var(--cizgi)}
+      #liste.yogun .raf-basligi{margin:10px 0 0}
+      .kart.secili{outline:2px solid var(--brass);outline-offset:2px;border-radius:var(--r-sm)}
       .secim-isaret{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:999px;
-        background:var(--brass);color:var(--uzeri);display:flex;align-items:center;justify-content:center;
+        background:var(--bg);border:1px solid var(--brass);color:var(--brass);
+        display:flex;align-items:center;justify-content:center;
         font-size:.8rem;z-index:3;box-shadow:var(--yukselti-2)}
       .secim-isaret .ikon{width:13px;height:13px;vertical-align:0}
-      /* yukarı-yönlü tek gölge: yüzer geçici çubuk — bilinçli istisna */
+      /* Toplu çubuk (v42 Ciltli): kontur dili — zemin + ayraç, düğmeler dolgusuz;
+         yukarı-yönlü tek gölge yüzer geçici çubuğun bilinçli istisnası */
       .toplu-cubuk{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:31;
-        background:var(--surface);border-top:1px solid var(--brass-dim);padding:10px 14px;
+        background:var(--bg);border-top:1px solid var(--cizgi);padding:10px 14px;
         display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 -2px 8px var(--golge-orta)}
       .toplu-cubuk .sayi{font-size:.85rem;color:var(--brass);font-weight:600;margin-right:auto}
-      .toplu-cubuk button{padding:8px 12px;border-radius:var(--r-ic);border:1px solid var(--border);
-        background:var(--surface2);font-size:.8rem;color:var(--paper)}
+      .toplu-cubuk button{padding:8px 12px;border-radius:var(--r-md);border:1px solid var(--cizgi);
+        background:transparent;font-size:.8rem;color:var(--paper)}
       .toplu-cubuk button.tehlike{border-color:var(--drop);color:var(--drop)}
-      .gorunum-dugme{padding:8px 12px;border-radius:var(--r-ic);border:1px solid var(--border);
-        background:var(--surface);font-size:.8rem;color:var(--muted)}
-      .gorunum-dugme.aktif{background:var(--brass);color:var(--uzeri);border-color:var(--brass);font-weight:600}
+      .gorunum-dugme{padding:8px 12px;border-radius:var(--r-md);border:1px solid var(--cizgi);
+        background:transparent;font-size:.8rem;color:var(--muted)}
+      .gorunum-dugme.aktif{border-color:var(--brass);color:var(--brass);
+        background:color-mix(in srgb,var(--brass) 7%,transparent);font-weight:600}
+      /* Üç düzen anahtarı (v42): görsel 32×30, dokunma alanı ::after ile ~40px */
+      .duzen-anahtar{display:flex;gap:4px}
+      .duzen-dugme{width:32px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;
+        border:1px solid var(--cizgi);border-radius:var(--r-sm);background:transparent;
+        color:var(--muted);position:relative}
+      .duzen-dugme::after{content:'';position:absolute;inset:-5px -4px}
+      .duzen-dugme .ikon{width:15px;height:15px}
+      .duzen-dugme.aktif{border-color:var(--brass);color:var(--brass);
+        background:color-mix(in srgb,var(--brass) 7%,transparent)}
     `;
     document.head.appendChild(s);
   }
 
   function dugmeEkle(){
     const satir = document.querySelector('.sort-row');
-    if(!satir || document.getElementById('izgaraBtn')) return;
-    const b = document.createElement('button');
-    b.id = 'izgaraBtn'; b.className = 'gorunum-dugme' + (izgara ? ' aktif' : '');
-    b.dataset.act = 'gorunum-degis';
-    // innerHTML güvenli: içerik sabit dizeler + ikon() SVG'si, kullanıcı verisi yok (XSS riski yok).
-    b.innerHTML = izgara
-      ? (window.ikon ? window.ikon('liste') : '') + ' Liste'
-      : (window.ikon ? window.ikon('izgara') : '') + ' Izgara';
-    satir.insertBefore(b, satir.firstChild.nextSibling);
+    if(!satir || document.getElementById('duzenAnahtar')) return;
     const s = document.createElement('button');
     s.id = 'secimBtn'; s.className = 'gorunum-dugme';
     s.dataset.act = 'secim-ac';
-    s.innerHTML = (window.ikon ? window.ikon('onay') : '') + ' Seç';
-    satir.insertBefore(s, b);
-    // Raf gruplama YALNIZ ızgara açıkken anlamlı — liste görünümünde gizli durur.
+    // innerHTML güvenli: sabit dizeler + ikon() SVG'si, kullanıcı verisi yok.
+    s.innerHTML = ik('onay') + ' Seç';
+    satir.insertBefore(s, satir.firstChild.nextSibling);
+    /* v42: iki-durumlu #izgaraBtn EMEKLİ — üç düzen anahtarı (tasarım deseni).
+       Her düğme kendi düzenini SEÇER (toggle değil); tercih kk_gorunum_v1'de. */
+    const grup = document.createElement('div');
+    grup.id = 'duzenAnahtar'; grup.className = 'duzen-anahtar';
+    grup.innerHTML =
+      '<button id="duzenIzgara" class="duzen-dugme" data-act="duzen-sec" data-v="izgara" aria-label="Izgara görünümü" title="Izgara">' + ik('izgara') + '</button>' +
+      '<button id="duzenListe" class="duzen-dugme" data-act="duzen-sec" data-v="liste" aria-label="Liste görünümü" title="Liste">' + ik('liste') + '</button>' +
+      '<button id="duzenYogun" class="duzen-dugme" data-act="duzen-sec" data-v="yogun" aria-label="Yoğun görünüm" title="Yoğun">' + ik('yogun') + '</button>';
+    satir.insertBefore(grup, s.nextSibling);
     const r = document.createElement('button');
     r.id = 'rafGrupBtn'; r.className = 'gorunum-dugme' + (rafGrupla ? ' aktif' : '');
     r.dataset.act = 'raf-grupla';
-    r.innerHTML = (window.ikon ? window.ikon('raf') : '') + ' Rafa göre';
-    satir.insertBefore(r, b.nextSibling);
+    r.innerHTML = ik('raf') + ' Rafa göre';
+    satir.insertBefore(r, grup.nextSibling);
+    duzenDugmeTazele();
     rafDugmeTazele();
+  }
+  function duzenDugmeTazele(){
+    const grup = document.getElementById('duzenAnahtar');
+    if(!grup) return;
+    grup.querySelectorAll('.duzen-dugme').forEach(b => {
+      const aktif = b.dataset.v === duzen;
+      b.classList.toggle('aktif', aktif);
+      b.setAttribute('aria-pressed', aktif ? 'true' : 'false');
+    });
   }
   function rafDugmeTazele(){
     const r = document.getElementById('rafGrupBtn');
     if(!r) return;
-    /* v40: raf verisi HİÇ yoksa düğme gösterilmez (işlevsiz düğme keşfedilebilirliği
-       düşürür); raf girilmiş kitap varsa izgarada görünür — listeCiz sarmalayıcısı
-       her çizimde çağırdığı için raf eklendiği anda belirir. */
+    /* Raf verisi HİÇ yoksa düğme gösterilmez (v40 kararı). v42: gruplama izgara
+       VE yoğun düzende anlamlı (ikisi de raf taramasi); listede gizli. */
     const rafVar = (typeof veri === 'object' && Array.isArray(veri.kitaplar))
       && veri.kitaplar.some(k => k.raf && String(k.raf).trim());
-    r.style.display = (izgara && rafVar) ? '' : 'none';
+    r.style.display = (duzen !== 'liste' && rafVar) ? '' : 'none';
     r.classList.toggle('aktif', rafGrupla);
   }
 
-  function sirtRenkL(ad){
-    /* v41: index.html SIRT_RENK ile AYNI liste (parşömen uyumu, üzeri metin AA) */
-    const renkler = ['#8A6524','#5C7040','#96502E','#53667E','#7B5871','#6A5433','#40707A','#8C4A38'];
-    let h = 0;
-    for(const ch of String(ad)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
-    return renkler[h % renkler.length];
-  }
-  function izgaraCiz(){
-    const kap = document.getElementById('liste');
-    if(!kap) return;
-    const idler = [...kap.querySelectorAll('.kart')].map(k => k.dataset.id).filter(Boolean);
-    if(!idler.length){ kap.classList.remove('izgara'); return; }
-    kap.classList.add('izgara');
-    const kitaplar = idler.map(kitapBulL).filter(Boolean);
-
+  function grupluCiz(kap, kitaplar, kartFn){
     let parcalar = [];
     if(rafGrupla){
       const gruplar = new Map();
@@ -142,63 +175,103 @@
       });
       [...gruplar.keys()].sort((a,b) => a.localeCompare(b,'tr')).forEach(r => {
         parcalar.push('<div class="raf-basligi">' + kacir(r) + ' · ' + gruplar.get(r).length + '</div>');
-        gruplar.get(r).forEach(k => parcalar.push(kartHtml(k)));
+        gruplar.get(r).forEach(k => parcalar.push(kartFn(k)));
       });
     }else{
-      kitaplar.forEach(k => parcalar.push(kartHtml(k)));
+      kitaplar.forEach(k => parcalar.push(kartFn(k)));
     }
     kap.innerHTML = parcalar.join('');
     kapakHatalariniBagla(kap, kitaplar);
     secimGorselTazele();
   }
-  /* Kapak yüklenemezse yedek sırtı DOM API'siyle kurar.
-     Satır içi onerror KULLANILMAZ: attribute değeri iki kez çözüldüğü için
-     kitap adındaki apostrof JS dizesini kapatıp kod çalıştırabiliyordu. */
+  function listedekiKitaplar(kap){
+    return [...kap.querySelectorAll('.kart')].map(k => k.dataset.id).filter(Boolean)
+      .map(kitapBulL).filter(Boolean);
+  }
+  function izgaraCiz(){
+    const kap = document.getElementById('liste');
+    if(!kap) return;
+    const kitaplar = listedekiKitaplar(kap);
+    if(!kitaplar.length){ kap.classList.remove('izgara'); return; }
+    kap.classList.add('izgara');
+    grupluCiz(kap, kitaplar, kartHtml);
+  }
+  function yogunCiz(){
+    const kap = document.getElementById('liste');
+    if(!kap) return;
+    const kitaplar = listedekiKitaplar(kap);
+    if(!kitaplar.length){ kap.classList.remove('yogun'); return; }
+    kap.classList.add('yogun');
+    grupluCiz(kap, kitaplar, yogunHtml);
+  }
+  /* Levha içindeki kapak yüklenemezse img kalkar; kapaksız karo dilinde
+     (kesikli çerçeve + tam ad) yer tutucu kurulur. Satır içi onerror
+     KULLANILMAZ: attribute değeri iki kez çözüldüğü için kitap adındaki
+     apostrof JS dizesini kapatıp kod çalıştırabiliyordu (g12 kararı). */
   function yedekSirtKoy(img, ad){
     if(!img || !img.parentNode) return;
-    const d = document.createElement('div');
-    d.className = 'iz-yedek';
-    d.style.background = sirtRenkL(ad);
-    d.textContent = String(ad == null ? '' : ad);
-    img.parentNode.replaceChild(d, img);
+    const plate = img.closest('.plate');
+    if(!plate){ img.remove(); return; }
+    plate.classList.add('p-bos');
+    if(plate.classList.contains('iz-plate')){
+      const d = document.createElement('div');
+      d.className = 'iz-yedek';
+      d.textContent = String(ad == null ? '' : ad);
+      plate.replaceChild(d, img);
+    }else{
+      img.remove();
+    }
   }
   function kapakHatalariniBagla(kap, kitaplar){
     const harita = new Map(kitaplar.map(k => [k.id, k]));
     kap.querySelectorAll('.kart').forEach(kart => {
-      const img = kart.querySelector('img.iz-kapak');
+      const img = kart.querySelector('.plate > img');
       if(!img) return;
       const k = harita.get(kart.dataset.id);
       const ad = k ? k.ad : '';
       img.addEventListener('error', () => yedekSirtKoy(img, ad), { once: true });
       // src'siz yerel-kapak img'leri (kapak.js dolduracak) erken-düşme sayılmaz:
-      // src yokken complete=true + naturalWidth=0 normaldir, sırta çevrilmemeli.
-      if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) yedekSirtKoy(img, ad); // dinleyiciden önce düşmüşse
+      // src yokken complete=true + naturalWidth=0 normaldir, yedeğe çevrilmemeli.
+      if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) yedekSirtKoy(img, ad);
     });
   }
+  function plateHtml(k, sinif){
+    // Kapak önceliği: yerel fotoğraf > uzak URL > kesikli yer tutucu (izgarada + tam ad).
+    // İzgara img'i .iz-kapak adını taşımaya devam eder (g12/g23 seçici sözleşmesi).
+    const imgSinif = sinif === 'iz-plate' ? 'iz-kapak' : 'plate-img';
+    if(k.kapakYerel && window.__kapak)
+      return '<div class="plate ' + sinif + '"><img class="' + imgSinif + ' kp-bekliyor" data-kp-id="' + kacir(k.id) + '"' +
+        (k.kapak ? ' data-kp-yedek="' + kacir(k.kapak) + '"' : '') + ' alt=""></div>';
+    if(k.kapak)
+      return '<div class="plate ' + sinif + '"><img class="' + imgSinif + '" src="' + kacir(k.kapak) + '" alt="" loading="lazy"></div>';
+    if(sinif === 'iz-plate')
+      return '<div class="plate iz-plate p-bos"><div class="iz-yedek">' + kacir(k.ad) + '</div></div>';
+    return '<div class="plate ' + sinif + ' p-bos" aria-hidden="true"></div>';
+  }
+  const DURUM_SINIF = { okunuyor:'d-okunuyor', bitti:'d-bitti', okunacak:'d-okunacak', yarim:'d-yarim' };
+  const DURUM_KISA = { okunuyor:'Okunuyor', bitti:'Okundu', okunacak:'Okunacak', yarim:'Yarım' };
   function kartHtml(k){
-    // Kapak önceliği: yerel fotoğraf > uzak URL > sırt. Yerel img src'siz doğar;
-    // kapak.js görünürlüğe girince IndexedDB'den doldurur (500 kitaplık ızgarada
-    // hepsi birden yüklenmesin). Blob yoksa data-kp-yedek, o da yoksa error → sırt.
-    const gorsel = (k.kapakYerel && window.__kapak)
-      ? '<img class="iz-kapak kp-bekliyor" data-kp-id="' + kacir(k.id) + '"' +
-        (k.kapak ? ' data-kp-yedek="' + kacir(k.kapak) + '"' : '') + ' alt="">'
-      : k.kapak
-      ? '<img class="iz-kapak" src="' + kacir(k.kapak) + '" alt="" loading="lazy">'
-      : '<div class="iz-yedek" style="background:' + sirtRenkL(k.ad) + '">' + kacir(k.ad) + '</div>';
-    const rozet = k.durum === 'okunuyor'
-      ? '<div style="position:absolute;top:6px;left:6px;background:var(--brass);color:var(--uzeri);' +
-        'font-size:.6rem;padding:2px 6px;border-radius:999px">okunuyor</div>' : '';
-    // Izgarada yer dar: sol üst "okunuyor" rozetine ayrılmış, seçim işareti geçici;
-    // istek işareti sağ üstte küçük bir pil olarak duruyor (kapak üstünde okunur kalsın diye dolu zemin).
-    const istek = k.sahiplik === 'istek'
-      ? '<div class="vm-iz-istek">İstek</div>' : '';
-    /* v40: bitmiş kitap raf duvarında SÖNÜK (iz-okundu) — okunmamışlar göze
-       çarpsın diye; başlık tam opak kalır (bilgi kaybolmaz), ek rozet yok. */
+    const istek = k.sahiplik === 'istek' ? '<div class="vm-iz-istek">İstek</div>' : '';
+    const dS = DURUM_SINIF[k.durum] || '';
+    // Okunmuş işaret: sessiz ✓ (SVG onay) + "Okundu" — v40'ın sönükleştirmesi emekli
+    const dIk = k.durum === 'bitti' ? ik('onay') : '';
     return '<button class="kart' + (k.durum === 'bitti' ? ' iz-okundu' : '')
       + '" data-act="detay" data-id="' + k.id + '" style="position:relative">' +
-      gorsel + rozet + istek +
+      plateHtml(k, 'iz-plate') + istek +
       '<div class="kart-ic"><div class="kart-baslik">' + kacir(k.ad) + '</div>' +
       (k.yazar ? '<div class="kart-yazar">' + kacir(k.yazar) + '</div>' : '') +
+      '<div class="iz-durum ' + dS + '">' + dIk + (DURUM_KISA[k.durum] || '') + '</div>' +
+      '</div></button>';
+  }
+  function yogunHtml(k){
+    const dS = DURUM_SINIF[k.durum] || '';
+    const dIk = k.durum === 'bitti' ? ik('onay') : '';
+    return '<button class="kart' + (k.durum === 'bitti' ? ' iz-okundu' : '')
+      + '" data-act="detay" data-id="' + k.id + '" style="position:relative">' +
+      plateHtml(k, 'yg-plate') +
+      '<div class="kart-ic"><span class="kart-baslik">' + kacir(k.ad) + '</span>' +
+      (k.yazar ? '<span class="kart-yazar">' + kacir(k.yazar) + '</span>' : '') +
+      '<span class="yg-durum ' + dS + '">' + dIk + (DURUM_KISA[k.durum] || '') + '</span>' +
       '</div></button>';
   }
 
@@ -223,7 +296,7 @@
         kart.style.position = 'relative';
         const i = document.createElement('div');
         i.className = 'secim-isaret';
-        i.innerHTML = window.ikon ? window.ikon('onay') : '✓';
+        i.innerHTML = ik('onay') || '✓';
         kart.appendChild(i);
       }
     });
@@ -314,15 +387,18 @@
     const o = document.getElementById('topluOrtu');
     if(o) o.classList.remove('acik');
     bildir(mesaj);
-    setTimeout(() => { izgaraTazele(); secimGorselTazele(); }, 0);
+    setTimeout(() => { duzenTazele(); secimGorselTazele(); }, 0);
   }
 
-  function izgaraTazele(){
-    if(izgara) izgaraCiz();
-    else {
-      const kap = document.getElementById('liste');
-      if(kap) kap.classList.remove('izgara');
+  function duzenTazele(){
+    const kap = document.getElementById('liste');
+    if(kap){
+      kap.classList.toggle('izgara', duzen === 'izgara');
+      kap.classList.toggle('yogun', duzen === 'yogun');
     }
+    if(duzen === 'izgara') izgaraCiz();
+    else if(duzen === 'yogun') yogunCiz();
+    duzenDugmeTazele();
   }
   function listeyiBagla(){
     if(typeof window.listeCiz === 'function' && !window.listeCiz.__gorunum){
@@ -331,7 +407,7 @@
         const s = asil.apply(this, arguments);
         dugmeEkle();
         rafDugmeTazele();
-        izgaraTazele();
+        duzenTazele();
         secimGorselTazele();
         return s;
       };
@@ -341,7 +417,7 @@
   }
 
   function baslat(){
-    ayarYukle(); stilEkle(); listeyiBagla(); dugmeEkle(); izgaraTazele();
+    ayarYukle(); stilEkle(); listeyiBagla(); dugmeEkle(); duzenTazele();
 
     document.addEventListener('click', e => {
       if(!secimModu) return;
@@ -373,21 +449,19 @@
       if(!el) return;
       const act = el.dataset.act;
 
-      if(act === 'gorunum-degis'){
-        izgara = !izgara; ayarYaz();
-        // innerHTML güvenli: sabit dize + ikon() SVG'si, kullanıcı verisi yok (XSS riski yok).
-        el.innerHTML = izgara
-          ? (window.ikon ? window.ikon('liste') : '') + ' Liste'
-          : (window.ikon ? window.ikon('izgara') : '') + ' Izgara';
-        el.classList.toggle('aktif', izgara);
-        rafDugmeTazele();
-        if(typeof listeCiz === 'function') listeCiz();
+      if(act === 'duzen-sec'){
+        const v = el.dataset.v;
+        if(DUZENLER.indexOf(v) >= 0 && v !== duzen){
+          duzen = v; ayarYaz();
+          rafDugmeTazele();
+          if(typeof listeCiz === 'function') listeCiz();
+        }
         return;
       }
       if(act === 'raf-grupla'){
         rafGrupla = !rafGrupla; ayarYaz();
         rafDugmeTazele();
-        izgaraTazele();
+        duzenTazele();
         return;
       }
       if(act === 'secim-ac'){ secimModu ? secimKapat() : secimAc(null); return; }
@@ -477,8 +551,12 @@
   if(document.getElementById('liste')) baslat();
   else document.addEventListener('DOMContentLoaded', baslat);
 
-  window.__gorunum = { secimAc, secimKapat, izgaraCiz, izgaraTazele, rafDugmeTazele,
-    secilenler: () => secilenler, izgaraMi: () => izgara,
-    izgaraYaz: v => { izgara = v; ayarYaz(); },
+  window.__gorunum = { secimAc, secimKapat, izgaraCiz, duzenTazele, rafDugmeTazele,
+    izgaraTazele: duzenTazele,           // eski ad — geriye dönük API
+    secilenler: () => secilenler,
+    izgaraMi: () => duzen === 'izgara',
+    duzenMi: () => duzen,
+    izgaraYaz: v => { duzen = v ? 'izgara' : 'liste'; ayarYaz(); },
+    duzenYaz: v => { if(DUZENLER.indexOf(v) >= 0){ duzen = v; ayarYaz(); } },
     rafGruplaYaz: v => { rafGrupla = v; ayarYaz(); } };
 })();

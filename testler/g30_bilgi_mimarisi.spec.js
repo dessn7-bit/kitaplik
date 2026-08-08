@@ -49,14 +49,29 @@ test.describe('G30 — açılış Ana Sayfa', () => {
     await expect(page.locator('.fab')).toBeHidden();
   });
 
-  test('nav dört sekme: Ana Sayfa · Kütüphane · Alıntılar · İstatistik (Yedek YOK)', async ({ page }) => {
+  test('nav beş sekme: Ana Sayfa · Kütüphane · Keşfet · Alıntılar · İstatistik (Yedek YOK)', async ({ page }) => {
     await tohumla(page, []);
     await page.goto('/');
-    await expect(page.locator('nav .nav-btn')).toHaveCount(4);
+    await expect(page.locator('nav .nav-btn')).toHaveCount(5);
+    // Etiketler CSS text-transform ile BÜYÜK HARF görünür (innerText dönüşümü
+    // yansıtır) — /i bayrağı bu yüzden; Türkçe İ/i eşleşmesi için kaynak adlar.
     await expect(page.locator('nav .nav-btn')).toHaveText(
-      [/Ana Sayfa/, /Kütüphane/, /Alıntılar/, /İstatistik/]);
+      [/Ana Sayfa/i, /Kütüphane/i, /Keşfet/i, /Alıntılar/i, /İstatistik/i]);
     await expect(page.locator('nav [data-v="yedek"]')).toHaveCount(0);
     await expect(page.locator('#panel-yedek')).toHaveCount(0);
+  });
+
+  test('Keşfet iskeleti (v42): sekme açılır, anlamlı mesaj verir, çökme yok', async ({ page }) => {
+    await tohumla(page, [okunanK()]);
+    await page.goto('/');
+    await page.click('nav [data-act="sekme"][data-v="kesfet"]');
+    await expect(page.locator('#panel-kesfet')).toBeVisible();
+    await expect(page.locator('nav [data-v="kesfet"]')).toHaveClass(/active/);
+    await expect(page.locator('#panel-kesfet .kesfet-bos')).toContainText('keşif köşesi');
+    await expect(page.locator('#panel-kesfet .kesfet-bos small')).toContainText('Ne okusam?');
+    // Kütüphane'ye ait yüzeyler Keşfet'e sızmaz
+    await expect(page.locator('#aramaSatiri')).toBeHidden();
+    await expect(page.locator('.fab')).toBeHidden();
   });
 
   test('son sekme HATIRLANMAZ: başka sekmede bırakıp yenileyince yine Ana Sayfa', async ({ page }) => {
@@ -242,7 +257,7 @@ test.describe('G30 — Ayarlar penceresi', () => {
   test('⚙ her sekmeden erişilebilir ve eski Yedek işlevlerinin HEPSİ orada', async ({ page }) => {
     await tohumla(page, [bitmisK()]);
     await page.goto('/');
-    for (const sekme of ['raf', 'alinti', 'ist', 'ana']) {
+    for (const sekme of ['raf', 'kesfet', 'alinti', 'ist', 'ana']) {
       await page.click(`nav [data-act="sekme"][data-v="${sekme}"]`);
       await expect(page.locator('header [data-act="ayar-ac"]')).toBeVisible();
     }
@@ -473,14 +488,14 @@ test.describe('G30 — geçiş ve tutarlılık', () => {
     await expect(page.locator('#panel-alinti #faPanel')).toHaveCount(1);
   });
 
-  test('eklenti gorunum.js Kütüphane sekmesinde tetiklenir (ızgara/seçim düğmeleri)', async ({ page }) => {
+  test('eklenti gorunum.js Kütüphane sekmesinde tetiklenir (düzen/seçim düğmeleri)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'A', raf: 'Salon-1' })]);
     await rafAc(page);
-    await expect(page.locator('#panel-raf #izgaraBtn')).toBeVisible();
+    await expect(page.locator('#panel-raf #duzenAnahtar')).toBeVisible();
     await expect(page.locator('#panel-raf #secimBtn')).toBeVisible();
-    // ızgara ve raf gruplama Kütüphane'de kalır, Ana Sayfa'ya sızmaz
+    // düzen anahtarı ve raf gruplama Kütüphane'de kalır, Ana Sayfa'ya sızmaz
     await page.click('nav [data-act="sekme"][data-v="ana"]');
-    await expect(page.locator('#panel-ana #izgaraBtn')).toHaveCount(0);
+    await expect(page.locator('#panel-ana #duzenAnahtar')).toHaveCount(0);
   });
 
   test('eklenti senkron.js + katalog.js + kapak.js Ayarlar penceresinde tetiklenir', async ({ page }) => {

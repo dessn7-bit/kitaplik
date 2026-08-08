@@ -107,14 +107,14 @@ test.describe('G31 görsel dil', () => {
   });
 
   /* ---------- M2 ikon dili ---------- */
-  test('nav: 4 sekmenin hepsinde SVG ikon var, emoji/eski glif yok, metinler duruyor', async ({ page }) => {
+  test('nav: 5 sekmenin hepsinde SVG ikon var, emoji/eski glif yok, metinler duruyor', async ({ page }) => {
     await tohumla(page, []);
     await page.goto('/');
-    await expect(page.locator('nav .nav-btn svg.ikon')).toHaveCount(4);
+    await expect(page.locator('nav .nav-btn svg.ikon')).toHaveCount(5);
     const navMetin = await page.locator('nav').innerText();
     expect(YASAK_IKON.test(navMetin)).toBe(false);
     await expect(page.locator('nav .nav-btn')).toHaveText(
-      [/Ana Sayfa/, /Kütüphane/, /Alıntılar/, /İstatistik/]);
+      [/Ana Sayfa/i, /Kütüphane/i, /Keşfet/i, /Alıntılar/i, /İstatistik/i]);
     // SVG'ler dekoratif: hepsi aria-hidden
     expect(await page.locator('nav svg.ikon:not([aria-hidden="true"])').count()).toBe(0);
   });
@@ -140,13 +140,17 @@ test.describe('G31 görsel dil', () => {
     };
     await tara('ana sayfa');
     await rafaGec(page); await tara('kütüphane');
+    await page.click('nav [data-act="sekme"][data-v="kesfet"]'); await tara('keşfet');
     await page.click('nav [data-act="sekme"][data-v="alinti"]'); await tara('alıntılar');
     await page.click('nav [data-act="sekme"][data-v="ist"]'); await tara('istatistik');
     await page.click('[data-act="ayar-ac"]'); await tara('ayarlar penceresi');
   });
 
   /* ---------- M3 derinlik + kapaksız yer tutucu ---------- */
-  test('yükselti dili tek: kart rolündeki yüzeyler aynı gölgeyi ve yarıçapı taşır', async ({ page }) => {
+  /* v42 KARAR: Kütüphane satırları KART değil ÇİZGİ dilinde — kutu/gölge/yarıçap
+     yok, satırlar 1px ayraçla ayrılır. Kart dili henüz Ciltli'ye geçmeyen
+     ekranlarda (Ana Sayfa, İstatistik) kendi içinde tutarlı kalır. */
+  test('Kütüphane satırı çizgi dilinde; kart kalan yüzeyler kendi içinde tutarlı', async ({ page }) => {
     await tohumla(page, [kitapAlinti()]);
     await page.goto('/');
     await page.click('nav [data-act="sekme"][data-v="ist"]');
@@ -154,30 +158,39 @@ test.describe('G31 görsel dil', () => {
     const oku = (sec) => page.evaluate(s => {
       const el = document.querySelector(s);
       const c = getComputedStyle(el);
-      return { golge: c.boxShadow, r: c.borderRadius };
+      return { golge: c.boxShadow, r: c.borderRadius, altCizgi: c.borderBottomWidth,
+        zemin: c.backgroundColor };
     }, sec);
     const kart = await oku('#liste .kart');
-    expect(kart.golge).not.toBe('none');
-    expect(kart.r).toBe('12px');
-    for (const sec of ['#anaIcerik .as-blok', '#istIcerik .ist-kart']) {
-      const o = await oku(sec);
-      expect(o.golge, sec).toBe(kart.golge);
-      expect(o.r, sec).toBe(kart.r);
-    }
+    expect(kart.golge, 'satırda gölge yok').toBe('none');
+    expect(kart.r, 'satırda yarıçap yok').toBe('0px');
+    expect(kart.altCizgi, 'satır 1px ayraçla biter').toBe('1px');
+    expect(kart.zemin, 'satır dolgusuz').toBe('rgba(0, 0, 0, 0)');
+    // kart dilinde kalan iki yüzey birbiriyle aynı gölge + yarıçapı taşır
+    const asBlok = await oku('#anaIcerik .as-blok');
+    const istKart = await oku('#istIcerik .ist-kart');
+    expect(asBlok.golge).not.toBe('none');
+    expect(istKart.golge).toBe(asBlok.golge);
+    expect(istKart.r).toBe(asBlok.r);
   });
 
-  test('kapaksız kitap listede baş harfli sırt yer tutucusu alır (boş şerit değil)', async ({ page }) => {
+  /* v42 KARAR: renkli sırt/baş-harf yer tutucusu Kütüphane'de emekli — kapak
+     levhası (plate) içinde kesikli çerçeve "kapak yok" der; ad satırın kendisinde. */
+  test('kapaksız kitap listede kesikli levha yer tutucusu alır (v42 Ciltli)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Suç ve Ceza', kapak: null })]);
     await rafAc(page);
-    const sirt = page.locator('#liste .kart .sirt');
-    await expect(sirt).toHaveCount(1);
-    await expect(sirt).toHaveText('SVC');   // baş harfler — yer tutucu ANLAMLI
-    const olcum = await sirt.evaluate(el => ({
-      en: el.getBoundingClientRect().width,
-      zemin: getComputedStyle(el).backgroundColor
-    }));
-    expect(olcum.en).toBeGreaterThan(40);            // eski 8px kör şerit değil
-    expect(olcum.zemin).not.toBe('rgba(0, 0, 0, 0)'); // sırt rengi basılı
+    const levha = page.locator('#liste .kart .plate.p-bos');
+    await expect(levha).toHaveCount(1);
+    const olcum = await levha.evaluate(el => {
+      const c = getComputedStyle(el);
+      const sonra = getComputedStyle(el, '::after');
+      return { en: el.getBoundingClientRect().width, paspartu: c.borderTopWidth,
+        kesikli: sonra.borderTopStyle, filtre: c.filter };
+    });
+    expect(olcum.en).toBeGreaterThan(30);              // görünür levha, kör şerit değil
+    expect(olcum.paspartu).toBe('4px');                // mini levha paspartusu
+    expect(olcum.kesikli).toBe('dashed');              // kesikli "Kapak" yer tutucu deseni
+    expect(olcum.filtre).toContain('sepia');           // levha sepya filtresi
   });
 
   test('kapaksız kitap detayda da aynı yer tutucu dilini taşır', async ({ page }) => {

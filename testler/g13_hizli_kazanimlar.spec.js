@@ -63,13 +63,13 @@ test.describe('G13 M1 — not kimliği metin eşleştirmenin yerini aldı', () =
 /* --------- M2: raf gruplama düğmesi --------- */
 test.describe('G13 M2 — raf gruplama düğmesi', () => {
 
-  test('ızgara kapalıyken düğme görünmez, açıkken görünür', async ({ page }) => {
+  test('liste düzeninde düğme görünmez, ızgarada görünür (v42 üç-düzen anahtarı)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'K1', raf: 'üst raf' })]);
     await rafAc(page);
     await expect(page.locator('#rafGrupBtn')).toBeHidden();
-    await page.click('#izgaraBtn');
+    await page.click('#duzenIzgara');
     await expect(page.locator('#rafGrupBtn')).toBeVisible();
-    await page.click('#izgaraBtn');
+    await page.click('#duzenListe');
     await expect(page.locator('#rafGrupBtn')).toBeHidden();
   });
 
@@ -80,7 +80,7 @@ test.describe('G13 M2 — raf gruplama düğmesi', () => {
       sahteKitap({ ad: 'Rafsız', raf: '' })
     ]);
     await rafAc(page);
-    await page.click('#izgaraBtn');
+    await page.click('#duzenIzgara');
     await expect(page.locator('#liste .raf-basligi')).toHaveCount(0);
     await page.click('#rafGrupBtn');
     await expect(page.locator('#liste .raf-basligi')).toHaveCount(2);
@@ -92,7 +92,7 @@ test.describe('G13 M2 — raf gruplama düğmesi', () => {
   test('tercih yeniden yüklemede korunur', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'K1', raf: 'üst raf' })]);
     await rafAc(page);
-    await page.click('#izgaraBtn');
+    await page.click('#duzenIzgara');
     await page.click('#rafGrupBtn');
     await expect(page.locator('#liste .raf-basligi')).toHaveCount(1);
     expect(await page.evaluate(() =>

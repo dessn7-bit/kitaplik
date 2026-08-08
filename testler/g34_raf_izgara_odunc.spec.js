@@ -17,9 +17,10 @@ test.describe('G34 raf görünümü', () => {
     await tohumla(page, [sahteKitap({ ad: 'Duvar Kitabı' })], { kk_gorunum_v1: null });
     await rafAc(page);
     await expect(page.locator('#liste')).toHaveClass(/izgara/);
-    await expect(page.locator('#liste .iz-yedek')).toHaveCount(1);   // kapaksız → sırt karosu
-    // geçiş düğmesi "Liste"yi öneriyor (şu an izgaradayız)
-    await expect(page.locator('#izgaraBtn')).toContainText('Liste');
+    await expect(page.locator('#liste .iz-yedek')).toHaveCount(1);   // kapaksız → levha içinde ad
+    // v42: üç düzen anahtarında aktif seçim izgara
+    await expect(page.locator('#duzenIzgara')).toHaveClass(/aktif/);
+    await expect(page.locator('#duzenListe')).not.toHaveClass(/aktif/);
   });
 
   test('M1b: kayıtlı LİSTE tercihi varsa ona saygı duyulur', async ({ page }) => {
@@ -41,7 +42,10 @@ test.describe('G34 raf görünümü', () => {
     await expect(page.locator('#rafGrupBtn')).toBeVisible();
   });
 
-  test('M1d: bitmiş kitap izgarada sönük, okunmamış tam görünür', async ({ page }) => {
+  /* v42 KARAR: okunmuş işareti sönükleştirme (opacity/grayscale) DEĞİL — Ciltli
+     durum satırı: karo altında "✓ Okundu" (SVG onay + sessiz metin), okunuyor
+     altın. Kapaklar tam görünür kalır (kapak duvarında bilgi kaybı yok). */
+  test('M1d: bitmiş kitap izgarada ✓ Okundu satırı taşır, kapak sönükleşmez', async ({ page }) => {
     await tohumla(page, [
       sahteKitap({ ad: 'Okunmuş Kitap', durum: 'bitti', sayfa: 100, bitisTarihi: bugunISO() }),
       sahteKitap({ ad: 'Okunmamış Kitap', durum: 'okunacak' })
@@ -51,9 +55,15 @@ test.describe('G34 raf görünümü', () => {
     const okunmamis = page.locator('#liste .kart', { hasText: 'Okunmamış Kitap' });
     await expect(okunmus).toHaveClass(/iz-okundu/);
     await expect(okunmamis).not.toHaveClass(/iz-okundu/);
+    // durum satırı: okunmuşta onay SVG'si + "Okundu"; okunmamışta ikonsuz "Okunacak"
+    await expect(okunmus.locator('.iz-durum')).toContainText('Okundu');
+    await expect(okunmus.locator('.iz-durum svg.ikon')).toHaveCount(1);
+    await expect(okunmamis.locator('.iz-durum')).toContainText('Okunacak');
+    await expect(okunmamis.locator('.iz-durum svg.ikon')).toHaveCount(0);
+    // kapak levhası SÖNÜKLEŞMEZ: iki karonun görseli de tam opak
     const o1 = await okunmus.locator('.iz-yedek').evaluate(el => parseFloat(getComputedStyle(el).opacity));
     const o2 = await okunmamis.locator('.iz-yedek').evaluate(el => parseFloat(getComputedStyle(el).opacity));
-    expect(o1, 'okunmuş sönük').toBeLessThan(0.8);
+    expect(o1, 'okunmuş kapak tam görünür (v42)').toBe(1);
     expect(o2, 'okunmamış tam').toBe(1);
     // başlık tam opak kalır (bilgi kaybolmaz)
     expect(await okunmus.locator('.kart-baslik')

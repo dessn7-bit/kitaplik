@@ -245,11 +245,12 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     const ciplak = sahteKitap({ ad: 'Kapaksız Kitap' });
     await tohumla(page, [uzakli, ciplak]);
     await rafAc(page);
-    // liste görünümü: uzak kapak <img>, kapaksız sırt şeridi — kp izi YOK
-    const uzakImg = page.locator(`#liste .kart[data-id="${uzakli.id}"] img.kapak-mini`);
+    // liste görünümü (v42 Ciltli): uzak kapak levha içinde <img>, kapaksız
+    // kitapta kesikli yer tutucu (p-bos) — kp izi YOK
+    const uzakImg = page.locator(`#liste .kart[data-id="${uzakli.id}"] .plate > img`);
     await expect(uzakImg).toHaveAttribute('src', /covers\.openlibrary\.org/);
     expect(await uzakImg.getAttribute('data-kp-id')).toBeNull();
-    await expect(page.locator(`#liste .kart[data-id="${ciplak.id}"] .sirt`)).toHaveCount(1);
+    await expect(page.locator(`#liste .kart[data-id="${ciplak.id}"] .plate.p-bos`)).toHaveCount(1);
     // detay: uzak kapak img'si eski davranışıyla durur
     await page.click(`#liste .kart[data-id="${uzakli.id}"]`);
     await expect(page.locator('#detayIcerik img.detay-kapak')).toHaveAttribute('src', /covers\.openlibrary\.org/);
