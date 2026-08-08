@@ -31,12 +31,15 @@ test.describe('G29 — detayda durum başına tek birincil', () => {
     await expect(page.locator('#oturumBlok [data-act="oturum-basla"]')).toHaveClass(/btn-cerceve/);
   });
 
-  test('okunuyor (oturum yok): tek pirinç = oturum başlat; "Bitirdim" ve "Ekle" çerçeveli', async ({ page }) => {
+  /* v45 birincil tablosu: okunuyor → "Sayfa işaretle" (ilerleme-kaydet);
+     oturum başlatma artık HER durumda çerçeveli (oturum.js). */
+  test('okunuyor (oturum yok): tek pirinç = Sayfa işaretle; oturum/Bitirdim/Ekle çerçeveli', async ({ page }) => {
     await tohumla(page, [okunuyorK()]);
     await rafAc(page);
     await detayAcVeBekle(page);
     await expect(gorunurBrass(page, '#detayIcerik')).toHaveCount(1);
-    await expect(gorunurBrass(page, '#detayIcerik').first()).toHaveAttribute('data-act', 'oturum-basla');
+    await expect(gorunurBrass(page, '#detayIcerik').first()).toHaveAttribute('data-act', 'ilerleme-kaydet');
+    await expect(page.locator('#oturumBlok [data-act="oturum-basla"]')).toHaveClass(/btn-cerceve/);
     await expect(page.locator('#detayIcerik [data-act="bitir"]')).toHaveClass(/btn-cerceve/);
     await expect(page.locator('#detayIcerik [data-act="not-ekle"]')).toHaveClass(/btn-cerceve/);
   });
@@ -59,12 +62,15 @@ test.describe('G29 — detayda durum başına tek birincil', () => {
     await expect(gorunurBrass(page, '#detayIcerik').first()).toHaveAttribute('data-act', 'baslat');
   });
 
-  test('bitti: sıfır pirinç düğme — birincil, puan şeridinin kendisi', async ({ page }) => {
+  /* v45 birincil tablosu: bitti → "Yeniden oku" altın kontur; puan şeridi
+     yine formsuz puanlama yüzeyi olarak üstte durur. */
+  test('bitti: tek pirinç = Yeniden oku; puan şeridi görünür', async ({ page }) => {
     await tohumla(page, [okunuyorK({ durum: 'bitti', guncelSayfa: 300,
       bitisTarihi: '2026-02-01', puan: null })]);
     await rafAc(page);
     await detayAcVeBekle(page);
-    await expect(gorunurBrass(page, '#detayIcerik')).toHaveCount(0);
+    await expect(gorunurBrass(page, '#detayIcerik')).toHaveCount(1);
+    await expect(gorunurBrass(page, '#detayIcerik').first()).toHaveAttribute('data-act', 'yeniden-oku');
     await expect(page.locator('#dPuan')).toBeVisible();
   });
 

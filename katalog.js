@@ -84,6 +84,10 @@
   function detayZenginlestir(){
     const kap = document.getElementById('detayIcerik');
     if(!kap || document.getElementById('rafBilgi')) return;
+    // v45: çekirdek künye tablosu raf + ISBN satırlarını zaten gösteriyor —
+    // tablo varken ikinci bir raf/ISBN satırı basma (çifte bilgi olurdu).
+    // Tablo yoksa (eski çekirdek) eski davranış sürer.
+    if(document.getElementById('dKunyeTablo')) return;
     if(typeof durum !== 'object' || !durum.detayId) return;
     const k = (veri.kitaplar||[]).find(x => x.id === durum.detayId);
     if(!k || (!k.raf && !k.isbn)) return;

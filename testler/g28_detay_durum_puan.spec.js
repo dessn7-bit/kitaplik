@@ -62,13 +62,19 @@ test.describe('G28 M1 — detay hiyerarşisi', () => {
     expect(await page.locator('#dDigerKatla[open]').count()).toBe(0);   // düzenle hâlâ katlı
   });
 
-  test('kapak eylemi künyenin parçası: 📷 düğmesi kapak sütununda', async ({ page }) => {
+  /* v45 KARAR: kapak fotoğrafı NADİR eylem — düğmesi "Kapak, düzenle & diğer"
+     katlanır bölümüne taşındı (tasarımın sakinliği); künyede yalnız LEVHA durur. */
+  test('kapak eylemi nadir bölümde; kapaksız künyede kesikli levha + ad', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Kapaksız' })]);
     await rafAc(page);
     await detayAc(page);
-    await expect(page.locator('#detayIcerik .d-kapak-sutun [data-act="kp-cek"]')).toBeVisible();
-    // kapaksız kitapta yer tutucu var, künye boş kalmaz
-    await expect(page.locator('#detayIcerik .d-kapak-yok')).toBeVisible();
+    // ana yüzeyde kapak düğmesi YOK (katlı), levha VAR
+    await expect(page.locator('#detayIcerik [data-act="kp-cek"]')).toBeHidden();
+    await expect(page.locator('#detayIcerik .d-kapak-sutun .plate.d-plate.p-bos')).toBeVisible();
+    await expect(page.locator('#detayIcerik .d-plate-ad')).toHaveText('Kapaksız');
+    // katla açılınca düğme erişilebilir
+    await page.click('#dDigerKatla summary');
+    await expect(page.locator('#detayIcerik [data-act="kp-cek"]')).toBeVisible();
   });
 });
 

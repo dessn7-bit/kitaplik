@@ -71,6 +71,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
 
     await page.click('#liste .kart');
     const b64 = await buyukGorselB64(page, 3000, 2000);
+    await page.click('#dDigerKatla summary');  // v45: kapak eylemi nadir bölümde katlı
     await fotoSec(page, '#detayIcerik [data-act="kp-cek"]', b64);
     await page.click('#ortuKapak [data-act="kp-onay"]');
     await expect(page.locator('#toast')).toContainText('Kapak fotoğrafı kaydedildi');
@@ -213,6 +214,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     await page.click('[data-act="sekme"][data-v="raf"]');
     await page.click('#liste .kart');
     const b64 = await buyukGorselB64(page, 800, 1200);
+    await page.click('#dDigerKatla summary');  // v45: kapak eylemi nadir bölümde katlı
     await fotoSec(page, '#detayIcerik [data-act="kp-cek"]', b64);
     await page.click('#ortuKapak [data-act="kp-onay"]');
     await expect(page.locator('#toast')).toContainText('Fotoğraf kaydedilemedi');
@@ -303,6 +305,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     await rafAc(page);
     await page.click('#liste .kart');
     const b64 = await buyukGorselB64(page, 800, 1200);
+    await page.click('#dDigerKatla summary');  // v45: kapak eylemi nadir bölümde katlı
     await fotoSec(page, '#detayIcerik [data-act="kp-cek"]', b64);
     await page.click('#ortuKapak [data-act="kp-vazgec"]');
     await expect(page.locator('#ortuKapak')).not.toHaveClass(/acik/);
@@ -317,6 +320,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     await rafAc(page);
     await blobEk(page, k.id);
     await page.click('#liste .kart');
+    await page.click('#dDigerKatla summary');  // v45: kapak eylemi nadir bölümde katlı
     await page.click('#detayIcerik [data-act="kp-detay-kaldir"]');
     await expect(page.locator('#toast')).toContainText('Kapak fotoğrafı silindi');
     await expect.poll(() => idbAnahtarlari(page)).toEqual([]);
@@ -347,11 +351,11 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     await tohumla(page, [k]);
     await rafAc(page);
     await page.click('#liste .kart');
+    await page.click('#dDigerKatla summary');  // v45: kapak eylemi nadir bölümde katlı
     await page.click('#detayIcerik [data-act="kp-detay-kaldir"]');
     await expect(page.locator('#toast')).toContainText('Fotoğraf bu cihazda değil');
     expect(await page.evaluate(() => veri.kitaplar[0].kapakYerel)).toBe(true); // işaret KORUNDU
     // formda da "fotoğrafı var" şeridi çıkmaz (Kaldır sunulmaz)
-    await page.click('#dDigerKatla summary');  // Düzenle nadir bölümde katlı
     await page.click('#detayIcerik [data-act="duzenle"]');
     await page.waitForTimeout(150); // blob denetimi otursun
     await expect(page.locator('#kpFormDurum')).toBeHidden();

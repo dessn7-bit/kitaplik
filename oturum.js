@@ -152,9 +152,14 @@
         + '</div>'
       : '';
 
+    /* v45 Ciltli: blok kicker etiketli ("OKUMA OTURUMU") ince yapı. Birincil
+       eylem tekliği YENİ tablo: okunuyor'un birincili artık çekirdeğin "Sayfa
+       işaretle"si — oturum başlatma HER durumda çerçeveli. Oturum AÇIKKEN
+       çekirdek kutusu gizlendiği için görünür tek pirinç buradaki "Bitir". */
+    const kickerHtml = '<span class="kicker" style="display:block;margin-bottom:8px">Okuma oturumu</span>';
     if(bende){
       const gecen = Date.now() - o.b;
-      blok.innerHTML = '<label>Okuma oturumu</label>'
+      blok.innerHTML = kickerHtml
         + '<div class="hiz-kutu" style="border-color:var(--brass)">Okuyorsun — <b id="oturumSayac">'
         + sureMetni(gecen) + '</b> (başlangıç sayfası: ' + (o.sa||0) + ')</div>'
         + '<div class="ilerleme-guncelle" style="margin-top:10px">'
@@ -168,14 +173,11 @@
       sayacBaslat();
     }else{
       const baskaKitap = o && o.kitapId !== k.id;
-      blok.innerHTML = '<label>Okuma oturumu</label>'
+      blok.innerHTML = kickerHtml
         + (baskaKitap
             ? '<div class="hiz-kutu">Başka bir kitapta açık oturum var. Önce onu bitir.</div>'
-            /* Birincil eylem tekliği: okunuyor'da günlük eylem oturuma oturmaktır →
-               pirinç; okunacak/yarim'da birincil çekirdeğin durum düğmesi, bitti'de
-               puan şeridi → burada çerçeveli kalır. Ekranda aynı anda ≤1 .btn-brass. */
-            : '<button class="btn ' + (k.durum === 'okunuyor' ? 'btn-brass' : 'btn-cerceve')
-              + '" data-act="oturum-basla">' + (window.ikon?window.ikon('oynat'):'') + ' Okumaya başla (süre tut)</button>')
+            : '<button class="btn btn-cerceve" data-act="oturum-basla">'
+              + (window.ikon?window.ikon('oynat'):'') + ' Okumaya başla (süre tut)</button>')
         + ozet;
       sayacDurdur();
     }

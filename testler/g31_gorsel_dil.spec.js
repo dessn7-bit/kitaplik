@@ -193,13 +193,23 @@ test.describe('G31 görsel dil', () => {
     expect(olcum.filtre).toContain('sepia');           // levha sepya filtresi
   });
 
-  test('kapaksız kitap detayda da aynı yer tutucu dilini taşır', async ({ page }) => {
+  /* v45: renkli sırt/baş harf detayda da emekli — kapaksız künye kesikli
+     levha (plate.p-bos) + tam ad taşır (liste/ızgara ile aynı tek dil). */
+  test('kapaksız kitap detayda kesikli levha + tam ad taşır (v45 Ciltli)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Suç ve Ceza', kapak: null })]);
     await rafAc(page);
     await page.click('#liste .kart');
-    const yok = page.locator('#detayIcerik .d-kapak-yok');
-    await expect(yok).toHaveText('SVC');
-    expect(await yok.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+    const levha = page.locator('#detayIcerik .plate.d-plate.p-bos');
+    await expect(levha).toHaveCount(1);
+    await expect(levha.locator('.d-plate-ad')).toHaveText('Suç ve Ceza');
+    const olcum = await levha.evaluate(el => ({
+      kesikli: getComputedStyle(el, '::after').borderTopStyle,
+      paspartu: getComputedStyle(el).borderTopWidth,
+      filtre: getComputedStyle(el).filter
+    }));
+    expect(olcum.kesikli).toBe('dashed');
+    expect(olcum.paspartu).toBe('6px');
+    expect(olcum.filtre).toContain('sepia');
   });
 
   /* ---------- M4 çip satırları + rozet hiyerarşisi ---------- */
