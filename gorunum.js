@@ -231,7 +231,7 @@
       kitaplar.forEach(k => parcalar.push(kartFn(k)));
     }
     kap.innerHTML = parcalar.join('');
-    kapakHatalariniBagla(kap, kitaplar);
+    kapakHatalariniBagla(kap);
     secimGorselTazele();
   }
   /* Liste düzeninde gruplama (v43): çekirdeğin zengin satırları YENİDEN
@@ -280,46 +280,38 @@
     kap.classList.add('yogun');
     grupluCiz(kap, kitaplar, yogunHtml);
   }
-  /* Levha içindeki kapak yüklenemezse img kalkar; kapaksız karo dilinde
-     (kesikli çerçeve + tam ad) yer tutucu kurulur. Satır içi onerror
-     KULLANILMAZ: attribute değeri iki kez çözüldüğü için kitap adındaki
-     apostrof JS dizesini kapatıp kod çalıştırabiliyordu (g12 kararı). */
-  function yedekSirtKoy(img, ad){
+  /* Kapak hatası yedeği v44'te TEK yerde: çekirdeğin window.plateKapakYedek'i
+     (kesikli çerçeve + gerekiyorsa ad/yazar — metni levhanın data-ad/data-yazar
+     nitelikleri taşır). Buradaki sarmalayıcı yalnız emniyet kemeri: çekirdek
+     yardımcısı bir şekilde yoksa en azından çerçeveye düşülür. Satır içi
+     onerror KULLANILMAZ (g12 XSS kararı). */
+  function yedekSirtKoy(img){
     if(!img || !img.parentNode) return;
+    if(window.plateKapakYedek){ window.plateKapakYedek(img); return; }
     const plate = img.closest('.plate');
-    if(!plate){ img.remove(); return; }
-    plate.classList.add('p-bos');
-    if(plate.classList.contains('iz-plate')){
-      const d = document.createElement('div');
-      d.className = 'iz-yedek';
-      d.textContent = String(ad == null ? '' : ad);
-      plate.replaceChild(d, img);
-    }else{
-      img.remove();
-    }
+    if(plate) plate.classList.add('p-bos');
+    img.remove();
   }
-  function kapakHatalariniBagla(kap, kitaplar){
-    const harita = new Map(kitaplar.map(k => [k.id, k]));
-    kap.querySelectorAll('.kart').forEach(kart => {
-      const img = kart.querySelector('.plate > img');
-      if(!img) return;
-      const k = harita.get(kart.dataset.id);
-      const ad = k ? k.ad : '';
-      img.addEventListener('error', () => yedekSirtKoy(img, ad), { once: true });
+  function kapakHatalariniBagla(kap){
+    kap.querySelectorAll('.kart .plate > img').forEach(img => {
+      img.addEventListener('error', () => yedekSirtKoy(img), { once: true });
       // src'siz yerel-kapak img'leri (kapak.js dolduracak) erken-düşme sayılmaz:
       // src yokken complete=true + naturalWidth=0 normaldir, yedeğe çevrilmemeli.
-      if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) yedekSirtKoy(img, ad);
+      if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) yedekSirtKoy(img);
     });
   }
   function plateHtml(k, sinif){
     // Kapak önceliği: yerel fotoğraf > uzak URL > kesikli yer tutucu (izgarada + tam ad).
     // İzgara img'i .iz-kapak adını taşımaya devam eder (g12/g23 seçici sözleşmesi).
+    // data-ad/data-yazar: yükleme hatasında plateKapakYedek metni buradan alır (v44).
     const imgSinif = sinif === 'iz-plate' ? 'iz-kapak' : 'plate-img';
+    const veriNitelik = ' data-ad="' + kacir(k.ad) + '"' +
+      (k.yazar ? ' data-yazar="' + kacir(k.yazar) + '"' : '');
     if(k.kapakYerel && window.__kapak)
-      return '<div class="plate ' + sinif + '"><img class="' + imgSinif + ' kp-bekliyor" data-kp-id="' + kacir(k.id) + '"' +
+      return '<div class="plate ' + sinif + '"' + veriNitelik + '><img class="' + imgSinif + ' kp-bekliyor" data-kp-id="' + kacir(k.id) + '"' +
         (k.kapak ? ' data-kp-yedek="' + kacir(k.kapak) + '"' : '') + ' alt=""></div>';
     if(k.kapak)
-      return '<div class="plate ' + sinif + '"><img class="' + imgSinif + '" src="' + kacir(k.kapak) + '" alt="" loading="lazy"></div>';
+      return '<div class="plate ' + sinif + '"' + veriNitelik + '><img class="' + imgSinif + '" src="' + kacir(k.kapak) + '" alt="" loading="lazy"></div>';
     if(sinif === 'iz-plate')
       return '<div class="plate iz-plate p-bos"><div class="iz-yedek">' + kacir(k.ad) + '</div></div>';
     return '<div class="plate ' + sinif + ' p-bos" aria-hidden="true"></div>';

@@ -1341,17 +1341,52 @@ const KT_AY = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağus
 const KT_GUN = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
 function ktPlate(k, sinif){
   // Kapak önceliği listeyle aynı: yerel foto > uzak URL > kesikli yer tutucu.
+  // data-ad/data-yazar: yükleme HATASINDA plateKapakYedek metni buradan alır.
+  const veriNitelik = ` data-ad="${escAttr(k.ad)}"${k.yazar ? ` data-yazar="${escAttr(k.yazar)}"` : ''}`;
   if(k.kapakYerel && window.__kapak)
-    return `<div class="plate ${sinif}"><img class="kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt=""></div>`;
+    return `<div class="plate ${sinif}"${veriNitelik}><img class="kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt=""></div>`;
   if(k.kapak)
-    return `<div class="plate ${sinif}"><img src="${escAttr(k.kapak)}" alt="" loading="lazy"></div>`;
+    return `<div class="plate ${sinif}"${veriNitelik}><img src="${escAttr(k.kapak)}" alt="" loading="lazy"></div>`;
   return `<div class="plate ${sinif} p-bos" aria-hidden="true"></div>`;
 }
-/* Levha içindeki kapak yüklenemezse img kalkar, kesikli çerçeve (p-bos) kalır.
-   Satır içi onerror KULLANILMAZ (g12 XSS kararı). */
+/* Kapak yüklenemeyince TEK yedek yolu (v44) — hem çekirdek hem gorunum.js bunu
+   kullanır, kopya mantık yok. Levha kesikli çerçeveye (p-bos) döner; metni
+   LEVHANIN KENDİSİ taşıyorsa (ızgara karosu = tam ad, SIRADA levhası = ad+yazar)
+   metin yedeğe girer — komşusunda adı zaten yazan mini levhalar (liste/devam/
+   yoğun) yalnız çerçeve alır. textContent kullanılır (g12 XSS kararı; satır içi
+   onerror ASLA). */
+function plateKapakYedek(img){
+  const plate = img && img.closest ? img.closest('.plate') : null;
+  if(!plate){ if(img && img.parentNode) img.remove(); return; }
+  plate.classList.add('p-bos');
+  const ad = plate.dataset.ad || '';
+  const yazar = plate.dataset.yazar || '';
+  if(plate.classList.contains('iz-plate')){
+    const d = document.createElement('div');
+    d.className = 'iz-yedek';
+    d.textContent = ad;
+    plate.replaceChild(d, img);
+    return;
+  }
+  if(plate.classList.contains('kt-sira-plate')){
+    plate.classList.remove('kt-sira-kapakli');   // dolgu + dizilim tipografik düzene döner
+    const s = document.createElement('span');
+    s.className = 'kt-sira-ad';
+    s.textContent = ad;
+    plate.appendChild(s);
+    if(yazar){
+      const y = document.createElement('span');
+      y.className = 'kt-sira-yazar';
+      y.textContent = yazar;
+      plate.appendChild(y);
+    }
+  }
+  img.remove();
+}
+window.plateKapakYedek = plateKapakYedek;
 function ktPlateHata(kap){
   kap.querySelectorAll('.plate > img').forEach(img => {
-    const dus = () => { const p = img.parentNode; if(!p) return; p.classList.add('p-bos'); img.remove(); };
+    const dus = () => plateKapakYedek(img);
     img.addEventListener('error', dus, { once: true });
     if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) dus();
   });
@@ -1429,7 +1464,8 @@ function rafUstCiz(){
             const ic = (k.kapakYerel && window.__kapak)
               ? `<img class="kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt="">`
               : `<img src="${escAttr(k.kapak)}" alt="" loading="lazy">`;
-            return `<button class="plate kt-sira-plate kt-sira-kapakli" data-act="detay" data-id="${k.id}" title="${escAttr(k.ad)}">${ic}</button>`;
+            // data-ad/yazar: kapak hatasında plateKapakYedek levhayı tipografik yedeğe döndürür
+            return `<button class="plate kt-sira-plate kt-sira-kapakli" data-act="detay" data-id="${k.id}" title="${escAttr(k.ad)}" data-ad="${escAttr(k.ad)}"${k.yazar ? ` data-yazar="${escAttr(k.yazar)}"` : ''}>${ic}</button>`;
           }
           return `<button class="plate kt-sira-plate p-bos" data-act="detay" data-id="${k.id}">
             <span class="kt-sira-ad">${esc(k.ad)}</span>
