@@ -42,13 +42,18 @@ test.describe('G32 ince ayar', () => {
     }
   });
 
-  test('D2: 412×915 ekranda ilk kitap kartı üst yarıda başlar', async ({ page }) => {
+  /* v43: Kütüphane üstünde ambiyans blokları (hedef/devam/sırada) tasarım gereği
+     listeden önce — "sonuca hızlı ulaşma" niyeti artık ARAMA durumunda ölçülür:
+     arama yazılınca bloklar çekilir (g36 sözleşmesi) ve ilk sonuç üst yarıda. */
+  test('D2: arama yazılınca ilk sonuç kartı üst yarıda başlar (412×915)', async ({ page }) => {
     await page.setViewportSize({ width: 412, height: 915 });
-    await tohumla(page, [sahteKitap({ ad: 'İlk Kart Kitabı' })]);
+    await tohumla(page, [sahteKitap({ ad: 'İlk Kart Kitabı' }), sahteKitap({ ad: 'Dolgu' })]);
     await rafAc(page);
+    await page.fill('#arama', 'İlk Kart');
+    await expect(page.locator('#liste .kart')).toHaveCount(1);
     const ust = await page.locator('#liste .kart').first()
       .evaluate(el => el.getBoundingClientRect().top);
-    expect(ust, `ilk kart top=${ust.toFixed(0)}px (eşik 458)`).toBeLessThan(458);
+    expect(ust, `ilk sonuç top=${ust.toFixed(0)}px (eşik 458)`).toBeLessThan(458);
   });
 
   test('D2: sahiplik çipleri durum çipleriyle AYNI satırda ve işlev korunur', async ({ page }) => {

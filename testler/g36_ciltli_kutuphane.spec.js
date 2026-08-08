@@ -369,8 +369,8 @@ test.describe('G36 Ciltli Kütüphane', () => {
     ]);
     await rafAc(page);
     await page.click('#duzenYogun');
-    await expect(page.locator('#rafGrupBtn')).toBeVisible();
-    await page.click('#rafGrupBtn');
+    await expect(page.locator('#grupRaf')).toBeVisible();
+    await page.click('#grupRaf');
     await expect(page.locator('#liste .raf-basligi')).toHaveCount(2);
     await expect(page.locator('#liste .kart')).toHaveCount(3);
   });

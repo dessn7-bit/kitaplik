@@ -420,17 +420,26 @@ test.describe('G30 — Kütüphane sekmesi', () => {
     await expect(page.locator('#liste')).toContainText('Okunan');
   });
 
-  test('sayaç dururken anlamlı: kitap · raf konumu · gizlenen istek', async ({ page }) => {
+  /* v43 (D1): sayaç başlıktaki "N cilt" ile TEKRAR üretmez — varsayılan durumda
+     yalnız dürüstlük payı ("N istek listesinde") kalır; süzgeç DARALTINCA tam
+     sayım döner (kitap · raf konumu · gizlenen istek). */
+  test('sayaç: varsayılanda yalnız gizlenen-istek notu; süzgeç daraltınca tam sayım', async ({ page }) => {
     await tohumla(page, [
       sahteKitap({ ad: 'A', raf: 'Salon-1' }), sahteKitap({ ad: 'B', raf: 'Salon-1' }),
       sahteKitap({ ad: 'C', raf: 'Yatak Odası' }), sahteKitap({ ad: 'D', raf: '' }),
       sahteKitap({ ad: 'İstenen', sahiplik: 'istek' }),
     ]);
     await rafAc(page);
-    await expect(page.locator('#sayac')).toHaveText('4 kitap · 2 raf konumu · 1 istek listesinde');
-    // gizlenen yoksa üçüncü parça HİÇ yazılmaz (uydurma yok)
+    // varsayılan: başlık "4 cilt" zaten söylüyor — sayaç yalnız gizleneni söyler
+    await expect(page.locator('.kt-cilt')).toHaveText('4 cilt');
+    await expect(page.locator('#sayac')).toHaveText('1 istek listesinde');
+    // sahiplik "hepsi" = süzgeç değişti → tam sayım; gizlenen yoksa üçüncü parça YOK
     await page.click('[data-act="vm-sahiplik"][data-v="hepsi"]');
     await expect(page.locator('#sayac')).toHaveText('5 kitap · 2 raf konumu');
+    // durum süzgeci de tam sayımı döndürür
+    await page.click('[data-act="vm-sahiplik"][data-v="sahip"]');
+    await page.click('[data-act="filtre"][data-v="okunacak"]');
+    await expect(page.locator('#sayac')).toHaveText('4 kitap · 2 raf konumu · 1 istek listesinde');
   });
 
   test('raf konumu liste kartında görünür (fiziksel envanter hissi)', async ({ page }) => {

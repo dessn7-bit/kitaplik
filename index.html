@@ -206,10 +206,26 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
   background:transparent;color:var(--muted);font-size:.8rem;letter-spacing:.02em}
 .chip.active{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
   border-color:var(--brass);font-weight:600}
-.sort-row{display:flex;align-items:center;justify-content:space-between;gap:8px;row-gap:6px;
-  flex-wrap:wrap;padding:6px 16px 0}
-.sort-row select{width:auto;font-size:.85rem;padding:6px 10px;background:transparent;max-width:46%}
-.count-label{font-size:.8rem;color:var(--muted2);white-space:nowrap}
+/* Araç satırı (v43 D1): tek satır, kırılmaz — eksenler solda kendi kaydırıcısında,
+   Seç + düzen anahtarları sabit sağda. Bindirme geometrisi g37 ile kilitli. */
+.kt-arac{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:8px 16px 4px}
+.grup-eksen{display:flex;gap:14px;align-items:center;min-width:0;overflow-x:auto;
+  scrollbar-width:none}
+.grup-eksen::-webkit-scrollbar{display:none}
+.grup-sekme{background:none;border:none;padding:2px 0 3px;font-family:var(--serif);
+  font-size:.9rem;font-weight:600;color:var(--muted);border-bottom:1px solid transparent;
+  border-radius:0;flex:0 0 auto;position:relative}
+.grup-sekme::after{content:'';position:absolute;inset:-8px -4px}   /* dokunma alanı */
+.grup-sekme.aktif{color:var(--brass);border-bottom-color:var(--brass)}
+.kt-arac-sag{display:flex;gap:6px;align-items:center;flex:0 0 auto}
+.grup-bos-not{padding:2px 16px 6px;font-size:.75rem;color:var(--muted);line-height:1.5}
+/* Sıralama satırı (v43 D1): ince, sağa yaslı; sayaç yalnız süzgeç daraltırken dolar */
+.sort-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;
+  padding:2px 16px 8px}
+.sort-row select{width:auto;font-size:.8rem;padding:5px 8px;background:transparent;max-width:46%}
+.count-label{font-size:.75rem;color:var(--muted2);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;margin-right:auto}
 
 /* Alt dolgu 88px (D3): FAB sabit katmanı (bottom 84 + 56 boy) son kartın metnini
    örtmesin — gövde dolgusu (76) + bu 88 = 164px > FAB üst kenarı (140). */
@@ -257,7 +273,9 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 .plate{box-sizing:border-box;position:relative;border:6px solid var(--surface);
   outline:1px solid var(--cizgi);background:var(--surface);
   filter:sepia(.22) saturate(.82) contrast(1.05);flex:0 0 auto}
-.plate img{width:100%;height:100%;object-fit:cover;display:block}
+/* Kapak görseli MUTLAK katman (D3): akış içi img hiçbir koşulda levha kutusunu
+   esnetemez — levha boyutu daima kendi ölçüsünden, görsel cover ile kırpılır. */
+.plate > img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .p-bos::after{content:'';position:absolute;inset:2px;border:1.5px dashed currentColor;
   opacity:.35;pointer-events:none}
 .kt-ust{padding:2px 16px 0}
@@ -288,12 +306,14 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 /* display:flex, UA'nın [hidden]{display:none} kuralını ezer — açıkça geri verilir */
 .kt-sayfa-satir[hidden]{display:none}
 .kt-sayfa-satir input{width:96px}
-.kt-serit{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px}
+.kt-serit{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px;
+  align-items:flex-start}
 .kt-serit::-webkit-scrollbar{display:none}
 .kt-serit .kt-devam-kart{flex:0 0 88%}
 .kt-bolum-bas{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
 .kt-adet{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.kt-sira-plate{width:76px;height:114px;padding:8px;display:flex;flex-direction:column;
+/* Şerit levhası SABİT 2:3 oran (D3): kapaklı/kapaksız aynı yükseklik */
+.kt-sira-plate{width:76px;aspect-ratio:2/3;padding:8px;display:flex;flex-direction:column;
   justify-content:space-between;gap:4px;text-align:left;color:var(--paper)}
 .kt-sira-plate.kt-sira-kapakli{padding:0}
 .kt-sira-ad{font-family:var(--serif);font-size:.72rem;font-weight:600;line-height:1.2;
@@ -707,7 +727,9 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <button class="chip" data-act="filtre" data-v="okunuyor">Okunuyor</button>
     <button class="chip" data-act="filtre" data-v="okunacak">Okunacak</button>
     <button class="chip" data-act="filtre" data-v="bitti">Bitti</button>
-    <button class="chip" data-act="filtre" data-v="yarim">Yarım kaldı</button>
+    <!-- Çip etiketi kısa "Yarım" (D1 taşma diyeti); durum ADI (rozet/DURUM_AD)
+         "Yarım kaldı" olarak yaşar — yalnız süzgeç yüzeyi kısaldı. -->
+    <button class="chip" data-act="filtre" data-v="yarim">Yarım</button>
     <button class="chip" data-act="filtre" data-v="puansiz">Puansız</button>
     <div class="vm-chips" id="vmSahiplikChips">
       <button class="vm-chip" data-act="vm-sahiplik" data-v="hepsi">Tüm raf</button>
@@ -715,10 +737,17 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
       <button class="vm-chip" data-act="vm-sahiplik" data-v="istek">İstek listesi</button>
     </div>
   </div>
+  <!-- Ciltli araç satırı (v43, tasarım deseni): SOLDA gruplama eksenleri
+       (Durum · Tür · Yazar · Raf — gorunum.js doldurur), SAĞDA Seç + üç düzen
+       anahtarı. TEK satır; eksenler dar ekranda kendi içinde kayar. -->
+  <div class="kt-arac" id="ktArac">
+    <div class="grup-eksen" id="grupEksen" role="group" aria-label="Gruplama"></div>
+    <div class="kt-arac-sag" id="ktAracSag"></div>
+  </div>
   <div class="sort-row">
     <span class="count-label" id="sayac"></span>
-    <select id="etiketFiltre"><option value="">Tüm etiketler</option></select>
-    <select id="sirala">
+    <select id="etiketFiltre" aria-label="Etiket filtresi"><option value="">Tüm etiketler</option></select>
+    <select id="sirala" aria-label="Sıralama">
       <option value="eklenme">Son eklenen</option>
       <option value="baslik">Ada göre</option>
       <option value="yazar">Yazara göre</option>
@@ -726,6 +755,8 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
       <option value="sayfa">Sayfaya göre</option>
     </select>
   </div>
+  <!-- Gruplama boyutu seçili ama hiçbir kitapta o veri yoksa dürüst mesaj (D2d) -->
+  <div class="grup-bos-not" id="grupBosNot" hidden></div>
   <div id="liste"></div>
 </section>
 
@@ -1436,17 +1467,20 @@ function listeCiz(){
   }[durum.sirala];
   ks.sort(cmp);
 
-  /* Sayaç dururken de anlamlı olsun: fiziksel envanter hissi için raf konumu
-     sayısı eklenir. Üçüncü parça DÜRÜSTLÜK payı — "Bende olanlar" varsayılan
-     olduğu için istek listesindeki kitaplar görünmüyor; kaç tane olduğunu
-     söylemezsek sessizce kaybolmuş gibi durur. Gizlenen yoksa hiç yazılmaz. */
+  /* Sayaç (v43 D1): varsayılan durumda başlıktaki "N cilt" ile TEKRAR üretmez —
+     yalnız süzgeç daraltıyorken tam sayım yazar. Varsayılanda tek istisna
+     DÜRÜSTLÜK payı: "Bende olanlar" istek listesini gizlediği için kaç kitabın
+     görünmediği söylenir (v20 kararı yaşar). */
   const rafSayi = new Set(ks.map(k => (k.raf||'').trim()).filter(Boolean)).size;
   const gizliIstek = durum.sahiplikFiltre === 'sahip'
     ? veri.kitaplar.filter(k => k.sahiplik === 'istek').length : 0;
-  document.getElementById('sayac').textContent = ks.length
+  const daraltiyor = durum.filtre !== 'hepsi' || !!durum.etiket || !!q
+    || durum.sahiplikFiltre !== 'sahip';
+  document.getElementById('sayac').textContent = !ks.length ? ''
+    : daraltiyor
     ? [`${ks.length} kitap`, rafSayi ? `${rafSayi} raf konumu` : '',
        gizliIstek ? `${gizliIstek} istek listesinde` : ''].filter(Boolean).join(' · ')
-    : '';
+    : (gizliIstek ? `${gizliIstek} istek listesinde` : '');
 
   if(!ks.length){
     const bosMesaj = veri.kitaplar.length

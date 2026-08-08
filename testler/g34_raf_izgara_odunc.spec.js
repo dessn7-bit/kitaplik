@@ -30,16 +30,22 @@ test.describe('G34 raf görünümü', () => {
     await expect(page.locator('#liste .kart .kart-alt')).toHaveCount(1);  // liste düzeni
   });
 
-  test('M1c: raf gruplama düğmesi yalnız raf verisi varken görünür', async ({ page }) => {
+  /* v43 (D2d): eksen veri yokken de SEÇİLEBİLİR — gruplama zorlanmaz, dürüst
+     not çıkar; veri gelince aynı seçim gruplamaya dönüşür. */
+  test('M1c: raf ekseni veri yokken dürüst not verir, veri gelince gruplar', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Rafsız Kitap' })], { kk_gorunum_v1: null });
     await rafAc(page);
     await expect(page.locator('#liste')).toHaveClass(/izgara/);
-    await expect(page.locator('#rafGrupBtn')).toBeHidden();          // veri yok → düğme yok
-    // raf verisi olan kütüphanede görünür
+    await page.click('#grupRaf');
+    await expect(page.locator('#grupBosNot')).toBeVisible();
+    await expect(page.locator('#grupBosNot')).toContainText('Raf konumu');
+    await expect(page.locator('#liste .raf-basligi')).toHaveCount(0); // tek "belirtilmemiş" kovası ZORLANMAZ
+    // raf verisi gelince aynı eksen gruplar, not kaybolur
     await page.evaluate(() => {
       veri.kitaplar[0].raf = 'üst raf'; depoKaydet(); listeCiz();
     });
-    await expect(page.locator('#rafGrupBtn')).toBeVisible();
+    await expect(page.locator('#grupBosNot')).toBeHidden();
+    await expect(page.locator('#liste .raf-basligi')).toHaveCount(1);
   });
 
   /* v42 KARAR: okunmuş işareti sönükleştirme (opacity/grayscale) DEĞİL — Ciltli

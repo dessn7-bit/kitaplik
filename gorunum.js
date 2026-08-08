@@ -7,9 +7,12 @@
 (function(){
   const GORUNUM_ANAHTAR = 'kk_gorunum_v1';
   const DUZENLER = ['izgara', 'liste', 'yogun'];
+  /* v43 (D2): tek gruplama boyutu — "Rafa göre" düğmesinin genellemesi.
+     '' = gruplama yok (varsayılan, eski davranış). */
+  const GRUPLAR = ['durum', 'tur', 'yazar', 'raf'];
   let secimModu = false;
   let secilenler = new Set();
-  let duzen = 'izgara', rafGrupla = false;
+  let duzen = 'izgara', grup = '';
   let basmaZaman = null, basmaId = null;
 
   const kacir = s => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -25,15 +28,18 @@
        ve eski test tohumları kırılmaz; yazarken iki alan birden basılır. */
     try{
       const ham = localStorage.getItem(GORUNUM_ANAHTAR);
-      if(ham === null){ duzen = 'izgara'; rafGrupla = false; return; }
+      if(ham === null){ duzen = 'izgara'; grup = ''; return; }
       const a = JSON.parse(ham) || {};
       duzen = DUZENLER.indexOf(a.duzen) >= 0 ? a.duzen : (a.izgara ? 'izgara' : 'liste');
-      rafGrupla = !!a.rafGrupla;
+      /* v43 göçü: eski rafGrupla:true → grup:'raf'; rafGrupla yazılmaya devam
+         eder (eski istemci/test tohumu sözleşmesi). */
+      grup = GRUPLAR.indexOf(a.grup) >= 0 ? a.grup : (a.rafGrupla ? 'raf' : '');
     }catch(e){ duzen = 'izgara'; }
   }
   function ayarYaz(){
     try{ localStorage.setItem(GORUNUM_ANAHTAR,
-      JSON.stringify({ duzen, izgara: duzen === 'izgara', rafGrupla })); }catch(e){}
+      JSON.stringify({ duzen, izgara: duzen === 'izgara', grup,
+        rafGrupla: grup === 'raf' })); }catch(e){}
   }
 
   function stilEkle(){
@@ -119,63 +125,107 @@
   }
 
   function dugmeEkle(){
-    const satir = document.querySelector('.sort-row');
-    if(!satir || document.getElementById('duzenAnahtar')) return;
+    const eksenKap = document.getElementById('grupEksen');
+    const sagKap = document.getElementById('ktAracSag');
+    if(!eksenKap || !sagKap || document.getElementById('duzenAnahtar')) return;
+    /* v43 (D1/D2): tasarım deseni — SOLDA gruplama eksenleri (metin sekmeleri,
+       "Rafa göre" düğmesinin genellemesi), SAĞDA Seç + üç düzen anahtarı.
+       innerHTML güvenli: sabit dizeler + ikon() SVG'si, kullanıcı verisi yok. */
+    eksenKap.innerHTML =
+      '<button id="grupDurum" class="grup-sekme" data-act="grup-sec" data-v="durum">Durum</button>' +
+      '<button id="grupTur" class="grup-sekme" data-act="grup-sec" data-v="tur">Tür</button>' +
+      '<button id="grupYazar" class="grup-sekme" data-act="grup-sec" data-v="yazar">Yazar</button>' +
+      '<button id="grupRaf" class="grup-sekme" data-act="grup-sec" data-v="raf">Raf</button>';
     const s = document.createElement('button');
     s.id = 'secimBtn'; s.className = 'gorunum-dugme';
     s.dataset.act = 'secim-ac';
-    // innerHTML güvenli: sabit dizeler + ikon() SVG'si, kullanıcı verisi yok.
     s.innerHTML = ik('onay') + ' Seç';
-    satir.insertBefore(s, satir.firstChild.nextSibling);
-    /* v42: iki-durumlu #izgaraBtn EMEKLİ — üç düzen anahtarı (tasarım deseni).
-       Her düğme kendi düzenini SEÇER (toggle değil); tercih kk_gorunum_v1'de. */
-    const grup = document.createElement('div');
-    grup.id = 'duzenAnahtar'; grup.className = 'duzen-anahtar';
-    grup.innerHTML =
+    sagKap.appendChild(s);
+    /* Üç düzen anahtarı: her düğme kendi düzenini SEÇER; tercih kk_gorunum_v1'de. */
+    const anahtar = document.createElement('div');
+    anahtar.id = 'duzenAnahtar'; anahtar.className = 'duzen-anahtar';
+    anahtar.innerHTML =
       '<button id="duzenIzgara" class="duzen-dugme" data-act="duzen-sec" data-v="izgara" aria-label="Izgara görünümü" title="Izgara">' + ik('izgara') + '</button>' +
       '<button id="duzenListe" class="duzen-dugme" data-act="duzen-sec" data-v="liste" aria-label="Liste görünümü" title="Liste">' + ik('liste') + '</button>' +
       '<button id="duzenYogun" class="duzen-dugme" data-act="duzen-sec" data-v="yogun" aria-label="Yoğun görünüm" title="Yoğun">' + ik('yogun') + '</button>';
-    satir.insertBefore(grup, s.nextSibling);
-    const r = document.createElement('button');
-    r.id = 'rafGrupBtn'; r.className = 'gorunum-dugme' + (rafGrupla ? ' aktif' : '');
-    r.dataset.act = 'raf-grupla';
-    r.innerHTML = ik('raf') + ' Rafa göre';
-    satir.insertBefore(r, grup.nextSibling);
+    sagKap.appendChild(anahtar);
     duzenDugmeTazele();
-    rafDugmeTazele();
+    grupDugmeTazele();
   }
   function duzenDugmeTazele(){
-    const grup = document.getElementById('duzenAnahtar');
-    if(!grup) return;
-    grup.querySelectorAll('.duzen-dugme').forEach(b => {
+    const kap = document.getElementById('duzenAnahtar');
+    if(!kap) return;
+    kap.querySelectorAll('.duzen-dugme').forEach(b => {
       const aktif = b.dataset.v === duzen;
       b.classList.toggle('aktif', aktif);
       b.setAttribute('aria-pressed', aktif ? 'true' : 'false');
     });
   }
-  function rafDugmeTazele(){
-    const r = document.getElementById('rafGrupBtn');
-    if(!r) return;
-    /* Raf verisi HİÇ yoksa düğme gösterilmez (v40 kararı). v42: gruplama izgara
-       VE yoğun düzende anlamlı (ikisi de raf taramasi); listede gizli. */
-    const rafVar = (typeof veri === 'object' && Array.isArray(veri.kitaplar))
-      && veri.kitaplar.some(k => k.raf && String(k.raf).trim());
-    r.style.display = (duzen !== 'liste' && rafVar) ? '' : 'none';
-    r.classList.toggle('aktif', rafGrupla);
+  function grupDugmeTazele(){
+    const kap = document.getElementById('grupEksen');
+    if(!kap) return;
+    kap.querySelectorAll('.grup-sekme').forEach(b => {
+      const aktif = b.dataset.v === grup;
+      b.classList.toggle('aktif', aktif);
+      b.setAttribute('aria-pressed', aktif ? 'true' : 'false');
+    });
+  }
+
+  /* ---- Gruplama boyutu (v43 D2) ---- */
+  const GRUP_DURUM_AD = { okunuyor:'Okunuyor', okunacak:'Okunacak', bitti:'Okundu', yarim:'Yarım' };
+  const GRUP_DURUM_SIRA = ['Okunuyor', 'Okunacak', 'Yarım', 'Okundu'];
+  function grupBaslik(k){
+    if(grup === 'durum') return GRUP_DURUM_AD[k.durum] || 'Okunacak';
+    if(grup === 'tur') return String(k.tur||'').trim() || '— tür belirtilmemiş —';
+    if(grup === 'yazar') return String(k.yazar||'').trim() || '— yazar belirtilmemiş —';
+    if(grup === 'raf') return String(k.raf||'').trim() || '— raf belirtilmemiş —';
+    return '';
+  }
+  function grupDegeriVar(k){
+    if(grup === 'durum') return true;
+    const v = grup === 'tur' ? k.tur : grup === 'yazar' ? k.yazar : k.raf;
+    return !!(v && String(v).trim());
+  }
+  function grupSirali(anahtarlar){
+    if(grup === 'durum')
+      return anahtarlar.sort((a,b) => GRUP_DURUM_SIRA.indexOf(a) - GRUP_DURUM_SIRA.indexOf(b));
+    // '—' ile başlayan "belirtilmemiş" kovası tr sıralamada başa düşer — g13'ün
+    // eski raf davranışı (belirtilmemiş İLK) korunur.
+    return anahtarlar.sort((a,b) => a.localeCompare(b,'tr'));
+  }
+  /* Boyut seçili ama görüntülenen hiçbir kitapta o veri yoksa: gruplamayı
+     ZORLAMA (tek "belirtilmemiş" kovası bilgi taşımaz) — dürüst not göster. */
+  function grupBosNotTazele(kitaplar){
+    const not = document.getElementById('grupBosNot');
+    if(!not) return false;
+    const bos = !!grup && grup !== 'durum' && kitaplar.length > 0
+      && !kitaplar.some(grupDegeriVar);
+    if(bos){
+      const ad = { tur:'Tür', yazar:'Yazar', raf:'Raf konumu' }[grup] || 'Bu bilgi';
+      const ipucu = grup === 'raf'
+        ? 'Düzenle formundan ya da çoklu seçimde "Raf ata" ile ekleyebilirsin.'
+        : 'Kitap formundaki alanı doldurdukça burada gruplanır.';
+      not.textContent = ad + ' bilgisi henüz hiçbir kitapta yok — gruplamak için önce veri gerek. ' + ipucu;
+      not.hidden = false;
+      return true;
+    }
+    not.hidden = true;
+    return false;
   }
 
   function grupluCiz(kap, kitaplar, kartFn){
     let parcalar = [];
-    if(rafGrupla){
+    const bosVeri = grupBosNotTazele(kitaplar);
+    if(grup && !bosVeri){
       const gruplar = new Map();
       kitaplar.forEach(k => {
-        const r = k.raf || '— raf belirtilmemiş —';
-        if(!gruplar.has(r)) gruplar.set(r, []);
-        gruplar.get(r).push(k);
+        const a = grupBaslik(k);
+        if(!gruplar.has(a)) gruplar.set(a, []);
+        gruplar.get(a).push(k);
       });
-      [...gruplar.keys()].sort((a,b) => a.localeCompare(b,'tr')).forEach(r => {
-        parcalar.push('<div class="raf-basligi">' + kacir(r) + ' · ' + gruplar.get(r).length + '</div>');
-        gruplar.get(r).forEach(k => parcalar.push(kartFn(k)));
+      grupSirali([...gruplar.keys()]).forEach(a => {
+        parcalar.push('<div class="raf-basligi">' + kacir(a) + ' · ' + gruplar.get(a).length + '</div>');
+        gruplar.get(a).forEach(k => parcalar.push(kartFn(k)));
       });
     }else{
       kitaplar.forEach(k => parcalar.push(kartFn(k)));
@@ -183,6 +233,32 @@
     kap.innerHTML = parcalar.join('');
     kapakHatalariniBagla(kap, kitaplar);
     secimGorselTazele();
+  }
+  /* Liste düzeninde gruplama (v43): çekirdeğin zengin satırları YENİDEN
+     ÜRETİLMEZ — mevcut kart düğümleri grup sırasına göre taşınır, araya
+     başlık girer (aynı .raf-basligi dili). */
+  function listeGrupla(){
+    const kap = document.getElementById('liste');
+    if(!kap) return;
+    kap.querySelectorAll('.raf-basligi').forEach(e => e.remove());
+    const kartlar = [...kap.querySelectorAll('.kart')];
+    const kitaplar = kartlar.map(el => kitapBulL(el.dataset.id)).filter(Boolean);
+    const bosVeri = grupBosNotTazele(kitaplar);
+    if(!grup || bosVeri || !kartlar.length) return;
+    const gruplar = new Map();
+    kartlar.forEach(el => {
+      const k = kitapBulL(el.dataset.id);
+      const a = k ? grupBaslik(k) : '—';
+      if(!gruplar.has(a)) gruplar.set(a, []);
+      gruplar.get(a).push(el);
+    });
+    grupSirali([...gruplar.keys()]).forEach(a => {
+      const bas = document.createElement('div');
+      bas.className = 'raf-basligi';
+      bas.textContent = a + ' · ' + gruplar.get(a).length;
+      kap.appendChild(bas);
+      gruplar.get(a).forEach(el => kap.appendChild(el));
+    });
   }
   function listedekiKitaplar(kap){
     return [...kap.querySelectorAll('.kart')].map(k => k.dataset.id).filter(Boolean)
@@ -192,7 +268,7 @@
     const kap = document.getElementById('liste');
     if(!kap) return;
     const kitaplar = listedekiKitaplar(kap);
-    if(!kitaplar.length){ kap.classList.remove('izgara'); return; }
+    if(!kitaplar.length){ kap.classList.remove('izgara'); grupBosNotTazele([]); return; }
     kap.classList.add('izgara');
     grupluCiz(kap, kitaplar, kartHtml);
   }
@@ -200,7 +276,7 @@
     const kap = document.getElementById('liste');
     if(!kap) return;
     const kitaplar = listedekiKitaplar(kap);
-    if(!kitaplar.length){ kap.classList.remove('yogun'); return; }
+    if(!kitaplar.length){ kap.classList.remove('yogun'); grupBosNotTazele([]); return; }
     kap.classList.add('yogun');
     grupluCiz(kap, kitaplar, yogunHtml);
   }
@@ -398,7 +474,9 @@
     }
     if(duzen === 'izgara') izgaraCiz();
     else if(duzen === 'yogun') yogunCiz();
+    else listeGrupla();
     duzenDugmeTazele();
+    grupDugmeTazele();
   }
   function listeyiBagla(){
     if(typeof window.listeCiz === 'function' && !window.listeCiz.__gorunum){
@@ -406,7 +484,6 @@
       const sarmal = function(){
         const s = asil.apply(this, arguments);
         dugmeEkle();
-        rafDugmeTazele();
         duzenTazele();
         secimGorselTazele();
         return s;
@@ -453,15 +530,17 @@
         const v = el.dataset.v;
         if(DUZENLER.indexOf(v) >= 0 && v !== duzen){
           duzen = v; ayarYaz();
-          rafDugmeTazele();
           if(typeof listeCiz === 'function') listeCiz();
         }
         return;
       }
-      if(act === 'raf-grupla'){
-        rafGrupla = !rafGrupla; ayarYaz();
-        rafDugmeTazele();
-        duzenTazele();
+      if(act === 'grup-sec'){
+        const v = el.dataset.v;
+        if(GRUPLAR.indexOf(v) >= 0){
+          grup = (grup === v) ? '' : v;   // aynı eksene dokunmak gruplamayı kapatır
+          ayarYaz();
+          if(typeof listeCiz === 'function') listeCiz();
+        }
         return;
       }
       if(act === 'secim-ac'){ secimModu ? secimKapat() : secimAc(null); return; }
@@ -551,12 +630,15 @@
   if(document.getElementById('liste')) baslat();
   else document.addEventListener('DOMContentLoaded', baslat);
 
-  window.__gorunum = { secimAc, secimKapat, izgaraCiz, duzenTazele, rafDugmeTazele,
+  window.__gorunum = { secimAc, secimKapat, izgaraCiz, duzenTazele,
     izgaraTazele: duzenTazele,           // eski ad — geriye dönük API
+    rafDugmeTazele: grupDugmeTazele,     // eski ad — geriye dönük API
     secilenler: () => secilenler,
     izgaraMi: () => duzen === 'izgara',
     duzenMi: () => duzen,
+    grupMu: () => grup,
     izgaraYaz: v => { duzen = v ? 'izgara' : 'liste'; ayarYaz(); },
     duzenYaz: v => { if(DUZENLER.indexOf(v) >= 0){ duzen = v; ayarYaz(); } },
-    rafGruplaYaz: v => { rafGrupla = v; ayarYaz(); } };
+    grupYaz: v => { grup = (GRUPLAR.indexOf(v) >= 0) ? v : ''; ayarYaz(); },
+    rafGruplaYaz: v => { grup = v ? 'raf' : (grup === 'raf' ? '' : grup); ayarYaz(); } };
 })();

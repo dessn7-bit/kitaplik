@@ -61,16 +61,23 @@ test.describe('G13 M1 — not kimliği metin eşleştirmenin yerini aldı', () =
 });
 
 /* --------- M2: raf gruplama düğmesi --------- */
-test.describe('G13 M2 — raf gruplama düğmesi', () => {
+/* v43 (D2): "Rafa göre" düğmesi gruplama EKSENİNE genelleşti (#grupRaf,
+   Durum·Tür·Yazar·Raf satırı). Eksenler her düzende görünür; veri yoksa
+   gruplama zorlanmaz, dürüst not çıkar (g37). */
+test.describe('G13 M2 — raf gruplama (v43 eksen)', () => {
 
-  test('liste düzeninde düğme görünmez, ızgarada görünür (v42 üç-düzen anahtarı)', async ({ page }) => {
+  test('raf ekseni her düzende görünür ve gruplamayı açıp kapatır', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'K1', raf: 'üst raf' })]);
     await rafAc(page);
-    await expect(page.locator('#rafGrupBtn')).toBeHidden();
+    await expect(page.locator('#grupRaf')).toBeVisible();
     await page.click('#duzenIzgara');
-    await expect(page.locator('#rafGrupBtn')).toBeVisible();
-    await page.click('#duzenListe');
-    await expect(page.locator('#rafGrupBtn')).toBeHidden();
+    await expect(page.locator('#grupRaf')).toBeVisible();
+    await page.click('#grupRaf');
+    await expect(page.locator('#grupRaf')).toHaveClass(/aktif/);
+    await expect(page.locator('#liste .raf-basligi')).toHaveCount(1);
+    await page.click('#grupRaf');   // aynı eksene dokunmak kapatır
+    await expect(page.locator('#grupRaf')).not.toHaveClass(/aktif/);
+    await expect(page.locator('#liste .raf-basligi')).toHaveCount(0);
   });
 
   test('gruplama açılınca raf başlıkları çizilir, rafsızlar ayrı grupta', async ({ page }) => {
@@ -82,24 +89,26 @@ test.describe('G13 M2 — raf gruplama düğmesi', () => {
     await rafAc(page);
     await page.click('#duzenIzgara');
     await expect(page.locator('#liste .raf-basligi')).toHaveCount(0);
-    await page.click('#rafGrupBtn');
+    await page.click('#grupRaf');
     await expect(page.locator('#liste .raf-basligi')).toHaveCount(2);
     await expect(page.locator('#liste .raf-basligi').first()).toContainText('raf belirtilmemiş');
     await expect(page.locator('#liste')).toContainText('üst raf · 2');
     await expect(page.locator('#liste .kart')).toHaveCount(3);
   });
 
-  test('tercih yeniden yüklemede korunur', async ({ page }) => {
+  test('tercih yeniden yüklemede korunur (grup + geriye dönük rafGrupla)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'K1', raf: 'üst raf' })]);
     await rafAc(page);
     await page.click('#duzenIzgara');
-    await page.click('#rafGrupBtn');
+    await page.click('#grupRaf');
     await expect(page.locator('#liste .raf-basligi')).toHaveCount(1);
     expect(await page.evaluate(() =>
       JSON.parse(localStorage.getItem('kk_gorunum_v1')).rafGrupla)).toBe(true);
+    expect(await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('kk_gorunum_v1')).grup)).toBe('raf');
     await rafYenile(page);
     await expect(page.locator('#liste .raf-basligi')).toHaveCount(1);
-    await expect(page.locator('#rafGrupBtn')).toBeVisible();
+    await expect(page.locator('#grupRaf')).toHaveClass(/aktif/);
   });
 });
 
