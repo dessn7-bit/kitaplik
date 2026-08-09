@@ -12,9 +12,13 @@ function bitmis(ek) {
 function okunacak(ek) {
   return sahteKitap(Object.assign({ durum: 'okunacak', sahiplik: 'sahip' }, ek));
 }
-async function panelAc(page) {
-  await page.click('[data-act="on-ac"]');
-  await expect(page.locator('#ortuOneri')).toHaveClass(/acik/);
+/* v50 GÖÇ: ampul paneli emekli — ampul düğmesi Keşfet sekmesine götürür,
+   öneri UI'si orada (kesfet.js, ks-). Bu yardımcı aynı zamanda "ampul
+   Keşfet'e gidiyor" sözleşmesinin kanıtıdır. */
+async function kesfetAc(page) {
+  await page.click('.on-ac-btn');
+  await expect(page.locator('#panel-kesfet')).toHaveClass(/active/);
+  await expect(page.locator('#ksIcerik .ks-ust')).toBeVisible();
 }
 /* Skorlamayı dolduran nötr taban: 3 puanlı bitmiş kitap (eşik), alakasız yazar/tür */
 function taban() {
@@ -41,10 +45,10 @@ test.describe('G24 öneri motoru', () => {
     expect(s.ana[0].kitap.ad).toBe('Mülksüzler');
     expect(s.ana[0].neden).toContain('Ursula K. Le Guin');
     expect(s.ana[0].neden).toContain('2 kitaba ortalama 9,5 verdin');
-    // arayüzde de ilk öğe bu
-    await panelAc(page);
-    await expect(page.locator('#oneriIcerik .on-item').first()).toContainText('Mülksüzler');
-    await expect(page.locator('#oneriIcerik .on-item').first()).toContainText('ortalama 9,5');
+    // arayüzde de ilk öğe bu (Keşfet — motorla AYNI gerekçe)
+    await kesfetAc(page);
+    await expect(page.locator('#ksIcerik .ks-item').first()).toContainText('Mülksüzler');
+    await expect(page.locator('#ksIcerik .ks-item').first()).toContainText('ortalama 9,5');
   });
 
   test('düşük puanlı yazarın kitabı ilk 5\'e giremez', async ({ page }) => {
@@ -88,10 +92,10 @@ test.describe('G24 öneri motoru', () => {
     const k = okunacak({ ad: 'Ertelenecek Kitap', yazar: 'Herhangi Yazar' });
     await tohumla(page, [...taban(), k, okunacak({ ad: 'Kalan Kitap' })]);
     await rafAc(page);
-    await panelAc(page);
-    await page.click(`#oneriIcerik [data-act="on-ertele"][data-id="${k.id}"]`);
+    await kesfetAc(page);
+    await page.click(`#ksIcerik [data-act="ks-ertele"][data-id="${k.id}"]`);
     await expect(page.locator('#toast')).toContainText('30 gün sonra');
-    await expect(page.locator('#oneriIcerik')).not.toContainText('Ertelenecek Kitap'); // panel tazelendi
+    await expect(page.locator('#ksIcerik')).not.toContainText('Ertelenecek Kitap'); // liste tazelendi
     expect(await page.evaluate(id =>
       veri.kitaplar.find(x => x.id === id).ertelemeTarihi, k.id)).toBe(bugunISO(0));
     // tarih taklidi: 29 gün önce ertelenmiş → hâlâ gizli; 31 gün önce → geri gelir
@@ -177,8 +181,8 @@ test.describe('G24 öneri motoru', () => {
     expect(s.mod).toBe('az-veri');
     expect(s.ana[0].kitap.ad).toBe('En Eski Bekleyen'); // en uzun bekleyen başta
     expect(s.ana[0].skor).toBe(null);                    // skor uydurulmadı
-    await panelAc(page);
-    const metin = await page.locator('#oneriIcerik').textContent();
+    await kesfetAc(page);
+    const metin = await page.locator('#ksIcerik').textContent();
     expect(metin).toContain('yeterli veri yok');
     expect(metin).toContain('rafta bekliyor');           // gerçek neden
     expect(metin).not.toContain('ortalama');             // uydurma yakınlık gerekçesi YOK
@@ -211,19 +215,21 @@ test.describe('G24 öneri motoru', () => {
     const s = await page.evaluate(() => window.__oneri.hesapla());
     expect(s.ana.some(o => o.kitap.ad === 'Dalgalar')).toBe(false);   // ana havuz yalnız sahip
     expect(s.istek.some(o => o.kitap.ad === 'Dalgalar')).toBe(true);  // ayrı bölümde
-    await panelAc(page);
-    await expect(page.locator('#oneriIcerik .on-bolum-baslik')).toContainText('İstek listenden');
-    const istekOge = page.locator('#oneriIcerik .on-item', { hasText: 'Dalgalar' });
-    await expect(istekOge.locator('.on-rozet')).toContainText('İstek listende');
-    await expect(istekOge.locator('[data-act="on-basla"]')).toHaveCount(0); // elinde yok → başlanamaz
+    // v50: Keşfet'te istekler ayrı bölüm değil SAHİPLİK SÜZGECİ — İstek listem çipi
+    await kesfetAc(page);
+    await expect(page.locator('#ksIcerik')).not.toContainText('Dalgalar'); // varsayılan: Bende
+    await page.click('#ksIcerik [data-act="ks-suz"][data-g="sahiplik"][data-v="istek"]');
+    const istekOge = page.locator('#ksIcerik .ks-item', { hasText: 'Dalgalar' });
+    await expect(istekOge.locator('.ks-rozet')).toContainText('İstek listende');
+    await expect(istekOge.locator('[data-act="ks-basla"]')).toHaveCount(0); // elinde yok → başlanamaz
   });
 
   test('"Okumaya başla": durum okunuyor olur, okuma OTURUMU başlamaz', async ({ page }) => {
     const k = okunacak({ ad: 'Başlanacak Kitap' });
     await tohumla(page, [...taban(), k]);
     await rafAc(page);
-    await panelAc(page);
-    await page.click(`#oneriIcerik [data-act="on-basla"][data-id="${k.id}"]`);
+    await kesfetAc(page);
+    await page.click(`#ksIcerik [data-act="ks-basla"][data-id="${k.id}"]`);
     await expect(page.locator('#toast')).toContainText('İyi okumalar');
     const d = await page.evaluate(id => {
       const x = veri.kitaplar.find(b => b.id === id);
@@ -232,7 +238,7 @@ test.describe('G24 öneri motoru', () => {
     expect(d.durum).toBe('okunuyor');
     expect(d.bas).toBe(bugunISO(0));
     expect(d.oturum).toBeFalsy();                       // oturum başlatılmadı (bilinçli)
-    await expect(page.locator('#oneriIcerik')).not.toContainText('Başlanacak Kitap'); // aday değil artık
+    await expect(page.locator('#ksIcerik')).not.toContainText('Başlanacak Kitap'); // aday değil artık
   });
 
   test('tür eşiği: tek kitaplık tür NÖTR, iki kitaplık tür sinyal verir', async ({ page }) => {
@@ -315,37 +321,38 @@ test.describe('G24 öneri motoru', () => {
     expect(oge.neden).toContain('Dune serisinin 2. cildi');
   });
 
-  test('uygunluk çubuğu her koşulda 0-100 arası: istek öğesinde ve ana liste boşken', async ({ page }) => {
+  test('uygunluk çizgisi her koşulda 0-100 arası: tek adayda ve istek süzgecinde', async ({ page }) => {
     await tohumla(page, [
       ...taban(),
       bitmis({ ad: 'Sevilmeyen K', yazar: 'Kötü Yazar', puan: 1 }),
       okunacak({ ad: 'Tek Sahip Aday', yazar: 'Nötr Yazar' }),
-      // düşük puanlı yazarın İSTEK kitabı: skoru ana minimumun ALTINDA → kelepçe testi
+      // düşük puanlı yazarın İSTEK kitabı: negatif skor → kelepçe testi
       sahteKitap({ ad: 'Kötü İstek', yazar: 'Kötü Yazar', durum: 'okunacak', sahiplik: 'istek' })
     ]);
     await rafAc(page);
-    await panelAc(page);
+    await kesfetAc(page);
+    // tek adaylı listede aralık 0 → kelepçe NaN/negatif üretmemeli
     const genislikler = await page.evaluate(() =>
-      [...document.querySelectorAll('#oneriIcerik .on-bar-ic')].map(b => parseFloat(b.style.width)));
+      [...document.querySelectorAll('#ksIcerik .ks-skor > span')].map(b => parseFloat(b.style.width)));
     expect(genislikler.length).toBeGreaterThan(0);
-    genislikler.forEach(g => { expect(g).toBeGreaterThanOrEqual(0); expect(g).toBeLessThanOrEqual(100); });
-    // ana liste tamamen boş (tek sahip aday ertelenir) + istek dolu → NaN/-Infinity üretmemeli
-    await page.click('#oneriIcerik [data-act="on-ertele"]');
+    genislikler.forEach(g => { expect(Number.isFinite(g)).toBe(true); expect(g).toBeGreaterThanOrEqual(0); expect(g).toBeLessThanOrEqual(100); });
+    // istek süzgecine geç: negatif skorlu tek öğe → yine kelepçeli
+    await page.click('#ksIcerik [data-act="ks-suz"][data-g="sahiplik"][data-v="istek"]');
+    await expect(page.locator('#ksIcerik')).toContainText('Kötü İstek');
     const sonra = await page.evaluate(() =>
-      [...document.querySelectorAll('#oneriIcerik .on-bar-ic')].map(b => parseFloat(b.style.width)));
+      [...document.querySelectorAll('#ksIcerik .ks-skor > span')].map(b => parseFloat(b.style.width)));
     sonra.forEach(g => { expect(Number.isFinite(g)).toBe(true); expect(g).toBeGreaterThanOrEqual(0); expect(g).toBeLessThanOrEqual(100); });
-    await expect(page.locator('#oneriIcerik')).toContainText('Kötü İstek'); // istek bölümü hâlâ duruyor
   });
 
-  test('panelden detaya geçip bitirince detayda kalınır: puan şeridi çıkar, panel tazelenir', async ({ page }) => {
+  test('Keşfet\'ten detaya geçip bitirince detayda kalınır: puan şeridi çıkar, liste tazelenir', async ({ page }) => {
     // Detay tasarımı sprintinden beri "bitir" form AÇMAZ: detayda kalınır,
     // puan sorusu birincil bloktaki şerittir (d-puan). Bu vaka yeni akışı kilitler.
     const k = okunacak({ ad: 'Panelden Bitirilecek' });
     await tohumla(page, [...taban(), k]);
     await rafAc(page);
-    await panelAc(page);
-    // panel → detay → okumaya başla → bitir (detayda kal, puan şeridi)
-    await page.click(`#oneriIcerik [data-act="on-detay"][data-id="${k.id}"]`);
+    await kesfetAc(page);
+    // Keşfet → detay → okumaya başla → bitir (detayda kal, puan şeridi)
+    await page.click(`#ksIcerik .ks-ad[data-act="detay"][data-id="${k.id}"]`);
     await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
     await page.click('#detayIcerik [data-act="baslat"]');
     await page.click('#detayIcerik [data-act="bitir"]');
@@ -363,11 +370,11 @@ test.describe('G24 öneri motoru', () => {
     await page.click('#detayIcerik #dPuan [data-act="d-puan"][data-v="8"]');
     await expect(page.locator('#ortuForm')).not.toHaveClass(/acik/);
     expect(await page.evaluate(id => veri.kitaplar.find(b => b.id === id).puan, k.id)).toBe(8);
-    // kapat: panel bu akışta hiç kapanmadı (form açılmadı) ve veri değişince
-    // kendini tazeledi — bitmiş kitap artık öneri listesinde değil
+    // kapat: Keşfet sekmesi hâlâ aktif ve veri değişince kendini tazeledi
+    // (hepsiniCiz sarmalaması) — bitmiş kitap artık öneri listesinde değil
     await page.click('#detayIcerik [data-act="detay-kapat"]');
-    await expect(page.locator('#ortuOneri')).toHaveClass(/acik/);
-    await expect(page.locator('#oneriIcerik')).not.toContainText('Panelden Bitirilecek');
+    await expect(page.locator('#panel-kesfet')).toHaveClass(/active/);
+    await expect(page.locator('#ksIcerik')).not.toContainText('Panelden Bitirilecek');
   });
 
   test('zar düğmesi hâlâ çalışıyor (regresyon)', async ({ page }) => {
@@ -530,8 +537,8 @@ test.describe('G24 gerekçe tekilleştirme (v48)', () => {
 
   test('tür-genel yedeği: tür cümlesi kullanılmışsa ikinci kitap sayısız tür cümlesi alır', async ({ page }) => {
     /* 3 aday, hepsi aynı tür, bekleme damgaları geçersiz: 1.si tür ortalamasını
-       alır, 2.si sayısız tür-geneline düşer, 3.sü (genel de kullanıldı)
-       gerekçesiz kalır — hiçbir cümle iki kez görünmez. */
+       alır, 2.si sayısız tür-geneline düşer, 3.sü genel havuzdan varyant alır
+       (v50: '' emekli — gerekçesiz satır kalmaz, havuz döngüseldir). */
     const adaylar = ['Aday 1', 'Aday 2', 'Aday 3'].map((ad, i) => {
       const k = okunacak({ ad, yazar: 'A Yazar ' + i, tur: 'Roman' });
       k.eklenme = 1;
@@ -548,8 +555,8 @@ test.describe('G24 gerekçe tekilleştirme (v48)', () => {
     const nedenler = s.ana.map(o => o.neden);
     expect(nedenler[0]).toContain('ortalama 9,0');
     expect(nedenler[1]).toBe('Roman türünden kitapları beğeniyorsun');
-    expect(nedenler[2]).toBe('');   // dürüst: uydurmaktansa gerekçesiz
-    const dolular = nedenler.filter(Boolean);
-    expect(new Set(dolular).size).toBe(dolular.length);
+    expect(nedenler[2]).toBe('Rafında seni bekliyor.');   // v50: genel havuz — '' emekli
+    nedenler.forEach(n => expect(n.trim().length).toBeGreaterThan(0));
+    expect(new Set(nedenler).size).toBe(nedenler.length);
   });
 });

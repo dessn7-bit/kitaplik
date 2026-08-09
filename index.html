@@ -684,27 +684,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .kp-bilgi{text-align:center;font-size:.8rem;color:var(--muted);margin-top:8px}
 .kp-not{font-size:.8rem;color:var(--muted);margin-top:10px;line-height:1.5}
 .kp-depo-satir{font-size:.85rem;color:var(--muted);margin:10px 0}
-/* ---------- Ne okusam? önerileri (on-) — stiller zar-btn'den kopya, seçici yeni ---------- */
+/* Ampul düğmesi (v50: pencere değil KEŞFET sekmesine götürür; on- panel CSS'i
+   emekli — liste/eylem stilleri artık kesfet.js'in ks- ad alanında) */
 .on-ac-btn{flex:0 0 40px;background:transparent;border:1px solid var(--cizgi);border-radius:var(--r-md);
   color:var(--muted);display:flex;align-items:center;justify-content:center}
 .on-ac-btn:active{transform:scale(.9)}
-.on-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
-.on-item:last-child{border-bottom:none}
-.on-kapak{flex:0 0 52px;width:52px;height:76px;object-fit:cover;border-radius:var(--r-mini);background:var(--surface2)}
-.on-yedek{flex:0 0 52px;width:52px;height:76px;border-radius:var(--r-mini)}
-.on-icerik{min-width:0;flex:1}
-.on-ad{font-weight:600;font-size:.95rem;text-align:left;padding:0;background:none;border:none;color:var(--paper)}
-.on-yazar{font-size:.8rem;color:var(--muted);margin-top:2px}
-.on-neden{font-size:.8rem;color:var(--muted2);margin-top:4px;line-height:1.5}
-.on-bar{height:6px;border-radius:999px;background:var(--surface2);margin-top:8px;overflow:hidden}
-.on-bar-ic{height:100%;border-radius:999px;background:var(--brass)}
-.on-satir{display:flex;gap:8px;margin-top:8px;align-items:center}
-.on-btn{padding:8px 12px;border-radius:var(--r-ic);border:1px solid var(--border);background:var(--surface);color:var(--paper);font-size:.8rem;font-weight:600}
-.on-btn-birincil{background:var(--brass);color:var(--uzeri);border-color:var(--brass)}
-.on-rozet{font-size:.75rem;color:var(--brass);border-radius:999px;padding:3px 10px;
-  background:color-mix(in srgb,var(--brass) 7%,transparent)}
-.on-bolum-baslik{font-size:.8rem;font-weight:600;color:var(--muted);margin:16px 0 2px}
-.on-mesaj{font-size:.85rem;color:var(--muted);line-height:1.5;padding:10px 0}
 /* ---------- Aralıklı alıntı tekrarı (tk-) — mantık tekrar.js'te ---------- */
 #tkKutu:empty{display:none}
 #tkKutu{display:block;padding:14px 16px 0}
@@ -755,9 +739,10 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <button class="zar-btn" data-act="zar" title="Okunacaklardan rastgele öner"
       aria-label="Okunacaklardan rastgele kitap öner"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="4" width="16" height="16" rx="3.6"/><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.4" fill="currentColor" stroke="none"/></svg></button>
     <!-- Zar SİLİNMEDİ (karar): zar "kader seçsin" anıdır, öneri motoru "bana göre
-         seç" anıdır — iki farklı ruh hali, yan yana dururlar. Mantık oneri.js'te. -->
-    <button class="on-ac-btn" data-act="on-ac" title="Ne okusam? Sana göre öneriler"
-      aria-label="Ne okusam? Kişisel okuma önerileri"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9.8 17.6h4.4"/><path d="M10.4 20.4h3.2"/><path d="M8.6 14.8C7 13.6 6 11.9 6 10c0-3.3 2.7-5.9 6-5.9s6 2.6 6 5.9c0 1.9-1 3.6-2.6 4.8-.5.4-.9 1-.9 1.7H9.5c0-.7-.4-1.3-.9-1.7z"/></svg></button>
+         seç" anıdır — iki farklı ruh hali, yan yana dururlar.
+         v50: ampul artık pencere değil KEŞFET sekmesini açar (panel emekli). -->
+    <button class="on-ac-btn" data-act="sekme" data-v="kesfet" title="Ne okusam? Sana göre öneriler"
+      aria-label="Ne okusam? Kişisel okuma önerileri — Keşfet"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9.8 17.6h4.4"/><path d="M10.4 20.4h3.2"/><path d="M8.6 14.8C7 13.6 6 11.9 6 10c0-3.3 2.7-5.9 6-5.9s6 2.6 6 5.9c0 1.9-1 3.6-2.6 4.8-.5.4-.9 1-.9 1.7H9.5c0-.7-.4-1.3-.9-1.7z"/></svg></button>
   </div>
 </header>
 
@@ -817,15 +802,16 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   <div id="liste"></div>
 </section>
 
-<!-- ===== KEŞFET (v42) =====
-     Şimdilik İSKELET: sekme + anlamlı boş durum. Öneri motoru (oneri.js) bir
-     sonraki sprintte buraya taşınacak — bu sprint yalnız yüzeyi açar, işlev
-     taşımaz (çakışma olmasın diye ampul düğmesine işaret eder). -->
+<!-- ===== KEŞFET (ks-, v50) =====
+     "Rafından ne okusam" — öneri motorunun tam ekranı; içeriği kesfet.js çizer.
+     Buradaki metin yalnız eklenti yüklenemezse görünür (savunmacı iskelet). -->
 <section class="panel" id="panel-kesfet">
-  <div class="kesfet-bos">
-    <div class="kicker">Keşfet</div>
-    <p>Burası, kütüphanenden yola çıkan keşif köşesi olacak: sana göre öneriler, seri devamları ve rafındaki örüntüler.</p>
-    <small>Öneri motoru bir sonraki adımda buraya taşınacak. O güne kadar "Ne okusam?" önerileri Kütüphane'deki ampul düğmesinde.</small>
+  <div id="ksIcerik">
+    <div class="kesfet-bos">
+      <div class="kicker">Keşfet</div>
+      <p>Öneriler hazırlanıyor…</p>
+      <small>Bu ekran açılmıyorsa sayfayı yenile — öneri motoru yüklenememiş demektir.</small>
+    </div>
   </div>
 </section>
 
@@ -1095,15 +1081,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   </div>
 </div>
 
-<!-- ===== NE OKUSAM? (on-) — mantık oneri.js'te ===== -->
-<div class="ortu" id="ortuOneri">
-  <div class="sheet">
-    <div class="tutamac"></div>
-    <button class="sheet-kapat" data-act="on-kapat" aria-label="Kapat">✕</button>
-    <div class="sheet-baslik" id="ortuOneriBaslik">Ne okusam?</div>
-    <div id="oneriIcerik"></div>
-  </div>
-</div>
+<!-- "Ne okusam?" örtü penceresi v50'de emekli — işlev Keşfet sekmesinde (kesfet.js). -->
 
 <!-- ===== DETAY ===== -->
 <div class="ortu" id="ortuDetay">
@@ -1147,7 +1125,8 @@ const DEPO = 'kk_kitaplik_v1';
 const DURUM_AD = { okunacak:'Okunacak', okunuyor:'Okunuyor', bitti:'Bitti', yarim:'Yarım kaldı' };
 /* v41: sırt paleti Soluk Parşömen'e uyarlandı — 8 renk de üzeri (#FFFDF7) metinle
    AA (5.20-7.05) ve zeminden net ayrık (bg'ye karşı 4.61-6.24). */
-const SIRT_RENK = ['#8A6524','#5C7040','#96502E','#53667E','#7B5871','#6A5433','#40707A','#8C4A38'];
+/* SIRT_RENK/sirtRenk v50'de kaldırıldı: son tüketici eski öneri panelinin
+   on-yedek kapağıydı; Keşfet ortak levha üreticisini (ktPlate) kullanıyor. */
 
 let veri = depoYukle();
 /* sekme:'ana' — açılış Ana Sayfa. KARAR: son sekme HATIRLANMAZ (kalıcı anahtar
@@ -1339,9 +1318,8 @@ function ikon(ad){
 }
 window.ikon = ikon;
 /* Kapaksız kitap yer tutucusu: adın ilk (en çok 3) kelimesinin baş harfleri */
-/* basHarf v47'de kaldırıldı: son tüketicisi Ana Sayfa'nın sırt-renkli kapak
-   şeridiydi; şerit ortak levha üreticisine (ktSiraLevhaHtml) geçti.
-   sirtRenk YAŞIYOR — oneri.js panel yedeği kullanıyor. */
+/* basHarf v47'de, sirtRenk/SIRT_RENK v50'de kaldırıldı: son tüketiciler
+   sırt-renkli kapak yedekleriydi; her yüzey ortak levha üreticisine geçti. */
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function bugun(){
   const d = new Date();
@@ -1354,11 +1332,6 @@ function trTarih(iso){
   return `${parseInt(p[2])} ${aylar[parseInt(p[1])-1]} ${p[0]}`;
 }
 function gunFarki(a, b){ return Math.round((new Date(b) - new Date(a)) / 86400000); }
-function sirtRenk(ad){
-  let h = 0;
-  for(const ch of String(ad)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
-  return SIRT_RENK[h % SIRT_RENK.length];
-}
 function kitapBul(id){ return veri.kitaplar.find(k => k.id === id); }
 /* aktifOdunc v40'ta kaldırıldı (ödünç UI söküldü); veri modeli (kitapNormalize.odunc)
    ve senkron.js dizi birleşimi bilinçli olarak YAŞIYOR — bkz. detay yorumu. */
@@ -1818,11 +1791,6 @@ function formAc(id){
   fAyrintiOzetGuncelle();
   formDurumCiz(); puanCiz(); kapakOnizleCiz();
   if(window.__kapak) window.__kapak.formAcildi(); // bekleyen fotoğraf durumunu sıfırla + şeridi çiz
-  // Öneri paneli açıkken form açılırsa (öneri → detay → bitir/düzenle) form DOM'da
-  // önce geldiği için panelin ALTINA gömülüp inert'lenirdi (G12 M3'teki desenin
-  // aynısı). Panel bir fırlatıcıdır; form açılırken kapatılır.
-  const ortuOneriEl = document.getElementById('ortuOneri');
-  if(ortuOneriEl) ortuOneriEl.classList.remove('acik');
   document.getElementById('ortuForm').classList.add('acik');
 }
 /* D2: katlanır bölümün özet satırı — kapalıyken hangi alanların dolduğunu
@@ -2789,11 +2757,7 @@ function hepsiniCiz(){
   if(durum.sekme === 'ana') anaCiz();
   if(durum.sekme === 'ist') istCiz();
   if(durum.sekme === 'alinti') alintiCiz();
-  // öneri paneli açıkken veri değiştiyse (detaydan başlat/bitir/sil vb.) panel
-  // bayat kalmasın — bayat "Okumaya başla" düğmesi yanlış kitaba yazabilirdi
-  const ortuOneriEl = document.getElementById('ortuOneri');
-  if(window.__oneri && ortuOneriEl && ortuOneriEl.classList.contains('acik'))
-    window.__oneri.panelCiz();
+  // Keşfet'in bayat kalmaması kesfet.js'in hepsiniCiz sarmalamasında (v50)
 }
 function temaDugmeleriCiz(){
   const secili = window.temaTercihi ? window.temaTercihi() : 'sistem';
@@ -3347,6 +3311,7 @@ cipKaydirmaKur();
 <script src="./rapor.js"></script>
 <script src="./kapak.js"></script>
 <script src="./oneri.js"></script>
+<script src="./kesfet.js"></script>
 <!-- Ana Sayfa'nın ikinci çizimi. İlk çizim (hepsiniCiz) eklentilerden ÖNCE
      koşuyor: o anda window.__tekrar / __oneri / __oturum henüz yok, bu yüzden
      "Bugün" ve "Sıradaki" bölümleri eksik kalırdı. Betikler eşzamanlı

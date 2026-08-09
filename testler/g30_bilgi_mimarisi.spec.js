@@ -61,14 +61,15 @@ test.describe('G30 — açılış Ana Sayfa', () => {
     await expect(page.locator('#panel-yedek')).toHaveCount(0);
   });
 
-  test('Keşfet iskeleti (v42): sekme açılır, anlamlı mesaj verir, çökme yok', async ({ page }) => {
+  test('Keşfet (v50): sekme açılır, iskelet DEĞİL gerçek öneri ekranı çizilir', async ({ page }) => {
     await tohumla(page, [okunanK()]);
     await page.goto('/');
     await page.click('nav [data-act="sekme"][data-v="kesfet"]');
     await expect(page.locator('#panel-kesfet')).toBeVisible();
     await expect(page.locator('nav [data-v="kesfet"]')).toHaveClass(/active/);
-    await expect(page.locator('#panel-kesfet .kesfet-bos')).toContainText('keşif köşesi');
-    await expect(page.locator('#panel-kesfet .kesfet-bos small')).toContainText('Ne okusam?');
+    // v50 GÖÇ: boş iskelet emekli — kesfet.js gerçek ekranı çizer
+    await expect(page.locator('#ksIcerik .ks-baslik')).toHaveText('Ne okusam?');
+    await expect(page.locator('#panel-kesfet .kesfet-bos')).toHaveCount(0);
     // Kütüphane'ye ait yüzeyler Keşfet'e sızmaz
     await expect(page.locator('#aramaSatiri')).toBeHidden();
     await expect(page.locator('.fab')).toBeHidden();

@@ -147,12 +147,16 @@ test.describe('G29 — pencere başına tek birincil', () => {
     await expect(gorunurBrass(page, '#kartOrtu').first()).toHaveAttribute('data-act', 'kart-indir');
   });
 
-  test('öneri paneli: .btn-brass yok (kendi on-btn sınıfları)', async ({ page }) => {
+  test('Keşfet: .btn-brass yok (öneri eylemleri ghost/sessiz dilinde) — v50 göçü', async ({ page }) => {
+    /* v50: ampul paneli emekli — öneri yüzeyi Keşfet sekmesi. Birincil eylem
+       "Okumaya başla" ghost brass METİN düğmesi (.ks-basla), .btn-brass değil. */
     await tohumla(page, [sahteKitap({ ad: 'Önerilecek' })]);
     await rafAc(page);
-    await page.click('[data-act="on-ac"]');
-    await expect(page.locator('#ortuOneri')).toHaveClass(/acik/);
-    await expect(gorunurBrass(page, '#ortuOneri')).toHaveCount(0);
+    await page.click('.on-ac-btn');
+    await expect(page.locator('#panel-kesfet')).toHaveClass(/active/);
+    await expect(page.locator('#ksIcerik .ks-ust')).toBeVisible();
+    await expect(gorunurBrass(page, '#panel-kesfet')).toHaveCount(0);
+    await expect(page.locator('#ortuOneri')).toHaveCount(0);   // eski pencere YOK
   });
 
   test('yedek sekmesi: tek pirinç = JSON indir (md/CSV/seri/senkron çerçeveli)', async ({ page }) => {

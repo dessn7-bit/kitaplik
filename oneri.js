@@ -79,8 +79,25 @@
      böylece birleşik cümleler de kendiliğinden farklılaşır. Keşfet aynı motoru
      kullanacak: düzeltme BURADA, arayüzlerde kopya yok. */
   const GEREKCE_SIRA = ['yazar', 'seri', 'etiket', 'tur', 'bekleme'];
+  /* Genel yedek havuzları (v50): tekillik kısıtı ÖZGÜL cümleler içindir —
+     kopyalanmış "tür ortalaması" güveni kırar; genel cümle ise bilgi taşımaz,
+     tekrarı zarar vermez. Yine de dil tekdüzeleşmesin diye varyant havuzu
+     DÖNGÜSEL kullanılır (4./5. sinyalsiz kitap 1. ifadeyi yeniden alır).
+     Sonuç: gerekçesiz satır ('') İMKÂNSIZ — v49 ŞÜPHE-2 borcu kapandı. */
+  const GENEL_SINYALSIZ = [
+    'Hakkında yeterli veri yok — denemeye değer.',
+    'Henüz sinyal birikmedi; belki sürpriz yapar.',
+    'Kestirmek için veri az — açıp bakmak lazım.',
+    'Geçmişin bu kitap için henüz bir şey söylemiyor.'
+  ];
+  const GENEL_ORTAK = [
+    'Rafında seni bekliyor.',
+    'Sırasını bekleyen bir aday.',
+    'Listenin sessiz adaylarından.'
+  ];
   function nedenAta(liste){
     const kullanilan = new Set();
+    let sSayac = 0, oSayac = 0;   // varyant havuzu döngü sayaçları
     liste.forEach(o => {
       const c = o.cumleler || {};
       const b = o.bilesenler || {};
@@ -93,22 +110,23 @@
         kullanilan.add(c[ad]);
       }
       if(!parcalar.length){
-        /* Genel yedek İKİ AYRI durum (v49):
-           - kitapta sinyal VAR ama cümleleri listede kullanılmış → tür-genel
-             (yalnız tür gerçekten pozitifken) ya da nötr raf cümlesi;
-           - kitapta HİÇ sinyal yok → dürüst itiraf. KARAR: sinyalsiz kitap
-             listeden ATILMAZ — veri yokluğu kitabın aleyhine kanıt değil,
-             küçük kütüphanede liste boşalır ve "önerilecek kitap yok" yalanı
-             doğardı; cümle sayı uydurmaz, denemeye davet eder. */
+        /* Genel yedek İKİ AYRI durum (v49) — KARAR: sinyalsiz kitap listeden
+           ATILMAZ (veri yokluğu aleyhe kanıt değil; küçük kütüphanede liste
+           boşalırdı); cümle sayı uydurmaz. */
         const sinyalVar = Object.keys(c).length > 0;
-        const genel = !sinyalVar
-          ? 'Hakkında yeterli veri yok — denemeye değer.'
-          : (b.tur > 0 && o.kitap.tur)
-            ? o.kitap.tur + ' türünden kitapları beğeniyorsun'
-            : 'Rafında seni bekliyor.';
-        if(!kullanilan.has(genel)){ parcalar.push(genel); kullanilan.add(genel); }
+        let genel;
+        if(!sinyalVar){
+          genel = GENEL_SINYALSIZ[sSayac % GENEL_SINYALSIZ.length]; sSayac++;
+        }else if(b.tur > 0 && o.kitap.tur &&
+                 !kullanilan.has(o.kitap.tur + ' türünden kitapları beğeniyorsun')){
+          genel = o.kitap.tur + ' türünden kitapları beğeniyorsun';
+        }else{
+          genel = GENEL_ORTAK[oSayac % GENEL_ORTAK.length]; oSayac++;
+        }
+        parcalar.push(genel);
+        kullanilan.add(genel);
       }
-      o.neden = parcalar.join(' · ');   // hiçbir parça kalmadıysa '' — UI nedensiz çizer
+      o.neden = parcalar.join(' · ');
     });
   }
 
@@ -130,7 +148,11 @@
   }
 
   /* ---------- skorlama ---------- */
-  function hesapla(){
+  /* hesaplaHam (v50): degerlendirilmis TAM sirali listeler — neden ATANMAMIS,
+     kirpilmamis. Kesfet suzgec+limit uygular, cesitlilikSec + nedenAta'yi
+     KENDI gorunen listesine kosar. hesapla() bunun kirpilmis sarmalayicisi
+     (Ana Sayfa + testler) — iki yuzey ayni motordan, kopya mantik yok. */
+  function hesaplaHam(){
     const kitaplar = (typeof veri === 'object' && Array.isArray(veri.kitaplar)) ? veri.kitaplar : [];
     const ozetler = new Map(kitaplar.map(k => [k.id, okumaOzet(k)]));
     const bittiler = kitaplar.filter(k => ozetler.get(k.id).bitti);
@@ -142,19 +164,20 @@
 
     if(puanlilar.length < MIN_PUANLI){
       // AZ VERİ: skor yok, uydurma gerekçe yok — en uzun bekleyenler (gerçek neden);
-      // gerekçeler burada da nedenAta'dan geçer (geçersiz damga = beklemesiz, tekillik)
-      const bekleyen = sahipler.slice()
+      // gerekçeler nedenAta'dan geçer (geçersiz damga = beklemesiz, tekillik)
+      const bekleyenYap = liste => liste.slice()
         .sort((a, b) => (a.eklenme || 0) - (b.eklenme || 0))
-        .slice(0, ANA_SAYI)
         .map(k => {
           const c = {};
           const gun = beklemeGun(k);
           if(gun !== null && gun >= BEKLEME_GEREKCE_GUN) c.bekleme = beklemeCumle(k);
           return { kitap: k, skor: null, bilesenler: {}, cumleler: c };
         });
-      nedenAta(bekleyen);
+      // istek de dolu döner (v50, inceleme K2): Keşfet'in "İstek listem" çipi
+      // az-veri modunda da dürüst kalsın. hesapla() az-veri'de isteği yine
+      // boş kırpar — Ana Sayfa/panel davranışı DEĞİŞMEZ.
       return { mod: 'az-veri', puanliSayi: puanlilar.length, esik: MIN_PUANLI,
-        ana: bekleyen, istek: [] };
+        sahip: bekleyenYap(sahipler), istek: bekleyenYap(istekler) };
     }
 
     // yazar / tür istatistikleri (yalnız puanlı bitmişlerden; puan = kitap başına
@@ -253,23 +276,37 @@
     }
 
     const sirala = (a, b) => b.skor - a.skor || (a.kitap.eklenme || 0) - (b.kitap.eklenme || 0);
-    const sahipSkor = sahipler.map(degerlendir).sort(sirala);
-    const istekSkor = istekler.map(degerlendir).sort(sirala).slice(0, ISTEK_SAYI);
-    const anaSecim = cesitlilikSec(sahipSkor, ANA_SAYI);
-    // gerekçe tekilliği GÖSTERİLEN listenin tamamında (panel ana+istek birlikte çizer)
-    nedenAta(anaSecim.concat(istekSkor));
     return { mod: 'skor', puanliSayi: puanlilar.length, esik: MIN_PUANLI,
-      ana: anaSecim, istek: istekSkor };
+      sahip: sahipler.map(degerlendir).sort(sirala),
+      istek: istekler.map(degerlendir).sort(sirala) };
   }
 
-  /* İlk N'de aynı yazardan ≤2, aynı türden ≤3 — kota katı, havuz yetmezse kısalır */
+  /* hesapla: hesaplaHam'ın kırpılmış + neden atanmış hali (Ana Sayfa SIRADAKİ
+     ve motor testleri). Gerekçe tekilliği GÖSTERİLEN listenin tamamında. */
+  function hesapla(){
+    const h = hesaplaHam();
+    if(h.mod === 'az-veri'){
+      const ana = h.sahip.slice(0, ANA_SAYI);
+      nedenAta(ana);
+      return { mod: 'az-veri', puanliSayi: h.puanliSayi, esik: h.esik, ana, istek: [] };
+    }
+    const ana = cesitlilikSec(h.sahip, ANA_SAYI);
+    const istek = h.istek.slice(0, ISTEK_SAYI);
+    nedenAta(ana.concat(istek));
+    return { mod: 'skor', puanliSayi: h.puanliSayi, esik: h.esik, ana, istek };
+  }
+
+  /* İlk N'de aynı yazardan ≤2 (katı — görev sözleşmesi); aynı türden en çok
+     ceil(n*0.6) (v50: 5'te 3 = eski davranış birebir; 10'da 6 — tek türlü
+     kütüphanede Keşfet listesi 3'te kesilmesin). Havuz yetmezse liste kısalır. */
   function cesitlilikSec(sirali, n){
     const secilen = [], ySay = new Map(), tSay = new Map();
+    const turKota = Math.ceil(n * 0.6);
     for(const a of sirali){
       if(secilen.length >= n) break;
       const y = kat(a.kitap.yazar || ''), t = kat(a.kitap.tur || '');
       if(y && (ySay.get(y) || 0) >= 2) continue;
-      if(t && (tSay.get(t) || 0) >= 3) continue;
+      if(t && (tSay.get(t) || 0) >= turKota) continue;
       secilen.push(a);
       if(y) ySay.set(y, (ySay.get(y) || 0) + 1);
       if(t) tSay.set(t, (tSay.get(t) || 0) + 1);
@@ -277,124 +314,44 @@
     return secilen;
   }
 
-  /* ---------- arayüz ---------- */
-  function kapakHtml(k){
-    if(k.kapakYerel && window.__kapak)
-      return '<img class="on-kapak" data-kp-id="' + escAttr(k.id) + '"' +
-        (k.kapak ? ' data-kp-yedek="' + escAttr(k.kapak) + '"' : '') + ' alt="">';
-    if(k.kapak)
-      return '<img class="on-kapak" src="' + escAttr(k.kapak) + '" alt="" loading="lazy">';
-    return '<div class="on-yedek" style="background:' + sirtRenk(k.ad) + '"></div>';
-  }
-  function ogeHtml(o, enYuksek, enDusuk, istekMi){
-    const k = o.kitap;
-    let bar = '';
-    if(o.skor !== null){
-      const aralik = (enYuksek - enDusuk) || 1;
-      // kelepçe: aralık dışı skor (ör. istek öğesi) ya da bozuk girdi asla
-      // negatif/NaN genişlik üretmesin — geçersiz width bar'ı TAM DOLU gösterirdi
-      const yuzde = Math.max(5, Math.min(100, Math.round(((o.skor - enDusuk) / aralik) * 90 + 10)));
-      if(Number.isFinite(yuzde))
-        bar = '<div class="on-bar" role="img" aria-label="uygunluk göstergesi">' +
-          '<div class="on-bar-ic" style="width:' + yuzde + '%"></div></div>';
+  /* ---------- eylemler (v50) ----------
+     Panel UI Keşfet sekmesine taşındı (kesfet.js, ks-); ampul paneli emekli.
+     Durum yazımı BURADA tek yerde — UI'lar (kesfet.js) yalnız çağırır.
+     Bayat-düğme koruması panelden miras: koşulsuz yazım bitmiş kitabın bitiş
+     tarihini silerdi. NOT: bu yazımlar k.g damgası basmaz (panelin v28'den
+     gelen davranışı birebir korunur — değişiklik ayrı karar ister). */
+  function basla(id){
+    const k = kitapBul(id);
+    if(!k || k.durum !== 'okunacak'){
+      bildir('Liste güncellendi — kitabın durumu değişmiş');
+      return false;
     }
-    return '<div class="on-item" data-id="' + escAttr(k.id) + '">' +
-      kapakHtml(k) +
-      '<div class="on-icerik">' +
-        '<button class="on-ad" data-act="on-detay" data-id="' + escAttr(k.id) + '">' + esc(k.ad) + '</button>' +
-        (k.yazar ? '<div class="on-yazar">' + esc(k.yazar) + '</div>' : '') +
-        '<div class="on-neden">' + esc(o.neden) + '</div>' +
-        bar +
-        '<div class="on-satir">' +
-          (istekMi ? '<span class="on-rozet">İstek listende</span>'
-                   : '<button class="on-btn on-btn-birincil" data-act="on-basla" data-id="' + escAttr(k.id) + '">Okumaya başla</button>') +
-          '<button class="on-btn" data-act="on-ertele" data-id="' + escAttr(k.id) + '">Şimdi değil</button>' +
-        '</div>' +
-      '</div></div>';
+    // yalnız durum değişir; okuma OTURUMU başlatılmaz (ayrı, bilinçli eylem)
+    k.durum = 'okunuyor';
+    k.baslamaTarihi = k.baslamaTarihi || bugun();
+    k.bitisTarihi = null;
+    depoKaydet();
+    bildir('İyi okumalar');
+    return true;
   }
-  function panelCiz(){
-    const kap = document.getElementById('oneriIcerik');
-    if(!kap) return;
-    const s = hesapla();
-    let html = '';
-    if(!s.ana.length && !s.istek.length){
-      html = '<div class="on-mesaj">Okunacak listende önerilebilecek kitap yok — rafına kitap ekle,' +
-        ' ya da "Şimdi değil" dediklerin ' + ERTELEME_GUN + ' gün sonra geri gelir.</div>';
-    }else if(s.mod === 'az-veri'){
-      html = '<div class="on-mesaj">Henüz kişisel öneri için yeterli veri yok: puan verdiğin ' +
-        'bitmiş kitap sayısı ' + s.puanliSayi + ' (en az ' + s.esik + ' gerekir). ' +
-        'Kitap bitirip puanladıkça öneriler sana göre şekillenir. ' +
-        'Şimdilik en uzun süredir bekleyenler:</div>' +
-        s.ana.map(o => ogeHtml(o, 0, 0, false)).join('');
-    }else{
-      // bar ölçeği ana+istek birlikte: ana boşken (hepsi erteli, istek dolu)
-      // boş diziden -Infinity/NaN üretmesin
-      const skorlar = s.ana.concat(s.istek).map(o => o.skor);
-      const enY = Math.max.apply(null, skorlar), enD = Math.min.apply(null, skorlar);
-      html = s.ana.map(o => ogeHtml(o, enY, enD, false)).join('');
-      if(s.istek.length){
-        html += '<div class="on-bolum-baslik">İstek listenden — eline geçerse bunlar da sana göre</div>' +
-          s.istek.map(o => ogeHtml(o, enY, enD, true)).join('');
-      }
-    }
-    kap.innerHTML = html;
+  function ertele(id){
+    const k = kitapBul(id);
+    if(!k || k.durum !== 'okunacak') return false;   // bayat düğme → çağıran tazeler
+    k.ertelemeTarihi = bugun();
+    depoKaydet();
+    bildir(ERTELEME_GUN + ' gün sonra yeniden önerilir');
+    return true;
   }
-  function panelAc(){
-    panelCiz();
-    const o = document.getElementById('ortuOneri');
-    if(o){
-      o.classList.add('acik');
-      if(typeof ortuAriaKur === 'function') ortuAriaKur(o);
-    }
+  function erteleGeriAl(id){
+    const k = kitapBul(id);
+    if(!k || !k.ertelemeTarihi) return false;
+    k.ertelemeTarihi = null;
+    depoKaydet();
+    bildir('Öneri listesine geri döndü');
+    return true;
   }
 
-  function baslat(){
-    // örtü dışına tıklayınca kapat — diğer pencerelerle aynı davranış
-    const ortu = document.getElementById('ortuOneri');
-    if(ortu) ortu.addEventListener('click', e => {
-      if(e.target.id === 'ortuOneri') ortu.classList.remove('acik');
-    });
-    document.addEventListener('click', e => {
-      const el = e.target.closest('[data-act]');
-      if(!el) return;
-      switch(el.dataset.act){
-        case 'on-ac': panelAc(); break;
-        case 'on-kapat': {
-          const o = document.getElementById('ortuOneri');
-          if(o) o.classList.remove('acik');
-          break; }
-        case 'on-detay':
-          if(typeof detayAc === 'function') detayAc(el.dataset.id);
-          break;
-        case 'on-basla': {
-          const k = kitapBul(el.dataset.id);
-          // bayat düğme koruması: panel açıkken kitabın durumu detaydan değişmiş
-          // olabilir — koşulsuz yazmak bitmiş kitabın bitiş tarihini silerdi
-          if(!k || k.durum !== 'okunacak'){ panelCiz(); bildir('Liste güncellendi — kitabın durumu değişmiş'); return; }
-          // yalnız durum değişir; okuma OTURUMU başlatılmaz (ayrı, bilinçli eylem)
-          k.durum = 'okunuyor';
-          k.baslamaTarihi = k.baslamaTarihi || bugun();
-          k.bitisTarihi = null;
-          depoKaydet();
-          if(typeof hepsiniCiz === 'function') hepsiniCiz();
-          panelCiz();
-          bildir('İyi okumalar');
-          break; }
-        case 'on-ertele': {
-          const k = kitapBul(el.dataset.id);
-          if(!k || k.durum !== 'okunacak'){ panelCiz(); return; } // bayat düğme → tazele
-          k.ertelemeTarihi = bugun();
-          depoKaydet();
-          panelCiz();
-          bildir(ERTELEME_GUN + ' gün sonra yeniden önerilir');
-          break; }
-      }
-    });
-  }
-
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', baslat);
-  else baslat();
-
-  window.__oneri = { hesapla, cesitlilikSec, panelAc, panelCiz,
+  window.__oneri = { hesapla, hesaplaHam, cesitlilikSec, nedenAta,
+    basla, ertele, erteleGeriAl, ertelemeAktif,
     ERTELEME_GUN, MIN_PUANLI, AGIRLIK };
 })();
