@@ -25,7 +25,9 @@
    yönetir). Aynı cümle listede İKİ KEZ GÖRÜNMEZ: kullanılmış cümle atlanır,
    kitap bir sonraki sinyaline düşer; benzersiz özgül sinyal kalmadıysa dürüst
    genel cümle (sayı yinelenmez), o da tükenirse gerekçesiz. Bekleme yalnız
-   GEÇERLİ eklenme damgasıyla yazılır. Uydurma gerekçe yok.
+   GEÇERLİ eklenme damgasıyla ve ≥90 günde yazılır (v49: "1 gündür bekliyor"
+   gerekçe değildir); sinyalsiz kitap dürüst itirafla listede kalır.
+   Uydurma gerekçe yok.
    AZ VERİ: puanlı bitirilmiş kitap < 3 ise skorlamaya GİRİLMEZ — dürüst mesaj +
    en uzun bekleyenler listesi gösterilir.
    ÇEŞİTLİLİK: ilk 5'te aynı yazardan en fazla 2, aynı türden en fazla 3 —
@@ -54,6 +56,12 @@
      gelecekte ya da absürt eski (>600 ay) ise null — cümle HİÇ kurulmaz.
      (v47 canlı kanıtı: bozuk damga "689 aydır rafta bekliyor" üretmişti.) */
   const BEKLEME_TAVAN_GUN = 600 * 30;   // 600 ay
+  /* GEREKÇE eşiği (v49): bekleme ancak 3 ay (90 gün) üzerinde anlatılmaya değer.
+     "1 gündür rafta bekliyor" kitabın dün eklendiğini söyler, NEDEN okunacağını
+     değil (canlı v48 kanıtı). 90 gün: skor katkısı o noktada 1.5 puana ulaşır
+     (gün/60) — sinyal ancak orada "unutulmuş kitap" anlatısına dönüşüyor;
+     beklemeCumle'nin "aydır" dili de 60. günden sonra başlıyor. */
+  const BEKLEME_GEREKCE_GUN = 90;
   function beklemeGun(k){
     if(!(k.eklenme > 0)) return null;
     const gun = Math.floor((Date.now() - k.eklenme) / 86400000);
@@ -85,11 +93,19 @@
         kullanilan.add(c[ad]);
       }
       if(!parcalar.length){
-        // benzersiz özgül sinyal kalmadı: genel ama DÜRÜST, sayı yinelenmez.
-        // tür-genel yalnız tür sinyali gerçekten pozitifken (uydurma beğeni yok).
-        const genel = (b.tur > 0 && o.kitap.tur)
-          ? o.kitap.tur + ' türünden kitapları beğeniyorsun'
-          : 'Rafında seni bekliyor.';
+        /* Genel yedek İKİ AYRI durum (v49):
+           - kitapta sinyal VAR ama cümleleri listede kullanılmış → tür-genel
+             (yalnız tür gerçekten pozitifken) ya da nötr raf cümlesi;
+           - kitapta HİÇ sinyal yok → dürüst itiraf. KARAR: sinyalsiz kitap
+             listeden ATILMAZ — veri yokluğu kitabın aleyhine kanıt değil,
+             küçük kütüphanede liste boşalır ve "önerilecek kitap yok" yalanı
+             doğardı; cümle sayı uydurmaz, denemeye davet eder. */
+        const sinyalVar = Object.keys(c).length > 0;
+        const genel = !sinyalVar
+          ? 'Hakkında yeterli veri yok — denemeye değer.'
+          : (b.tur > 0 && o.kitap.tur)
+            ? o.kitap.tur + ' türünden kitapları beğeniyorsun'
+            : 'Rafında seni bekliyor.';
         if(!kullanilan.has(genel)){ parcalar.push(genel); kullanilan.add(genel); }
       }
       o.neden = parcalar.join(' · ');   // hiçbir parça kalmadıysa '' — UI nedensiz çizer
@@ -132,7 +148,8 @@
         .slice(0, ANA_SAYI)
         .map(k => {
           const c = {};
-          if(beklemeGun(k) !== null) c.bekleme = beklemeCumle(k);
+          const gun = beklemeGun(k);
+          if(gun !== null && gun >= BEKLEME_GEREKCE_GUN) c.bekleme = beklemeCumle(k);
           return { kitap: k, skor: null, bilesenler: {}, cumleler: c };
         });
       nedenAta(bekleyen);
@@ -220,11 +237,13 @@
           if(u >= 6) cumleler.uzunluk = k.sayfa + ' sayfa — son dönemde okuduğun uzunlukta';
         }
       }
-      // bekleme yalnız geçerli damgayla puana ve cümleye girer (v48)
+      // bekleme yalnız geçerli damgayla puana girer (v48); CÜMLE ayrıca
+      // gerekçe eşiğini ister (v49) — kısa bekleme skorda önemsiz kalır
+      // (1 gün ≈ 0.02 puan), gerekçe olaraksa hiç kullanılmaz.
       const bGun = beklemeGun(k);
       if(bGun !== null){
         b.bekleme = Math.min(AGIRLIK.bekleme, bGun / 60);
-        cumleler.bekleme = beklemeCumle(k);
+        if(bGun >= BEKLEME_GEREKCE_GUN) cumleler.bekleme = beklemeCumle(k);
       }
 
       const skor = Object.values(b).reduce((a, x) => a + x, 0);

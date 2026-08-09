@@ -470,8 +470,62 @@ test.describe('G24 gerekçe tekilleştirme (v48)', () => {
     await rafAc(page);
     const s = await page.evaluate(() => window.__oneri.hesapla());
     const oge = s.ana.find(o => o.kitap.ad === 'Sinyalsiz Kitap');
-    expect(oge.neden).toBe('Rafında seni bekliyor.');
+    // v49 GÖÇ: hiç sinyali olmayan kitap dürüst itiraf alır (raf cümlesi değil)
+    expect(oge.neden).toBe('Hakkında yeterli veri yok — denemeye değer.');
     expect(oge.neden).not.toMatch(/\d/);
+  });
+
+  /* ---------- v49: bekleme gerekçe eşiği (90 gün) + sinyalsiz kitap kararı ---------- */
+
+  test('(a-v49) 1 günlük kitapta "gündür rafta bekliyor" gerekçesi ÇIKMAZ', async ({ page }) => {
+    const dunku = okunacak({ ad: 'Dün Eklenen', yazar: 'Yeni Yazar' });
+    dunku.eklenme = Date.now() - 1 * 86400000;   // 1 gün: eşik (90) ALTINDA
+    await tohumla(page, [...taban(), dunku]);
+    await rafAc(page);
+    const s = await page.evaluate(() => window.__oneri.hesapla());
+    const oge = s.ana.find(o => o.kitap.ad === 'Dün Eklenen');
+    expect(oge.neden).not.toMatch(/gündür rafta|aydır rafta/);
+  });
+
+  test('(b-v49) 74 aylık kitapta bekleme gerekçesi ÇIKAR (uzun bekleme anlamlı sinyal)', async ({ page }) => {
+    const eski = okunacak({ ad: 'Unutulmuş Kitap', yazar: 'Eski Yazar' });
+    eski.eklenme = Date.now() - 74 * 30 * 86400000;   // ~74 ay: eşik üstü, tavan (600 ay) altı
+    await tohumla(page, [...taban(), eski]);
+    await rafAc(page);
+    const s = await page.evaluate(() => window.__oneri.hesapla());
+    const oge = s.ana.find(o => o.kitap.ad === 'Unutulmuş Kitap');
+    expect(oge.neden).toContain('74 aydır rafta bekliyor');
+  });
+
+  test('(c-v49) sinyalsiz kitap KARARI: listede kalır, dürüst itiraf cümlesi alır', async ({ page }) => {
+    /* KARAR: listeden atmak yerine göster — veri yokluğu kitabın aleyhine
+       kanıt değil; küçük kütüphanede liste boşalırdı. Cümle sayı uydurmaz. */
+    const dunku = okunacak({ ad: 'Dün Eklenen', yazar: 'Yeni Yazar' });
+    dunku.eklenme = Date.now() - 1 * 86400000;
+    await tohumla(page, [...taban(), dunku]);
+    await rafAc(page);
+    const s = await page.evaluate(() => window.__oneri.hesapla());
+    const oge = s.ana.find(o => o.kitap.ad === 'Dün Eklenen');
+    expect(oge, 'sinyalsiz kitap listeye GİRER').toBeTruthy();
+    expect(oge.neden).toBe('Hakkında yeterli veri yok — denemeye değer.');
+    expect(oge.neden).not.toMatch(/\d/);
+  });
+
+  test('(d-v49) yeni eklenen sinyalsiz kitap, güçlü sinyalli kitabın ÜSTÜNE çıkmaz', async ({ page }) => {
+    const dunku = okunacak({ ad: 'Dün Eklenen', yazar: 'Yeni Yazar' });
+    dunku.eklenme = Date.now() - 1 * 86400000;
+    await tohumla(page, [
+      ...taban(),
+      bitmis({ ad: 'Sevilen G1', yazar: 'Güçlü Yazar', puan: 9 }),
+      bitmis({ ad: 'Sevilen G2', yazar: 'Güçlü Yazar', puan: 10 }),
+      okunacak({ ad: 'Güçlü Aday', yazar: 'Güçlü Yazar' }),
+      dunku,
+    ]);
+    await rafAc(page);
+    const s = await page.evaluate(() => window.__oneri.hesapla());
+    expect(s.ana[0].kitap.ad).toBe('Güçlü Aday');
+    const yeniSira = s.ana.findIndex(o => o.kitap.ad === 'Dün Eklenen');
+    expect(yeniSira, 'yeni kitap üstte değil').toBeGreaterThan(0);
   });
 
   test('tür-genel yedeği: tür cümlesi kullanılmışsa ikinci kitap sayısız tür cümlesi alır', async ({ page }) => {
