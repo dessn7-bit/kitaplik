@@ -249,15 +249,20 @@ test.describe('G33 barkod + form + font', () => {
   });
 
   /* ---------- D4 şerit yedeği ---------- */
-  test('D4: bozuk kapakta şeritte baş-harfli yedek görünür — boş kart YOK', async ({ page }) => {
+  test('D4: bozuk kapakta şeritte ortak levha yedeği görünür — boş kart YOK', async ({ page }) => {
+    /* v47 GÖÇ: şerit SIRADA ile AYNI üreticiye geçti — yedek artık baş-harfli
+       sırt değil, plateKapakYedek'in tipografik yüzü (p-bos + ad/yazar). */
     await tohumla(page, [sahteKitap({ ad: 'Bozuk Kapaklı', durum: 'bitti', sayfa: 100,
       puan: 6, bitisTarihi: bugunISO(), kapak: 'data:image/png;base64,Qk9aVUs=' })]);
     await page.goto('/');
-    const dugme = page.locator('#asSonBiten .as-kapak-btn');
-    await expect(dugme).toHaveCount(1);
-    await expect(dugme.locator('.as-kapak-yok')).toBeVisible();
-    await expect(dugme.locator('.as-kapak-yok')).toHaveText('BK');
-    // bozuk img üst katmandan KALDIRILDI — altta yedek, boş beyaz kart yok
-    await expect(dugme.locator('img.as-kapak-ust')).toHaveCount(0);
+    const levha = page.locator('#asSonBiten .kt-sira-plate');
+    await expect(levha).toHaveCount(1);
+    await expect(levha).toHaveClass(/p-bos/);
+    await expect(levha).not.toHaveClass(/kt-sira-kapakli/);
+    await expect(levha.locator('.kt-sira-ad')).toHaveText('Bozuk Kapaklı');
+    // bozuk img levhadan KALDIRILDI — kesikli çerçeve + ad, boş beyaz kart yok
+    await expect(levha.locator('img')).toHaveCount(0);
+    const adKutu = await levha.locator('.kt-sira-ad').boundingBox();
+    expect(adKutu.height, 'yedek metin gerçekten boyanıyor').toBeGreaterThan(6);
   });
 });

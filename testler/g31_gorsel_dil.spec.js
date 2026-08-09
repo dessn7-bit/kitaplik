@@ -148,8 +148,8 @@ test.describe('G31 görsel dil', () => {
 
   /* ---------- M3 derinlik + kapaksız yer tutucu ---------- */
   /* v42 KARAR: Kütüphane satırları KART değil ÇİZGİ dilinde — kutu/gölge/yarıçap
-     yok, satırlar 1px ayraçla ayrılır. Kart dili henüz Ciltli'ye geçmeyen
-     ekranlarda (Ana Sayfa, İstatistik) kendi içinde tutarlı kalır. */
+     yok, satırlar 1px ayraçla ayrılır. v47: Ana Sayfa da Ciltli'ye geçti; kutu
+     dili yalnız İstatistik/Alıntılar'da yaşıyor (sonraki sprint). */
   test('Kütüphane satırı çizgi dilinde; kart kalan yüzeyler kendi içinde tutarlı', async ({ page }) => {
     await tohumla(page, [kitapAlinti()]);
     await page.goto('/');
@@ -166,12 +166,12 @@ test.describe('G31 görsel dil', () => {
     expect(kart.r, 'satırda yarıçap yok').toBe('0px');
     expect(kart.altCizgi, 'satır 1px ayraçla biter').toBe('1px');
     expect(kart.zemin, 'satır dolgusuz').toBe('rgba(0, 0, 0, 0)');
-    // kart dilinde kalan iki yüzey birbiriyle aynı gölge + yarıçapı taşır
-    const asBlok = await oku('#anaIcerik .as-blok');
+    // kutu dili yalnız İstatistik'te yaşıyor; Ana Sayfa'da eski kutu sınıfı KALMADI (v47)
     const istKart = await oku('#istIcerik .ist-kart');
-    expect(asBlok.golge).not.toBe('none');
-    expect(istKart.golge).toBe(asBlok.golge);
-    expect(istKart.r).toBe(asBlok.r);
+    expect(istKart.golge).not.toBe('none');
+    const asKutu = await page.evaluate(() =>
+      document.querySelectorAll('#anaIcerik .as-blok').length);
+    expect(asKutu, "Ana Sayfa'da .as-blok kalmadı").toBe(0);
   });
 
   /* v42 KARAR: renkli sırt/baş-harf yer tutucusu Kütüphane'de emekli — kapak

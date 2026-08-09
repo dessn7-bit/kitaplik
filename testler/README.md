@@ -1,8 +1,10 @@
 # Kitaplık Regresyon Test Paketi (Playwright)
 
-441 vaka, 30 grup dosyasi. Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi
-kırarsa bu paket kırmızıya döner. (Mutasyon denetiminden geçti: 11 el-yapımı mutasyon +
-G12'nin 3 kritik düzeltmesi geri alındığında ilgili vakalar kırmızıya düşüyor.)
+41 grup dosyası (g1–g41); koşum sayısı için `npm test` çıktısındaki "passed"
+satırı esas alınır (döngüyle üretilen vakalar kaynak `test(` sayısından fazladır).
+Uygulamanın gerçek davranışını sabitler: bir değişiklik bir şeyi kırarsa bu paket
+kırmızıya döner. Her sprint kendi mutasyon denetimini koşar (commit sonrası mutasyon
+uygula → ilgili vakalar kırmızı → git checkout ile geri).
 
 ## Nasıl koşulur
 

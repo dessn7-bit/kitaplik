@@ -115,8 +115,9 @@
   --yukselti-2:0 2px 6px var(--golge-orta);
   --yukselti-3:0 4px 16px var(--golge-guclu);
   /* Yarıçap ölçeği (v42 Ciltli): 2 çip/etiket · 4 düğme/girdi · 7 sheet.
-     Eski --radius/--r-ic/--r-mini henüz Ciltli'ye geçmemiş ekranlarda (Ana Sayfa,
-     Alıntılar, İstatistik kartları) yaşıyor — sonraki sprintlerde emekli olacak. */
+     Eski --radius/--r-ic/--r-mini henüz Ciltli'ye geçmemiş ekranlarda (Alıntılar,
+     İstatistik kartları) yaşıyor — sonraki sprintlerde emekli olacak (Ana Sayfa
+     v47'de geçti). */
   --radius:12px; --r-ic:10px; --r-mini:6px; --r-sheet:7px;
   --r-sm:2px; --r-md:4px; --r-lg:7px;
   /* Ciltli ayraç: metin renginin %16 saydamı — tema değişince kendiliğinden uyar */
@@ -334,46 +335,44 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 .bos p{font-family:var(--serif);font-size:1.05rem;line-height:1.5}
 .bos small{display:block;margin-top:8px;font-size:.85rem;color:var(--muted2)}
 
-/* Ana Sayfa (as-) — kendi ad alanı. `.sort-row` ve `.yedek-wrap` sınıfları
-   BİLİNÇLİ olarak kullanılmaz: gorunum.js ve senkron.js/katalog.js bu sınıfların
-   İLK eşleşmesine yazıyor, ana sayfa DOM'da raf panelinden önce geldiği için
-   düğmeleri/kartları yanlış panele düşürürdü. Görsel dil değişmedi: tüm renk,
-   yazı ve kenarlık değişkenleri mevcut kart/rozet desenlerinden. */
-.as-wrap{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
-.as-blok{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  padding:16px;box-shadow:var(--yukselti-1)}
-.as-blok-btn{display:block;width:100%;text-align:left}
-.as-blok-bas{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-.as-blok-bas h2{font-family:var(--serif);font-size:1rem;font-weight:600}
-.as-blok-bas .zar-btn{flex:0 0 38px;height:34px;padding:0}
-.as-tumu{font-size:.75rem;color:var(--brass);white-space:nowrap}
-.as-satir{display:flex;gap:12px;width:100%;text-align:left;padding:10px 0}
-.as-satir + .as-satir{border-top:1px solid var(--border)}
-.as-satir:first-child{padding-top:0}
-.as-satir:last-child{padding-bottom:0}
-.as-satir-ic{flex:1;min-width:0}
-.as-ad{font-family:var(--serif);font-size:.95rem;font-weight:600;line-height:1.3;overflow-wrap:break-word}
-.as-yazar{font-size:.8rem;color:var(--muted);margin-top:2px}
+/* Ana Sayfa (as-, v47 Ciltli) — kutu/gölge/eski yarıçap YOK; bölümler kıl payı
+   ayraçlı (.kt-bolum) ve kicker etiketli. Devam kartı, levha şeridi, hedef
+   şeridi ve tarih satırı Kütüphane ile AYNI üreticiden gelir (kt- sınıfları
+   burada bilinçli paylaşılır; testler kapsamla ölçer). `.sort-row` ve
+   `.yedek-wrap` yasağı sürüyor: gorunum.js/senkron.js/katalog.js bu sınıfların
+   İLK eşleşmesine yazıyor, ana sayfa DOM'da raf panelinden önce. */
+.as-wrap{padding:2px 16px 24px}
+.as-ust{padding:0 0 12px}
+.as-selam{font-family:var(--serif);font-size:1.8rem;font-weight:400;line-height:1.15}
+.as-ozet{font-size:.78rem;color:var(--muted);margin-top:5px;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums}
+/* BUGÜN üç-hücre satırı: tasarımın "today" deseni — sol kıl payı ayraçlı
+   hücreler, büyük serif rakam + küçük büyük-harf etiket */
+.as-bugun{display:flex}
+.as-hucre{flex:1;min-width:0;display:block;padding:0 12px;border-left:1px solid var(--cizgi);
+  text-align:left}
+.as-hucre-sayi{display:block;font-family:var(--serif);font-size:1.5rem;line-height:1.1;
+  color:var(--paper);font-variant-numeric:tabular-nums}
+.as-hucre-ad{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin-top:5px}
+/* SIRADAKİ öneri satırı: mini levha + ad/yazar/gerekçe (tasarımın Keşfet öneri
+   deseni; motor Keşfet'e taşınana dek burada). Gerekçe gerçek veriden gelir. */
+.as-oneri{display:flex;gap:12px;width:100%;text-align:left;padding:10px 0;align-items:flex-start}
+.as-oneri + .as-oneri{border-top:1px solid var(--cizgi)}
+.as-oneri-ic{flex:1;min-width:0;display:block}
+.as-oneri-ad{display:block;font-family:var(--serif);font-size:1.05rem;font-weight:600;
+  line-height:1.25;overflow-wrap:break-word}
+.as-oneri-yazar{display:block;font-style:italic;font-size:.78rem;color:var(--muted);margin-top:1px}
+.as-neden{display:block;font-size:.8rem;color:var(--muted2);line-height:1.5;margin-top:4px}
 .as-not{font-size:.85rem;color:var(--muted);line-height:1.5}
-.as-neden{font-size:.8rem;color:var(--muted2);line-height:1.5;margin-top:4px}
-.as-sayi{font-family:var(--serif);font-size:1.6rem;color:var(--brass);line-height:1.1}
-.as-olcu{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap}
-.as-olcu-ad{font-size:.75rem;color:var(--muted2);margin-top:2px}
-/* Son bitirdiklerin şeridi (D4) — yatay mini kapak dizisi */
-.as-kapak-serit{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
-.as-kapak-serit::-webkit-scrollbar{display:none}
-.as-kapak-btn{flex:0 0 auto;padding:0;border:none;position:relative}
-.as-kapak{width:56px;height:84px;object-fit:cover;border-radius:var(--r-mini);
-  border:1px solid var(--border);background:var(--surface2);display:block}
-/* Kapak img'i baş-harf yedeğinin ÜSTÜNE biner; yüklenmemiş img boyanmaz (şeffaf
-   zemin), alttaki yedek görünür — boş beyaz kart hiçbir arıza modunda kalmaz */
-.as-kapak-ust{position:absolute;inset:0;background:transparent}
-.as-kapak-yok{display:flex;align-items:center;justify-content:center;border:none;
-  font-family:var(--serif);font-size:.9rem;font-weight:600;letter-spacing:.03em;color:var(--uzeri);
-  box-shadow:inset -10px 0 12px -9px rgba(0,0,0,.38),inset 2px 0 0 rgba(255,253,247,.28)}
+#asSiradaki .kt-bolum-bas{align-items:center}
+#asSiradaki .zar-btn{flex:0 0 38px;height:34px;padding:0}
+.as-yil-satir{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  width:100%;text-align:left;padding:0}
+.as-yil-metin{font-size:.85rem;color:var(--muted);line-height:1.5}
+.as-yil-link{font-family:var(--serif);font-weight:600;font-size:.8rem;color:var(--brass);white-space:nowrap}
 .as-eylem{display:flex;gap:8px;flex-wrap:wrap}
 .as-eylem .btn{width:auto;flex:1 1 28%;padding:12px 8px;font-size:.85rem}
-.as-eylem .zar-btn{flex:0 0 40px;height:auto}
 
 nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   background:var(--nav-zemin);backdrop-filter:blur(10px);border-top:1px solid var(--cizgi);
@@ -1340,10 +1339,9 @@ function ikon(ad){
 }
 window.ikon = ikon;
 /* Kapaksız kitap yer tutucusu: adın ilk (en çok 3) kelimesinin baş harfleri */
-function basHarf(ad){
-  return String(ad || '').trim().split(/\s+/).slice(0, 3)
-    .map(p => ([...p][0] || '').toLocaleUpperCase('tr')).join('');
-}
+/* basHarf v47'de kaldırıldı: son tüketicisi Ana Sayfa'nın sırt-renkli kapak
+   şeridiydi; şerit ortak levha üreticisine (ktSiraLevhaHtml) geçti.
+   sirtRenk YAŞIYOR — oneri.js panel yedeği kullanıyor. */
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function bugun(){
   const d = new Date();
@@ -1457,66 +1455,93 @@ function ktPlateHata(kap){
     if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) dus();
   });
 }
+/* ---------- Ortak Ciltli bileşenler (v47) ----------
+   Ana Sayfa ve Kütüphane üst bloğu AYNI üreticileri çağırır — kopya mantık yok
+   (v44 kapak-yedeği dersi: iki kopyadan biri hep eksik kalıyordu). Sayfa kutusu
+   bu yüzden id değil data-kid taşır: iki panel aynı DOM'u taşırken id çakışmaz,
+   kt-sayfa eylemleri kutuyu en yakın karttan bulur. */
+function ktTarihHtml(){
+  const s = new Date();
+  return `<div class="kt-tarih">${s.getDate()} ${KT_AY[s.getMonth()]} ${s.getFullYear()} · ${KT_GUN[s.getDay()]}</div>`;
+}
+function ktHedefHtml(){
+  // Yıl hedefi şeridi — hedef yoksa '' döner (bölüm çizilmez);
+  // sayı İstatistik'le AYNI motor (istKayit).
+  const yil = new Date().getFullYear();
+  const hedef = veri.hedef[yil] || 0;
+  if(!(hedef > 0)) return '';
+  const biten = veri.kitaplar.map(istKayit).filter(Boolean)
+    .filter(k => k.bitisTarihi && String(k.bitisTarihi).startsWith(String(yil))).length;
+  const p = Math.min(100, Math.round(biten / hedef * 100));
+  return `<button class="kt-hedef" data-act="kt-ist" title="İstatistik'te hedefini düzenle">
+      <span class="kt-hedef-ic"><span class="kicker">${yil} hedefi</span>
+        <span class="ilerleme" style="display:block" aria-hidden="true"><span style="display:block;height:100%;background:var(--brass);width:${p}%"></span></span></span>
+      <span class="kt-hedef-sayi">${biten} / ${hedef}</span>
+    </button>`;
+}
+function ktDevamKartHtml(k){
+  const sayfaVar = k.sayfa > 0;
+  const g = k.guncelSayfa || 0;
+  const p = sayfaVar ? Math.min(100, Math.round(g / k.sayfa * 100)) : 0;
+  return `<div class="kt-devam-kart">
+    ${ktPlate(k, 'kt-dkapak')}
+    <div class="kt-devam-ic">
+      <div class="kt-devam-ad">${esc(k.ad)}</div>
+      ${k.yazar ? `<div class="kt-devam-yazar">${esc(k.yazar)}</div>` : ''}
+      <div class="kt-devam-alt">
+        ${sayfaVar ? `<div class="ilerleme" aria-hidden="true"><div style="width:${p}%"></div></div>
+        <div class="kt-devam-sayfa"><span>${g} / ${k.sayfa} sayfa</span><span>%${p}</span></div>` : ''}
+        <div class="kt-devam-dugme">
+          <button class="btn btn-brass" data-act="kt-sayfa-ac" data-id="${k.id}">Sayfa işaretle</button>
+          <button class="btn btn-cerceve" data-act="kt-git" data-id="${k.id}">Kitaba git</button>
+        </div>
+        <div class="kt-sayfa-satir" data-kid="${k.id}" hidden>
+          <input type="number" inputmode="numeric" min="0"${sayfaVar ? ` max="${k.sayfa}"` : ''} value="${g}" aria-label="Güncel sayfa">
+          <button class="btn btn-cerceve btn-kucuk" data-act="kt-sayfa-kaydet" data-id="${k.id}">Kaydet</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function ktDevamBolumHtml(okunanlar){
+  if(!okunanlar.length) return '';
+  const kartlar = okunanlar.map(ktDevamKartHtml);
+  return `<div class="kicker" style="display:block;margin-bottom:12px">Devam eden okuma</div>
+    ${okunanlar.length > 1 ? `<div class="kt-serit">${kartlar.join('')}</div>` : kartlar[0]}`;
+}
+function ktSiraLevhaHtml(k){
+  const kapakli = k.kapak || (k.kapakYerel && window.__kapak);
+  if(kapakli){
+    const ic = (k.kapakYerel && window.__kapak)
+      ? `<img class="kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt="">`
+      : `<img src="${escAttr(k.kapak)}" alt="" loading="lazy">`;
+    // data-ad/yazar: kapak hatasında plateKapakYedek levhayı tipografik yedeğe döndürür
+    return `<button class="plate kt-sira-plate kt-sira-kapakli" data-act="detay" data-id="${k.id}" title="${escAttr(k.ad)}" data-ad="${escAttr(k.ad)}"${k.yazar ? ` data-yazar="${escAttr(k.yazar)}"` : ''}>${ic}</button>`;
+  }
+  return `<button class="plate kt-sira-plate p-bos" data-act="detay" data-id="${k.id}">
+    <span class="kt-sira-ad">${esc(k.ad)}</span>
+    ${k.yazar ? `<span class="kt-sira-yazar">${esc(k.yazar)}</span>` : ''}
+  </button>`;
+}
 function rafUstCiz(){
   const kap = document.getElementById('ktUst');
   if(!kap) return;
   const ks = veri.kitaplar;
   const ciltSayi = ks.filter(k => (k.sahiplik || 'sahip') !== 'istek').length;
-  const simdi = new Date();
   let html = `<div class="kt-baslik-satir">
       <h2 class="kt-baslik">Kütüphanem</h2>
       <span class="kt-cilt">${ciltSayi} cilt</span>
     </div>
-    <div class="kt-tarih">${simdi.getDate()} ${KT_AY[simdi.getMonth()]} ${simdi.getFullYear()} · ${KT_GUN[simdi.getDay()]}</div>`;
-  // YIL HEDEFİ — hedef yoksa bölüm çizilmez; sayı İstatistik'le AYNI motor (istKayit)
-  const yil = simdi.getFullYear();
-  const hedef = veri.hedef[yil] || 0;
-  if(hedef > 0){
-    const biten = ks.map(istKayit).filter(Boolean)
-      .filter(k => k.bitisTarihi && String(k.bitisTarihi).startsWith(String(yil))).length;
-    const p = Math.min(100, Math.round(biten / hedef * 100));
-    html += `<div class="kt-bolum" id="ktHedef">
-      <button class="kt-hedef" data-act="kt-ist" title="İstatistik'te hedefini düzenle">
-        <span class="kt-hedef-ic"><span class="kicker">${yil} hedefi</span>
-          <span class="ilerleme" style="display:block" aria-hidden="true"><span style="display:block;height:100%;background:var(--brass);width:${p}%"></span></span></span>
-        <span class="kt-hedef-sayi">${biten} / ${hedef}</span>
-      </button>
-    </div>`;
-  }
+    ${ktTarihHtml()}`;
+  // YIL HEDEFİ — hedef yoksa bölüm çizilmez
+  const hedefHtml = ktHedefHtml();
+  if(hedefHtml) html += `<div class="kt-bolum" id="ktHedef">${hedefHtml}</div>`;
   /* Arama yazılıyken devam/sırada blokları GİZLENİR (karar): aranan sonuç
      listede — ambiyans blokları sonucu ekran dışına itmesin. Hedef kalır. */
   if(!durum.arama){
     const okunanlar = ks.filter(k => k.durum === 'okunuyor').sort((a,b) => (b.gsG||0) - (a.gsG||0));
-    if(okunanlar.length){
-      const kartlar = okunanlar.map(k => {
-        const sayfaVar = k.sayfa > 0;
-        const g = k.guncelSayfa || 0;
-        const p = sayfaVar ? Math.min(100, Math.round(g / k.sayfa * 100)) : 0;
-        return `<div class="kt-devam-kart">
-          ${ktPlate(k, 'kt-dkapak')}
-          <div class="kt-devam-ic">
-            <div class="kt-devam-ad">${esc(k.ad)}</div>
-            ${k.yazar ? `<div class="kt-devam-yazar">${esc(k.yazar)}</div>` : ''}
-            <div class="kt-devam-alt">
-              ${sayfaVar ? `<div class="ilerleme" aria-hidden="true"><div style="width:${p}%"></div></div>
-              <div class="kt-devam-sayfa"><span>${g} / ${k.sayfa} sayfa</span><span>%${p}</span></div>` : ''}
-              <div class="kt-devam-dugme">
-                <button class="btn btn-brass" data-act="kt-sayfa-ac" data-id="${k.id}">Sayfa işaretle</button>
-                <button class="btn btn-cerceve" data-act="kt-git" data-id="${k.id}">Kitaba git</button>
-              </div>
-              <div class="kt-sayfa-satir" id="ktSayfaKutu-${k.id}" hidden>
-                <input type="number" inputmode="numeric" min="0"${sayfaVar ? ` max="${k.sayfa}"` : ''} value="${g}" aria-label="Güncel sayfa">
-                <button class="btn btn-cerceve btn-kucuk" data-act="kt-sayfa-kaydet" data-id="${k.id}">Kaydet</button>
-              </div>
-            </div>
-          </div>
-        </div>`;
-      });
-      html += `<div class="kt-bolum" id="ktDevam">
-        <div class="kicker" style="display:block;margin-bottom:12px">Devam eden okuma</div>
-        ${okunanlar.length > 1 ? `<div class="kt-serit">${kartlar.join('')}</div>` : kartlar[0]}
-      </div>`;
-    }
+    if(okunanlar.length)
+      html += `<div class="kt-bolum" id="ktDevam">${ktDevamBolumHtml(okunanlar)}</div>`;
     // SIRADA: okunacaklardan (istek listesi HARİÇ — rafta olmayan kitap sırada duramaz)
     const sirada = ks.filter(k => k.durum === 'okunacak' && (k.sahiplik || 'sahip') !== 'istek')
       .sort((a,b) => (b.eklenme||0) - (a.eklenme||0));
@@ -1524,20 +1549,7 @@ function rafUstCiz(){
       html += `<div class="kt-bolum" id="ktSirada">
         <div class="kt-bolum-bas"><span class="kicker">Sırada</span>
           <span class="kt-adet">${sirada.length} kitap</span></div>
-        <div class="kt-serit" id="ktSiradaSerit">${sirada.slice(0, 12).map(k => {
-          const kapakli = k.kapak || (k.kapakYerel && window.__kapak);
-          if(kapakli){
-            const ic = (k.kapakYerel && window.__kapak)
-              ? `<img class="kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt="">`
-              : `<img src="${escAttr(k.kapak)}" alt="" loading="lazy">`;
-            // data-ad/yazar: kapak hatasında plateKapakYedek levhayı tipografik yedeğe döndürür
-            return `<button class="plate kt-sira-plate kt-sira-kapakli" data-act="detay" data-id="${k.id}" title="${escAttr(k.ad)}" data-ad="${escAttr(k.ad)}"${k.yazar ? ` data-yazar="${escAttr(k.yazar)}"` : ''}>${ic}</button>`;
-          }
-          return `<button class="plate kt-sira-plate p-bos" data-act="detay" data-id="${k.id}">
-            <span class="kt-sira-ad">${esc(k.ad)}</span>
-            ${k.yazar ? `<span class="kt-sira-yazar">${esc(k.yazar)}</span>` : ''}
-          </button>`;
-        }).join('')}</div>
+        <div class="kt-serit" id="ktSiradaSerit">${sirada.slice(0, 12).map(ktSiraLevhaHtml).join('')}</div>
       </div>`;
     }
   }
@@ -2614,12 +2626,15 @@ function gelenKaydet(){
 }
 
 /* ---------- çizim / sekme ---------- */
-/* ---------- ANA SAYFA (as-) ----------
+/* ---------- ANA SAYFA (as-, v47 Ciltli) ----------
    Yönelim yüzeyi: "aç, nerede olduğunu gör". Kendi analizini YAPMAZ, hazır
-   kaynaklardan okur. İki kural:
+   kaynaklardan okur. Kurallar:
    1) UYDURMA YOK — verisi olmayan bölüm hiç çizilmez; sıfır gösterip suçlamaz.
    2) Eklentiler bu betikten SONRA yükleniyor, her window.__X çağrısı savunmacı.
       Sayfa sonundaki ikinci anaCiz() eklentiler bağlandıktan sonra tazeler.
+   3) ORTAK BİLEŞEN — devam kartı / levha şeridi / hedef şeridi / tarih satırı
+      Kütüphane ile AYNI üreticiden (ktDevamBolumHtml, ktSiraLevhaHtml,
+      ktHedefHtml, ktTarihHtml); iki ekran aynı şeyi iki biçimde göstermez.
    YAN ETKİ YASAĞI: __tekrar.kuyruk() salt okur; ciz()/planlamaYap() depoKaydet
    çağırdığı için ana sayfadan ASLA çağrılmaz (açılış her seferinde damga
    basardı → bayat cihaz güncel veriyi ezerdi). */
@@ -2650,59 +2665,64 @@ function anaCiz(){
         <p>Kütüphanen henüz boş.</p>
         <small>İlk kitabını ekle — adını yazmaya başladığında yazar, sayfa ve kapak kendiliğinden gelir.
         Goodreads'ten geliyorsan bütün kitaplığını olduğu gibi aktarabilirsin.</small></div>
-      <div class="as-blok"><div class="as-eylem">
+      <div class="as-eylem">
         <button class="btn btn-brass" data-act="yeni">Kitap ekle</button>
         <button class="btn btn-cerceve" data-act="ayar-ac">Goodreads'ten aktar</button>
-      </div></div>`;
+      </div>`;
     return;
   }
 
   const bloklar = [];
+  const simdi = new Date();
+  const yil = simdi.getFullYear();
+  const ciltSayi = veri.kitaplar.filter(k => (k.sahiplik || 'sahip') !== 'istek').length;
+  const tumBiten = veri.kitaplar.map(istKayit).filter(Boolean);
+  const buYil = tumBiten.filter(k => k.bitisTarihi && String(k.bitisTarihi).startsWith(String(yil))).length;
 
-  /* --- 1. şu an okudukların --- */
-  const okunuyor = veri.kitaplar.filter(k => k.durum === 'okunuyor')
-    .sort((a,b) => (b.gsG||0) - (a.gsG||0) || (b.eklenme||0) - (a.eklenme||0));
-  const okunuyorHtml = okunuyor.length
-    ? okunuyor.slice(0,3).map(k => {
-        const p = k.sayfa > 0 ? Math.min(100, Math.round((k.guncelSayfa||0) / k.sayfa * 100)) : null;
-        return `<button class="as-satir" data-act="detay" data-id="${escAttr(k.id)}">
-          <div class="as-satir-ic">
-            <div class="as-ad">${esc(k.ad)}</div>
-            ${k.yazar ? `<div class="as-yazar">${esc(k.yazar)}</div>` : ''}
-            ${p !== null
-              ? `<div class="ilerleme"><div style="width:${p}%"></div></div>
-                 <div class="ilerleme-txt">${k.guncelSayfa||0} / ${k.sayfa} · %${p}</div>`
-              : k.guncelSayfa
-                ? `<div class="ilerleme-txt">sf. ${k.guncelSayfa} — toplam sayfa girilmemiş</div>` : ''}
-          </div></button>`;
-      }).join('')
-    : `<div class="as-not">Şu an okuduğun kitap yok.</div>`;
-  bloklar.push(`<div class="as-blok" id="asOkunuyor">
-    <div class="as-blok-bas"><h2>Şu an okudukların</h2>
-      ${okunuyor.length > 3
-        ? `<button class="as-tumu" data-act="ana-okunuyor">Tümü (${okunuyor.length})</button>` : ''}
-    </div>${okunuyorHtml}</div>`);
+  /* --- üst blok: karşılama + tarih (Kütüphane ile AYNI üretici) + tek satır özet.
+     Başlık "Kütüphanem" DEĞİL (o Kütüphane'nin): burası günün karşılaması —
+     iki ekran aynı başlığı iki biçimde yarıştırmaz. --- */
+  const saat = simdi.getHours();
+  const selam = saat < 5 ? 'İyi geceler' : saat < 12 ? 'Günaydın'
+    : saat < 18 ? 'İyi günler' : saat < 22 ? 'İyi akşamlar' : 'İyi geceler';
+  bloklar.push(`<div class="as-ust">
+    <h2 class="as-selam">${selam}</h2>
+    ${ktTarihHtml()}
+    <div class="as-ozet">${ciltSayi} cilt${buYil ? ` · bu yıl ${buYil} kitap bitirdin` : ''}</div>
+  </div>`);
 
-  /* --- 2. bugün: hiçbiri yoksa bölüm HİÇ çizilmez --- */
+  /* --- devam eden okuma: Kütüphane ile AYNI bileşen (ortak üretici).
+     Yönelim yüzeyi ilk 4 kartla sınırlı — uç durumda (yüzlerce "okunuyor")
+     sayfa şişmesin; Kütüphane tam listeyi zaten gösteriyor. --- */
+  const okunanlar = veri.kitaplar.filter(k => k.durum === 'okunuyor')
+    .sort((a,b) => (b.gsG||0) - (a.gsG||0)).slice(0, 4);
+  if(okunanlar.length)
+    bloklar.push(`<div class="kt-bolum" id="asDevam">${ktDevamBolumHtml(okunanlar)}</div>`);
+
+  /* --- bugün: üç hücre (tasarımın "today" deseni); hiçbiri yoksa bölüm HİÇ çizilmez --- */
   let tekrarSayi = 0;
   try{ if(window.__tekrar) tekrarSayi = window.__tekrar.kuyruk().length; }catch(e){ tekrarSayi = 0; }
   const bg = anaBugunOkuma();
   const sureYaz = (window.__oturum && window.__oturum.sureMetni)
     ? window.__oturum.sureMetni : (ms => Math.max(0, Math.round(ms/60000)) + ' dk');
-  const bugunParca = [];
-  if(tekrarSayi) bugunParca.push(
-    `<button class="as-satir" data-act="ana-tekrar"><div class="as-satir-ic">
-       <div class="as-ad">${tekrarSayi} alıntı tekrar için bekliyor</div>
-       <div class="as-yazar">Alıntılar sekmesinde seni bekliyorlar.</div>
-     </div></button>`);
-  if(bg.ms > 0 || bg.sayfa > 0) bugunParca.push(`<div class="as-satir"><div class="as-olcu">
-      ${bg.ms > 0 ? `<div><div class="as-sayi">${esc(sureYaz(bg.ms))}</div><div class="as-olcu-ad">okuma süresi</div></div>` : ''}
-      ${bg.sayfa > 0 ? `<div><div class="as-sayi">${bg.sayfa}</div><div class="as-olcu-ad">sayfa</div></div>` : ''}
-    </div></div>`);
-  if(bugunParca.length) bloklar.push(`<div class="as-blok" id="asBugun">
-    <div class="as-blok-bas"><h2>Bugün</h2></div>${bugunParca.join('')}</div>`);
+  const hucreler = [];
+  if(tekrarSayi) hucreler.push(`<button class="as-hucre" data-act="ana-tekrar" title="Alıntılar sekmesine git">
+      <span class="as-hucre-sayi">${tekrarSayi}</span>
+      <span class="as-hucre-ad">tekrar bekleyen alıntı</span></button>`);
+  if(bg.ms > 0) hucreler.push(`<div class="as-hucre">
+      <span class="as-hucre-sayi">${esc(sureYaz(bg.ms))}</span>
+      <span class="as-hucre-ad">okuma süresi</span></div>`);
+  if(bg.sayfa > 0) hucreler.push(`<div class="as-hucre">
+      <span class="as-hucre-sayi">${bg.sayfa}</span>
+      <span class="as-hucre-ad">sayfa</span></div>`);
+  if(hucreler.length) bloklar.push(`<div class="kt-bolum" id="asBugun">
+    <div class="kicker" style="display:block;margin-bottom:12px">Bugün</div>
+    <div class="as-bugun">${hucreler.join('')}</div></div>`);
 
-  /* --- 3. sıradaki: öneri motoru yüklenmediyse bölüm hiç çizilmez --- */
+  /* --- sıradaki: öneri motorundan 1-2 öneri + GERÇEK-veri gerekçe cümlesi.
+     Motor yüklenmediyse bölüm hiç çizilmez; motor Keşfet'e taşınana dek burada.
+     Kütüphane'nin SIRADA şeridiyle çakışmaz: orası ham kuyruk, burası gerekçeli
+     seçki. --- */
   if(window.__oneri && window.__oneri.hesapla){
     let oneriler = [];
     try{
@@ -2711,74 +2731,49 @@ function anaCiz(){
     }catch(e){ oneriler = []; }
     const okunacakVar = veri.kitaplar.some(k => k.durum === 'okunacak');
     const oneriHtml = oneriler.length
-      ? oneriler.map(o => `<button class="as-satir" data-act="detay" data-id="${escAttr(o.kitap.id)}">
-          <div class="as-satir-ic">
-            <div class="as-ad">${esc(o.kitap.ad)}</div>
-            ${o.kitap.yazar ? `<div class="as-yazar">${esc(o.kitap.yazar)}</div>` : ''}
-            ${o.neden ? `<div class="as-neden">${esc(o.neden)}</div>` : ''}
-          </div></button>`).join('')
+      ? oneriler.map(o => `<button class="as-oneri" data-act="detay" data-id="${escAttr(o.kitap.id)}">
+          ${ktPlate(o.kitap, 'p-mini')}
+          <span class="as-oneri-ic">
+            <span class="as-oneri-ad">${esc(o.kitap.ad)}</span>
+            ${o.kitap.yazar ? `<span class="as-oneri-yazar">${esc(o.kitap.yazar)}</span>` : ''}
+            ${o.neden ? `<span class="as-neden">${esc(o.neden)}</span>` : ''}
+          </span></button>`).join('')
       : okunacakVar
         ? `<div class="as-not">Okunacaklarının hepsini ertelemişsin — şimdilik önerecek bir şey yok.</div>`
         : `<div class="as-not">Okunacak listen boş. Kütüphanendeki kitapları “Okunacak” işaretledikçe burada öneri çıkar.</div>`;
-    bloklar.push(`<div class="as-blok" id="asSiradaki">
-      <div class="as-blok-bas"><h2>Sıradaki</h2>
+    bloklar.push(`<div class="kt-bolum" id="asSiradaki">
+      <div class="kt-bolum-bas"><span class="kicker">Sıradaki</span>
         ${okunacakVar ? `<button class="zar-btn" data-act="zar" title="Kader seçsin"
           aria-label="Okunacaklardan rastgele kitap öner">${ikon('zar')}</button>` : ''}
       </div>${oneriHtml}</div>`);
   }
 
-  /* --- 4. yıl özeti ---
-     KARAR: sayım istKayit tabanlı, yani İstatistik sekmesiyle AYNI motor.
-     rapor.js'in yilOzeti'si yeniden okumaları farklı sayıyor; buradaki rakam
-     dokununca İstatistik'e gidiyor, orada başka bir sayı görmek kusurdur. */
-  const yil = new Date().getFullYear();
-  const tumBiten = veri.kitaplar.map(istKayit).filter(Boolean);
-  const buYil = tumBiten.filter(k => k.bitisTarihi && k.bitisTarihi.startsWith(String(yil)));
-  const hedef = veri.hedef[yil] || 0;
-  const yuzde = hedef > 0 ? Math.min(100, Math.round(buYil.length / hedef * 100)) : null;
-  bloklar.push(`<button class="as-blok as-blok-btn" id="asYil" data-act="ana-ist">
-    <div class="as-blok-bas"><h2>${yil} özeti</h2><span class="as-tumu">İstatistik →</span></div>
-    <div class="as-olcu"><div>
-      <div class="as-sayi">${buYil.length}${hedef > 0
-        ? ` <span style="font-size:.9rem;color:var(--muted)">/ ${hedef}</span>` : ''}</div>
-      <div class="as-olcu-ad">bu yıl bitirdiğin kitap</div>
-    </div></div>
-    ${yuzde !== null
-      ? `<div class="ilerleme" style="margin-top:10px"><div style="width:${yuzde}%"></div></div>
-         <div class="ilerleme-txt">Yıllık hedefinin %${yuzde}'i</div>`
-      : `<div class="as-neden">Yıllık hedef koymadın — İstatistik sekmesinden koyabilirsin.</div>`}
-  </button>`);
+  /* --- yıl: hedef varsa Kütüphane ile AYNI hedef şeridi (istKayit motoru,
+     dokununca İstatistik); hedef yoksa uydurma yüzde YOK, hedefe yönlendiren
+     dürüst bağlantı. Bitirilen sayısı üst özet satırında zaten yazıyor. --- */
+  const hedefHtml = ktHedefHtml();
+  bloklar.push(`<div class="kt-bolum" id="asYil">${hedefHtml
+    ? hedefHtml
+    : `<div class="kt-bolum-bas"><span class="kicker">${yil}</span></div>
+       <button class="as-yil-satir" data-act="ana-ist">
+         <span class="as-yil-metin">Yıllık hedef koymadın.</span>
+         <span class="as-yil-link">Hedef koy →</span>
+       </button>`}</div>`);
 
-  /* --- 4b. son bitirdiklerin (D4) ---
-     KARAR: alt yarı boşluğu GERÇEK veriyle dolar — son 4 bitmiş kitabın kapağı
-     (istKayit tabanlı, İstatistik ile aynı motor; sıfır uydurma). Bitmiş kitap
-     yoksa blok HİÇ çizilmez ("uydurma yok" ilkesi korunur). Kapak önceliği
-     liste kartıyla aynı: yerel > uzak > baş-harfli sırt. */
+  /* --- son bitirdiklerin: SIRADA şeridiyle AYNI levha üreticisi (bozuk kapak
+     yedeği dahil, v44 tek yolu). Bitmiş yoksa bölüm HİÇ çizilmez. --- */
   const sonBiten = tumBiten.slice()
     .sort((a, b) => String(b.bitisTarihi || '').localeCompare(String(a.bitisTarihi || '')))
     .slice(0, 4);
   if(sonBiten.length){
-    bloklar.push(`<div class="as-blok" id="asSonBiten">
-      <div class="as-blok-bas"><h2>Son bitirdiklerin</h2></div>
-      <div class="as-kapak-serit">${sonBiten.map(k => {
-        /* D4: baş-harfli sırt HER öğede ALT KATMAN olarak durur; kapak img'i
-           üstüne mutlak konumla biner. Yüklenmeyen/asılı kalan/hata veren
-           kapakta altta yedek görünür — beyaz boş kart HİÇBİR arıza modunda
-           kalamaz (error olayı hiç ateşlenmese bile). */
-        const yedek = `<div class="as-kapak as-kapak-yok" style="background:${sirtRenk(k.ad)}" aria-hidden="true">${esc(basHarf(k.ad))}</div>`;
-        const ust = k.kapakYerel && window.__kapak
-          ? `<img class="as-kapak as-kapak-ust kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt="">`
-          : k.kapak
-          ? `<img class="as-kapak as-kapak-ust" src="${escAttr(k.kapak)}" alt="" loading="lazy">`
-          : '';
-        return `<button class="as-kapak-btn" data-act="detay" data-id="${escAttr(k.id)}"
-          title="${escAttr(k.ad)}" aria-label="${escAttr(k.ad)}">${yedek}${ust}</button>`;
-      }).join('')}</div></div>`);
+    bloklar.push(`<div class="kt-bolum" id="asSonBiten">
+      <div class="kt-bolum-bas"><span class="kicker">Son bitirdiklerin</span></div>
+      <div class="kt-serit">${sonBiten.map(ktSiraLevhaHtml).join('')}</div></div>`);
   }
 
-  /* --- 5. hızlı eylemler --- */
-  bloklar.push(`<div class="as-blok" id="asEylem">
-    <div class="as-blok-bas"><h2>Hızlı eylemler</h2></div>
+  /* --- hızlı eylemler: en fazla üç, kontur dilinde --- */
+  bloklar.push(`<div class="kt-bolum" id="asEylem">
+    <div class="kt-bolum-bas"><span class="kicker">Hızlı eylemler</span></div>
     <div class="as-eylem">
       <button class="btn btn-cerceve" data-act="yeni">Kitap ekle</button>
       <button class="btn btn-cerceve" data-act="ana-barkod">Barkod tara</button>
@@ -2786,16 +2781,7 @@ function anaCiz(){
     </div></div>`);
 
   kap.innerHTML = bloklar.join('');
-  asKapakHata(kap);
-}
-/* Son-bitenler şeridinde kapak hatasında üst katman KALDIRILIR — alttaki
-   baş-harfli sırt görünür (D4; listeKapakHata'nın katmanlı eşi) */
-function asKapakHata(kap){
-  kap.querySelectorAll('#asSonBiten img.as-kapak-ust').forEach(img => {
-    const dus = () => { if(img.parentNode) img.remove(); };
-    img.addEventListener('error', dus, { once: true });
-    if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) dus();
-  });
+  ktPlateHata(kap);   // levha + p-mini kapakları TEK yedek yoluna bağlanır (v44)
 }
 
 function hepsiniCiz(){
@@ -2945,12 +2931,9 @@ document.addEventListener('click', e => {
     case 'sekme': sekmeGec(v); break;
     case 'ayar-ac': ayarAc(); break;
     case 'ayar-kapat': ayarKapat(); break;
-    /* Ana sayfa köprüleri — hepsi mevcut yollara bağlanır, yeni mantık yok. */
-    case 'ana-okunuyor':
-      durum.filtre = 'okunuyor';
-      document.querySelectorAll('#durumChips .chip').forEach(c =>
-        c.classList.toggle('active', c.dataset.v === 'okunuyor'));
-      sekmeGec('raf'); listeCiz(); break;
+    /* Ana sayfa köprüleri — hepsi mevcut yollara bağlanır, yeni mantık yok.
+       (ana-okunuyor v47'de emekli: "Tümü" düğmesi kalktı, devam bölümü
+       Kütüphane'yle ortak bileşen oldu.) */
     case 'ana-tekrar': sekmeGec('alinti'); break;
     case 'ana-ist': sekmeGec('ist'); break;
     case 'ana-barkod':
@@ -3082,7 +3065,10 @@ document.addEventListener('click', e => {
         detayAc(id); toast('Okuma oturumu açık — sayfayı oturumu bitirirken gir');
         break;
       }
-      const kutu = document.getElementById('ktSayfaKutu-' + id);
+      /* v47: kutu id değil data-kid taşır (ortak bileşen iki panelde de
+         çizilebilir; id çakışmasın) — kutu EN YAKIN karttan bulunur. */
+      const kart = el.closest('.kt-devam-kart');
+      const kutu = kart ? kart.querySelector('.kt-sayfa-satir') : null;
       if(kutu){
         kutu.hidden = !kutu.hidden;
         if(!kutu.hidden){ const g = kutu.querySelector('input'); if(g){ g.focus(); g.select(); } }
@@ -3090,7 +3076,8 @@ document.addEventListener('click', e => {
       break; }
     case 'kt-sayfa-kaydet': {
       const k = kitapBul(el.dataset.id);
-      const kutu = document.getElementById('ktSayfaKutu-' + el.dataset.id);
+      const kart = el.closest('.kt-devam-kart');
+      const kutu = kart ? kart.querySelector('.kt-sayfa-satir') : null;
       const g = kutu ? (parseInt(kutu.querySelector('input').value) || 0) : 0;
       if(k){
         // Detaydaki ilerleme-kaydet ile AYNI üçlü: clamp + seans + gsG damgası

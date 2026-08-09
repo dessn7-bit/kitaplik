@@ -251,12 +251,13 @@ test.describe('G36 Ciltli Kütüphane', () => {
     await expect(blok).toContainText('100 / 400 sayfa');
     await expect(blok).toContainText('%25');
     // sayfa işaretle: kutu açılır → değer → kaydet → veri + seans + damga
-    await expect(page.locator('.kt-sayfa-satir')).toBeHidden();
-    await page.click('[data-act="kt-sayfa-ac"]');
-    const kutu = page.locator('.kt-sayfa-satir');
+    // (v47: seçiciler #ktUst kapsamlı — ortak bileşen Ana Sayfa'da da çiziliyor)
+    await expect(page.locator('#ktUst .kt-sayfa-satir')).toBeHidden();
+    await page.click('#ktUst [data-act="kt-sayfa-ac"]');
+    const kutu = page.locator('#ktUst .kt-sayfa-satir');
     await expect(kutu).toBeVisible();
     await kutu.locator('input').fill('160');
-    await page.click('[data-act="kt-sayfa-kaydet"]');
+    await page.click('#ktUst [data-act="kt-sayfa-kaydet"]');
     await expect(page.locator('#ktDevam')).toContainText('160 / 400 sayfa');
     const v = await page.evaluate(() => {
       const k = veri.kitaplar[0];
@@ -270,16 +271,16 @@ test.describe('G36 Ciltli Kütüphane', () => {
   test('sayfa işaretle sınırı aşan girişte toplam sayfaya kırpar', async ({ page }) => {
     await tohumla(page, [okunanK()]);
     await rafAc(page);
-    await page.click('[data-act="kt-sayfa-ac"]');
-    await page.locator('.kt-sayfa-satir input').fill('9999');
-    await page.click('[data-act="kt-sayfa-kaydet"]');
+    await page.click('#ktUst [data-act="kt-sayfa-ac"]');
+    await page.locator('#ktUst .kt-sayfa-satir input').fill('9999');
+    await page.click('#ktUst [data-act="kt-sayfa-kaydet"]');
     expect(await page.evaluate(() => veri.kitaplar[0].guncelSayfa)).toBe(400);
   });
 
   test('kitaba git detayı açar; okunan kitap yoksa blok çizilmez', async ({ page }) => {
     await tohumla(page, [okunanK(), sahteKitap({ ad: 'Duran Kitap' })]);
     await rafAc(page);
-    await page.click('[data-act="kt-git"]');
+    await page.click('#ktUst [data-act="kt-git"]');
     await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
     await expect(page.locator('#detayIcerik')).toContainText('Okunan Roman');
     await page.click('[data-act="detay-kapat"]');
@@ -336,7 +337,7 @@ test.describe('G36 Ciltli Kütüphane', () => {
     await expect(page.locator('.kt-baslik')).toHaveText('Kütüphanem');
     await expect(page.locator('.kt-cilt')).toHaveText('2 cilt');
     const s = new Date();
-    await expect(page.locator('.kt-tarih')).toContainText(String(s.getFullYear()));
+    await expect(page.locator('#ktUst .kt-tarih')).toContainText(String(s.getFullYear()));
     const buyuk = await page.locator('.kt-cilt').evaluate(el => getComputedStyle(el).textTransform);
     expect(buyuk).toBe('uppercase');
   });
@@ -434,14 +435,14 @@ test.describe('G36 Ciltli Kütüphane', () => {
       await rafAc(page);
       const ciftler = [
         ['#ktUst .kicker', null, 'kicker'],
-        ['.kt-cilt', null, 'cilt sayısı'],
-        ['.kt-tarih', null, 'tarih satırı'],
-        ['.kt-devam-ad', null, 'devam kitap adı'],
-        ['.kt-devam-yazar', null, 'devam yazar'],
-        ['.kt-devam-sayfa span', null, 'sayfa sayacı'],
+        ['#ktUst .kt-cilt', null, 'cilt sayısı'],
+        ['#ktUst .kt-tarih', null, 'tarih satırı'],
+        ['#ktUst .kt-devam-ad', null, 'devam kitap adı'],
+        ['#ktUst .kt-devam-yazar', null, 'devam yazar'],
+        ['#ktUst .kt-devam-sayfa span', null, 'sayfa sayacı'],
         ['#ktDevam .btn-brass', null, 'birincil düğme metni'],
         ['#ktDevam .btn-cerceve', null, 'ikincil düğme metni'],
-        ['.kt-adet', null, 'şerit adedi'],
+        ['#ktUst .kt-adet', null, 'şerit adedi'],
         ['nav .nav-btn.active', null, 'aktif sekme'],
         ['nav .nav-btn:not(.active)', null, 'pasif sekme']
       ];

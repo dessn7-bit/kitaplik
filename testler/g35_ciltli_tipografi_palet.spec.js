@@ -157,9 +157,10 @@ test.describe('G35 Ciltli tipografi + Palet A', () => {
     await tohumla(page, [dolulKitap(), sahteKitap({ ad: 'Okunacak Ç', durum: 'okunacak' })]);
     await page.goto('/');
     await ciftleriDogrula(page, [
-      ['#anaIcerik .as-blok h2', '#anaIcerik .as-blok', 'bölüm başlığı'],
-      ['#asSonBiten .as-kapak-yok', null, 'şerit baş harf (sırt rengi)'],
-      ['#asYil .as-sayi', '#asYil', 'yıl sayısı'],
+      // v47: Ana Sayfa Ciltli — kutu/sırt rolleri emekli, yeni metin rolleri ölçülür
+      ['#anaIcerik .as-selam', 'body', 'karşılama başlığı'],
+      ['#anaIcerik .as-ozet', 'body', 'özet satırı'],
+      ['#anaIcerik .kicker', 'body', 'ana sayfa kicker'],
       ['#asEylem .btn-cerceve', null, 'çerçeve düğme']
     ], 'ana');
     await rafaGec(page);   // tohumla varsayılanı: liste

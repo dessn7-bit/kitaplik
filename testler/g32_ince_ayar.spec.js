@@ -100,13 +100,13 @@ test.describe('G32 ince ayar', () => {
     const blok = page.locator('#asSonBiten');
     await expect(blok).toBeVisible();
     await expect(blok).toContainText('Son bitirdiklerin');
-    await expect(blok.locator('.as-kapak-btn')).toHaveCount(2);   // okunacak GİRMEZ
-    // en yeni bitiş ilk sırada
-    await expect(blok.locator('.as-kapak-btn').first()).toHaveAttribute('title', 'Yeni Bitmiş');
-    // kapaksız kitap baş-harfli sırt yer tutucusu taşır (liste diliyle aynı)
-    await expect(blok.locator('.as-kapak-btn').first().locator('.as-kapak-yok')).toHaveText('YB');
+    await expect(blok.locator('.kt-sira-plate')).toHaveCount(2);   // okunacak GİRMEZ
+    // en yeni bitiş ilk sırada; kapaksız kitap ortak levhanın tipografik
+    // yüzünü taşır (v47: SIRADA şeridiyle AYNI üretici — sırt rengi emekli)
+    await expect(blok.locator('.kt-sira-plate').first()
+      .locator('.kt-sira-ad')).toHaveText('Yeni Bitmiş');
     // dokunuş mevcut detay yoluna gider — yeni mantık yok
-    await blok.locator('.as-kapak-btn').first().click();
+    await blok.locator('.kt-sira-plate').first().click();
     await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
     await expect(page.locator('#detayIcerik')).toContainText('Yeni Bitmiş');
   });
@@ -114,7 +114,7 @@ test.describe('G32 ince ayar', () => {
   test('D4: hiç bitmiş kitap yokken şerit ÇİZİLMEZ (uydurma yok ilkesi)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Sadece Okunacak' })]);
     await page.goto('/');
-    await expect(page.locator('#anaIcerik .as-blok').first()).toBeVisible(); // sayfa çizildi
+    await expect(page.locator('#anaIcerik .as-ust')).toBeVisible(); // sayfa çizildi
     await expect(page.locator('#asSonBiten')).toHaveCount(0);
   });
 });

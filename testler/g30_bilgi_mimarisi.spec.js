@@ -84,66 +84,91 @@ test.describe('G30 — açılış Ana Sayfa', () => {
     await expect(page.locator('#panel-ist')).not.toHaveClass(/active/);
   });
 
-  test('Ana Sayfa dolu kütüphanede sıfır pirinç (g29 sözleşmesi): eylemler çerçeveli', async ({ page }) => {
+  test('Ana Sayfa pirinci yalnız ortak DEVAM bileşeninden gelir (g29 sözleşmesi): eylemler çerçeveli', async ({ page }) => {
+    /* v47 GÖÇ: eski sözleşme "dolu kütüphanede 0 pirinç"ti; DEVAM bölümü
+       Kütüphane'yle ORTAK bileşen olunca birincil "Sayfa işaretle" Ana
+       Sayfa'ya da geldi. Yeni sözleşme: pirinç YALNIZ devam kartından gelir
+       (kart başına 1); hızlı eylemler çerçeveli kalır. */
     await tohumla(page, [okunanK(), bitmisK()]);
     await page.goto('/');
-    await expect(page.locator('#panel-ana .btn-brass:visible')).toHaveCount(0);
+    const brass = page.locator('#panel-ana .btn-brass:visible');
+    await expect(brass).toHaveCount(1);
+    await expect(brass).toHaveAttribute('data-act', 'kt-sayfa-ac');
     await expect(page.locator('#asEylem [data-act="yeni"]')).toHaveClass(/btn-cerceve/);
     await expect(page.locator('#asEylem [data-act="ana-barkod"]')).toHaveClass(/btn-cerceve/);
     await expect(page.locator('#asEylem [data-act="seri-ac"]')).toHaveClass(/btn-cerceve/);
+  });
+
+  test('okunan kitap yokken Ana Sayfa sıfır pirinç', async ({ page }) => {
+    await tohumla(page, [bitmisK()]);
+    await page.goto('/');
+    await expect(page.locator('#panel-ana .btn-brass:visible')).toHaveCount(0);
   });
 });
 
 /* ===================================================================== */
 test.describe('G30 — Ana Sayfa bölümleri gerçek veriyle', () => {
 
-  test('şu an okudukların: ilerleme çubuğu ve yüzde doğru, dokununca detay açılır', async ({ page }) => {
+  test('devam eden okuma: ortak bileşen — levha + ilerleme + iki düğme; sayfa işaretleme buradan çalışır', async ({ page }) => {
     await tohumla(page, [okunanK(), bitmisK()]);
     await page.goto('/');
-    const blok = page.locator('#asOkunuyor');
+    const blok = page.locator('#asDevam');
+    await expect(blok).toContainText('Devam eden okuma');
     await expect(blok).toContainText('Okunan Kitap');
-    await expect(blok).toContainText('120 / 300 · %40');
+    await expect(blok).toContainText('120 / 300 sayfa');
+    await expect(blok).toContainText('%40');
     await expect(blok.locator('.ilerleme > div')).toHaveAttribute('style', 'width:40%');
     await expect(blok).not.toContainText('Bitmiş Kitap');   // yalnız okunuyor
-    await blok.locator('.as-satir').first().click();
+    // sayfa işaretleme Ana Sayfa'dan çalışır (ortak bileşen davranışıyla)
+    await blok.locator('[data-act="kt-sayfa-ac"]').click();
+    const kutu = blok.locator('.kt-sayfa-satir');
+    await expect(kutu).toBeVisible();
+    await kutu.locator('input').fill('150');
+    await kutu.locator('[data-act="kt-sayfa-kaydet"]').click();
+    await expect(page.locator('#asDevam')).toContainText('150 / 300 sayfa');
+    // "Kitaba git" mevcut detay yoluna gider
+    await page.locator('#asDevam [data-act="kt-git"]').click();
     await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
     await expect(page.locator('#detayIcerik')).toContainText('Okunan Kitap');
   });
 
-  test('en fazla 3 okunan gösterilir, fazlası için "Tümü" Kütüphane\'ye okunuyor filtresiyle götürür', async ({ page }) => {
-    await tohumla(page, [1, 2, 3, 4].map(i => okunanK({ ad: 'Okunan ' + i })));
+  test('birden çok okunanda ortak şerit: Ana Sayfa en fazla 4 kart, Kütüphane tam liste', async ({ page }) => {
+    await tohumla(page, [1, 2, 3, 4, 5].map(i => okunanK({ ad: 'Okunan ' + i })));
     await page.goto('/');
-    await expect(page.locator('#asOkunuyor .as-satir')).toHaveCount(3);
-    await expect(page.locator('#asOkunuyor [data-act="ana-okunuyor"]')).toContainText('Tümü (4)');
-    await page.click('#asOkunuyor [data-act="ana-okunuyor"]');
-    await expect(page.locator('#panel-raf')).toHaveClass(/active/);
-    await expect(page.locator('#durumChips .chip.active')).toHaveAttribute('data-v', 'okunuyor');
-    await expect(page.locator('#liste .kart')).toHaveCount(4);
+    await expect(page.locator('#asDevam .kt-serit')).toHaveCount(1);
+    await expect(page.locator('#asDevam .kt-devam-kart')).toHaveCount(4);   // yönelim sınırı
+    await page.click('nav [data-act="sekme"][data-v="raf"]');
+    await expect(page.locator('#ktDevam .kt-devam-kart')).toHaveCount(5);   // ortak bileşen, kırpılmamış
   });
 
-  test('okunan kitap yoksa dürüst mesaj, uydurma satır yok', async ({ page }) => {
+  test('okunan kitap yoksa DEVAM bölümü hiç çizilmez (uydurma satır yok)', async ({ page }) => {
     await tohumla(page, [bitmisK()]);
     await page.goto('/');
-    await expect(page.locator('#asOkunuyor')).toContainText('Şu an okuduğun kitap yok');
-    await expect(page.locator('#asOkunuyor .as-satir')).toHaveCount(0);
+    await expect(page.locator('#asDevam')).toHaveCount(0);
   });
 
-  test('bugün: tekrar kuyruğu sayısı doğru ve Alıntılar sekmesine götürür', async ({ page }) => {
+  test('bugün: tekrar kuyruğu hücresi doğru sayıyı taşır ve Alıntılar sekmesine götürür', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Alıntılı',
       notlar: [bekleyenAlinti(1), bekleyenAlinti(2), bekleyenAlinti(3)] })]);
     await page.goto('/');
-    await expect(page.locator('#asBugun')).toContainText('3 alıntı tekrar için bekliyor');
+    await expect(page.locator('#asBugun .as-hucre-sayi')).toHaveText('3');
+    // Etiket CSS ile BÜYÜK HARF görünür; TR ı/İ dönüşümü /i bayrağını şaşırtır —
+    // iddia textContent'ten (dönüşümsüz kaynak metin) yapılır.
+    expect(await page.locator('#asBugun .as-hucre-ad').first()
+      .evaluate(el => el.textContent)).toContain('tekrar bekleyen alıntı');
     await page.click('#asBugun [data-act="ana-tekrar"]');
     await expect(page.locator('#panel-alinti')).toHaveClass(/active/);
     await expect(page.locator('#tkKutu')).toBeVisible();
   });
 
-  test('bugün: okuma süresi ve sayfa özeti bugünkü oturumlardan gelir', async ({ page }) => {
+  test('bugün: okuma süresi ve sayfa hücreleri bugünkü oturumlardan gelir', async ({ page }) => {
     await tohumla(page, [okunanK({ oturumlar: [bugunOturum(45, 100, 120)] })]);
     await page.goto('/');
+    await expect(page.locator('#asBugun .as-hucre')).toHaveCount(2);
     await expect(page.locator('#asBugun')).toContainText('45 dk');
     await expect(page.locator('#asBugun')).toContainText('20');
-    await expect(page.locator('#asBugun')).toContainText('sayfa');
+    expect(await page.locator('#asBugun .as-hucre-ad').last()
+      .evaluate(el => el.textContent)).toBe('sayfa');
   });
 
   test('bugün hiçbir şey olmadıysa "Bugün" bölümü HİÇ çizilmez (sıfır gösterip suçlamaz)', async ({ page }) => {
@@ -156,7 +181,7 @@ test.describe('G30 — Ana Sayfa bölümleri gerçek veriyle', () => {
   test('tekrar sayısı okunurken depoya YAZILMAZ (planlama yan etkisi yok)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Alıntılı', notlar: [bekleyenAlinti(1)] })]);
     await page.goto('/');
-    await expect(page.locator('#asBugun')).toContainText('1 alıntı');
+    await expect(page.locator('#asBugun .as-hucre-sayi')).toHaveText('1');
     // Ana Sayfa çizimi planlamaYap/ciz çağırmadığı için not damgası basılmamalı.
     // KUSUR DÜZELTMESİ (v40'ta bulundu): beklenen değer tohumla AYNI yerel-saat
     // hesabından gelmeli — eski toISOString (UTC) kıyası gece 00-03 (UTC+3)
@@ -176,7 +201,8 @@ test.describe('G30 — Ana Sayfa bölümleri gerçek veriyle', () => {
     const blok = page.locator('#asSiradaki');
     await expect(blok).toContainText('Aday Kitap');
     await expect(blok.locator('.as-neden')).not.toHaveText('');   // gerçek-veri gerekçesi
-    await expect(blok.locator('.as-satir')).toHaveCount(1);       // en fazla 2
+    await expect(blok.locator('.as-oneri')).toHaveCount(1);       // en fazla 2
+    await expect(blok.locator('.as-oneri .plate')).toHaveCount(1); // mini levha (ortak üretici)
     await blok.locator('[data-act="zar"]').click();
     await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
   });
@@ -188,14 +214,15 @@ test.describe('G30 — Ana Sayfa bölümleri gerçek veriyle', () => {
     await expect(page.locator('#asSiradaki [data-act="zar"]')).toHaveCount(0);
   });
 
-  test('yıl özeti hedefle birlikte doğru, dokununca İstatistik açılır', async ({ page }) => {
+  test('yıl: Kütüphane\'yle AYNI hedef şeridi (ortak üretici), dokununca İstatistik açılır', async ({ page }) => {
     await tohumla(page, { kitaplar: [bitmisK({ ad: 'A' }), bitmisK({ ad: 'B' }), okunanK()],
       hedef: { [YIL]: 10 } });
     await page.goto('/');
-    await expect(page.locator('#asYil')).toContainText(String(YIL));
-    await expect(page.locator('#asYil')).toContainText('/ 10');
-    await expect(page.locator('#asYil')).toContainText('%20');
-    await page.click('#asYil');
+    const blok = page.locator('#asYil');
+    await expect(blok.locator('.kicker')).toContainText(String(YIL));
+    await expect(blok.locator('.kt-hedef-sayi')).toHaveText('2 / 10');
+    await expect(blok.locator('.ilerleme > span')).toHaveAttribute('style', /width:20%/);
+    await page.click('#asYil .kt-hedef');
     await expect(page.locator('#panel-ist')).toHaveClass(/active/);
   });
 
@@ -207,16 +234,19 @@ test.describe('G30 — Ana Sayfa bölümleri gerçek veriyle', () => {
       okunanK({ ad: 'Yeniden Okunan', okumalar: [{ bas: '2026-01-01', bit: bugunISO(), puan: 7 }] }),
     ], hedef: { [YIL]: 10 } });
     await page.goto('/');
-    await expect(page.locator('#asYil .as-sayi')).toContainText('2');
+    await expect(page.locator('#asYil .kt-hedef-sayi')).toContainText('2 / 10');
     await page.click('nav [data-act="sekme"][data-v="ist"]');
     await expect(page.locator('#istIcerik')).toContainText('2 / 10');
   });
 
-  test('hedef yoksa uydurma yüzde yok, hedefe yönlendiren dürüst not var', async ({ page }) => {
+  test('hedef yoksa uydurma yüzde yok, hedef koymaya götüren dürüst bağlantı var', async ({ page }) => {
     await tohumla(page, [bitmisK()]);
     await page.goto('/');
     await expect(page.locator('#asYil')).toContainText('Yıllık hedef koymadın');
     await expect(page.locator('#asYil .ilerleme')).toHaveCount(0);
+    await expect(page.locator('#asYil .as-yil-link')).toContainText('Hedef koy');
+    await page.click('#asYil [data-act="ana-ist"]');
+    await expect(page.locator('#panel-ist')).toHaveClass(/active/);
   });
 });
 
@@ -233,7 +263,7 @@ test.describe('G30 — boş kütüphane', () => {
     await expect(page.locator('#panel-ana .btn-brass:visible')).toHaveCount(1);
     await expect(page.locator('#panel-ana .btn-brass')).toHaveAttribute('data-act', 'yeni');
     // uydurma bölüm yok
-    await expect(page.locator('#asOkunuyor')).toHaveCount(0);
+    await expect(page.locator('#asDevam')).toHaveCount(0);
     await expect(page.locator('#asYil')).toHaveCount(0);
     expect(hatalar, 'boş kütüphanede sayfa hatası').toEqual([]);
   });
@@ -536,15 +566,16 @@ test.describe('G30 — geçiş ve tutarlılık', () => {
   test('Ana Sayfa veri değişince tazelenir (bayat kalmaz)', async ({ page }) => {
     await tohumla(page, [okunanK({ ad: 'İlk Kitap' })]);
     await page.goto('/');
-    await expect(page.locator('#asOkunuyor')).toContainText('İlk Kitap');
+    await expect(page.locator('#asDevam')).toContainText('İlk Kitap');
     await page.click('nav [data-act="sekme"][data-v="raf"]');
     await page.click('#liste .kart');
     await page.click('#detayIcerik [data-act="bitir"]');
     await page.keyboard.press('Escape');   // detay bitirdikten sonra puan şeridiyle açık kalır
     await expect(page.locator('#ortuDetay')).not.toHaveClass(/acik/);
     await page.click('nav [data-act="sekme"][data-v="ana"]');
-    await expect(page.locator('#asOkunuyor')).toContainText('Şu an okuduğun kitap yok');
-    await expect(page.locator('#asYil .as-sayi')).toContainText('1');
+    await expect(page.locator('#asDevam')).toHaveCount(0);                    // okunan kalmadı
+    await expect(page.locator('.as-ozet')).toContainText('bu yıl 1 kitap bitirdin');
+    await expect(page.locator('#asSonBiten .kt-sira-plate')).toHaveCount(1);  // şeride düştü
   });
 });
 
@@ -575,7 +606,7 @@ test.describe('G30 — ölçüm', () => {
     });
     console.log(`[ÖLÇÜM] 500 kitap · açılış ${acilisMs} ms · anaCiz ortalama ${cizimMs.toFixed(1)} ms`);
 
-    await expect(page.locator('#asOkunuyor .as-satir')).toHaveCount(3);   // 167 okunan → 3
+    await expect(page.locator('#asDevam .kt-devam-kart')).toHaveCount(4); // 167 okunan → 4 (yönelim sınırı)
     expect(cizimMs, 'anaCiz tek çizim 150 ms altında kalmalı').toBeLessThan(150);
     expect(acilisMs, '500 kitapta açılış 5 sn altında kalmalı').toBeLessThan(5000);
   });
