@@ -19,9 +19,13 @@
    - Yayınevi           KULLANILMIYOR (karar): aynı yayınevi çok farklı tür/kalite
                                   basar; sinyal zayıf ve "X yayınevine 7 verdin"
                                   gerekçesi anlamsız duruyor.
-   AÇIKLANABİLİRLİK: her önerinin nedeni GERÇEK veriden üretilir (en güçlü pozitif
-   bileşenin cümlesi + varsa ikincil). Pozitif bileşen yoksa bekleme süresi yazılır
-   (her zaman gerçek). Uydurma gerekçe yok.
+   AÇIKLANABİLİRLİK (v48): gerekçe LİSTE bağlamında atanır (nedenAta) — kitabın
+   en ÖZGÜL sinyalinin cümlesi; özgüllük sırası yazar > seri > etiket > tür >
+   bekleme (Kaan kararı — skor ağırlığı DEĞİL: skor sıralamayı, özgüllük anlatımı
+   yönetir). Aynı cümle listede İKİ KEZ GÖRÜNMEZ: kullanılmış cümle atlanır,
+   kitap bir sonraki sinyaline düşer; benzersiz özgül sinyal kalmadıysa dürüst
+   genel cümle (sayı yinelenmez), o da tükenirse gerekçesiz. Bekleme yalnız
+   GEÇERLİ eklenme damgasıyla yazılır. Uydurma gerekçe yok.
    AZ VERİ: puanlı bitirilmiş kitap < 3 ise skorlamaya GİRİLMEZ — dürüst mesaj +
    en uzun bekleyenler listesi gösterilir.
    ÇEŞİTLİLİK: ilk 5'te aynı yazardan en fazla 2, aynı türden en fazla 3 —
@@ -46,13 +50,50 @@
     if(!k.ertelemeTarihi) return false;
     return gunFarki(k.ertelemeTarihi, bugun()) < ERTELEME_GUN;
   }
+  /* Bekleme yalnız GEÇERLİ eklenme damgasıyla anlamlı (v48): damga yok/<=0,
+     gelecekte ya da absürt eski (>600 ay) ise null — cümle HİÇ kurulmaz.
+     (v47 canlı kanıtı: bozuk damga "689 aydır rafta bekliyor" üretmişti.) */
+  const BEKLEME_TAVAN_GUN = 600 * 30;   // 600 ay
   function beklemeGun(k){
-    return Math.max(0, Math.floor((Date.now() - (k.eklenme || Date.now())) / 86400000));
+    if(!(k.eklenme > 0)) return null;
+    const gun = Math.floor((Date.now() - k.eklenme) / 86400000);
+    if(gun < 0 || gun > BEKLEME_TAVAN_GUN) return null;
+    return gun;
   }
   function beklemeCumle(k){
     const gun = beklemeGun(k);
+    if(gun === null) return '';
     return gun >= 60 ? Math.floor(gun / 30) + ' aydır rafta bekliyor'
                      : gun + ' gündür rafta bekliyor';
+  }
+  /* Gerekçe ataması LİSTE bağlamında (v48) — özgüllük sırası + tekillik.
+     Her parça (birincil + katkısı ≥10 ikincil) kullanılan kümesine ayrı girer;
+     böylece birleşik cümleler de kendiliğinden farklılaşır. Keşfet aynı motoru
+     kullanacak: düzeltme BURADA, arayüzlerde kopya yok. */
+  const GEREKCE_SIRA = ['yazar', 'seri', 'etiket', 'tur', 'bekleme'];
+  function nedenAta(liste){
+    const kullanilan = new Set();
+    liste.forEach(o => {
+      const c = o.cumleler || {};
+      const b = o.bilesenler || {};
+      const parcalar = [];
+      for(const ad of GEREKCE_SIRA){
+        if(parcalar.length >= 2) break;
+        if(!c[ad] || kullanilan.has(c[ad])) continue;
+        if(parcalar.length && b[ad] < 10) continue;   // ikincil için güç eşiği
+        parcalar.push(c[ad]);
+        kullanilan.add(c[ad]);
+      }
+      if(!parcalar.length){
+        // benzersiz özgül sinyal kalmadı: genel ama DÜRÜST, sayı yinelenmez.
+        // tür-genel yalnız tür sinyali gerçekten pozitifken (uydurma beğeni yok).
+        const genel = (b.tur > 0 && o.kitap.tur)
+          ? o.kitap.tur + ' türünden kitapları beğeniyorsun'
+          : 'Rafında seni bekliyor.';
+        if(!kullanilan.has(genel)){ parcalar.push(genel); kullanilan.add(genel); }
+      }
+      o.neden = parcalar.join(' · ');   // hiçbir parça kalmadıysa '' — UI nedensiz çizer
+    });
   }
 
   /* Kitap düzeyinde okuma geçmişi özeti — ARŞİVLİ okumalar (yeniden-oku) dahil.
@@ -84,11 +125,17 @@
     const istekler = adaylar.filter(k => k.sahiplik === 'istek');
 
     if(puanlilar.length < MIN_PUANLI){
-      // AZ VERİ: skor yok, uydurma gerekçe yok — en uzun bekleyenler (gerçek neden)
+      // AZ VERİ: skor yok, uydurma gerekçe yok — en uzun bekleyenler (gerçek neden);
+      // gerekçeler burada da nedenAta'dan geçer (geçersiz damga = beklemesiz, tekillik)
       const bekleyen = sahipler.slice()
         .sort((a, b) => (a.eklenme || 0) - (b.eklenme || 0))
         .slice(0, ANA_SAYI)
-        .map(k => ({ kitap: k, skor: null, bilesenler: {}, neden: beklemeCumle(k) }));
+        .map(k => {
+          const c = {};
+          if(beklemeGun(k) !== null) c.bekleme = beklemeCumle(k);
+          return { kitap: k, skor: null, bilesenler: {}, cumleler: c };
+        });
+      nedenAta(bekleyen);
       return { mod: 'az-veri', puanliSayi: puanlilar.length, esik: MIN_PUANLI,
         ana: bekleyen, istek: [] };
     }
@@ -173,24 +220,27 @@
           if(u >= 6) cumleler.uzunluk = k.sayfa + ' sayfa — son dönemde okuduğun uzunlukta';
         }
       }
-      b.bekleme = Math.min(AGIRLIK.bekleme, beklemeGun(k) / 60);
-      cumleler.bekleme = beklemeCumle(k);
+      // bekleme yalnız geçerli damgayla puana ve cümleye girer (v48)
+      const bGun = beklemeGun(k);
+      if(bGun !== null){
+        b.bekleme = Math.min(AGIRLIK.bekleme, bGun / 60);
+        cumleler.bekleme = beklemeCumle(k);
+      }
 
       const skor = Object.values(b).reduce((a, x) => a + x, 0);
-      // neden: en güçlü POZİTİF bileşen + yeterince güçlü ikincil (≥10)
-      const sirali = Object.keys(b).filter(ad => b[ad] > 0 && cumleler[ad])
-        .sort((x, y) => b[y] - b[x]);
-      let neden = sirali.length ? cumleler[sirali[0]] : beklemeCumle(k);
-      if(sirali.length > 1 && b[sirali[1]] >= 10)
-        neden += ' · ' + cumleler[sirali[1]];
-      return { kitap: k, skor, bilesenler: b, neden };
+      // neden BURADA atanmaz: liste bağlamı gerekir (tekillik) — hesapla
+      // sonunda nedenAta seçilen öğelere yazar.
+      return { kitap: k, skor, bilesenler: b, cumleler };
     }
 
     const sirala = (a, b) => b.skor - a.skor || (a.kitap.eklenme || 0) - (b.kitap.eklenme || 0);
     const sahipSkor = sahipler.map(degerlendir).sort(sirala);
     const istekSkor = istekler.map(degerlendir).sort(sirala).slice(0, ISTEK_SAYI);
+    const anaSecim = cesitlilikSec(sahipSkor, ANA_SAYI);
+    // gerekçe tekilliği GÖSTERİLEN listenin tamamında (panel ana+istek birlikte çizer)
+    nedenAta(anaSecim.concat(istekSkor));
     return { mod: 'skor', puanliSayi: puanlilar.length, esik: MIN_PUANLI,
-      ana: cesitlilikSec(sahipSkor, ANA_SAYI), istek: istekSkor };
+      ana: anaSecim, istek: istekSkor };
   }
 
   /* İlk N'de aynı yazardan ≤2, aynı türden ≤3 — kota katı, havuz yetmezse kısalır */

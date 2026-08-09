@@ -379,3 +379,123 @@ test.describe('G24 öneri motoru', () => {
     await expect(page.locator('#detayIcerik')).toContainText('Zarlık Kitap');
   });
 });
+
+/* ===================================================================== */
+/* v48 — gerekçe tekilleştirme + bekleme geçerliliği (ORTAK motorda;
+   Keşfet de aynı motoru kullanacak). Canlı v47 kanıtı: iki öneri BİREBİR
+   aynı "tür ortalaması · 689 aydır rafta bekliyor" cümlesini taşıyordu. */
+test.describe('G24 gerekçe tekilleştirme (v48)', () => {
+
+  /* Kanıt kurgusu: aynı türde 3 puanlı bitmiş + aynı türde 2 aday —
+     tür cümlesi ikisi için de aynı üretilirdi. */
+  function ayniTurVeri() {
+    return [
+      bitmis({ ad: 'Roman 1', yazar: 'R Yazar 1', tur: 'Roman', puan: 9 }),
+      bitmis({ ad: 'Roman 2', yazar: 'R Yazar 2', tur: 'Roman', puan: 9 }),
+      bitmis({ ad: 'Roman 3', yazar: 'R Yazar 3', tur: 'Roman', puan: 9 }),
+      okunacak({ ad: 'Tanrı Yanılgısı', yazar: 'Dawkins', tur: 'Roman' }),
+      okunacak({ ad: 'Böyle Buyurdu Zerdüşt', yazar: 'Nietzsche', tur: 'Roman' }),
+    ];
+  }
+
+  test('(a) iki öneri aynı gerekçe cümlesini göstermez — motorda VE Ana Sayfa\'da', async ({ page }) => {
+    await tohumla(page, ayniTurVeri());
+    await page.goto('/');
+    const s = await page.evaluate(() => window.__oneri.hesapla());
+    const nedenler = s.ana.map(o => o.neden).filter(Boolean);
+    expect(new Set(nedenler).size, 'motor nedenleri benzersiz').toBe(nedenler.length);
+    // ilk öneri tür ortalamasını taşır; ikincisi AYNI cümleyi taşımaz
+    expect(s.ana[0].neden).toContain('Roman türünde 3 kitaba ortalama 9,0 verdin');
+    expect(s.ana[1].neden).not.toBe(s.ana[0].neden);
+    expect(s.ana[1].neden).not.toContain('ortalama 9,0');
+    // gerçek render (v47 kanıtının yüzeyi): Ana Sayfa SIRADAKİ iki farklı gerekçe
+    const uiNedenler = await page.locator('#asSiradaki .as-neden').allTextContents();
+    expect(uiNedenler.length).toBe(2);
+    expect(uiNedenler[0]).not.toBe(uiNedenler[1]);
+  });
+
+  test('(b) yazar yakınlığı olan kitapta gerekçe yazarı anar (birincil)', async ({ page }) => {
+    await tohumla(page, [
+      ...taban(),
+      bitmis({ ad: 'Sevilen Y1', yazar: 'Bilge Karasu', puan: 9 }),
+      bitmis({ ad: 'Sevilen Y2', yazar: 'Bilge Karasu', puan: 10 }),
+      okunacak({ ad: 'Gece', yazar: 'Bilge Karasu', tur: 'Deneme' }),
+    ]);
+    await rafAc(page);
+    const s = await page.evaluate(() => window.__oneri.hesapla());
+    const oge = s.ana.find(o => o.kitap.ad === 'Gece');
+    expect(oge.neden.indexOf('Bilge Karasu'), 'yazar cümlesi BİRİNCİL').toBe(0);
+    expect(oge.neden).toContain('2 kitaba ortalama 9,5 verdin');
+  });
+
+  test('(c) seri devamı olan kitapta gerekçe seriyi anar (yazar sinyalsiz kurgu)', async ({ page }) => {
+    await tohumla(page, [
+      ...taban(),   // puanlılar başka yazarlardan — Asimov yazar istatistiği almaz
+      bitmis({ ad: 'Vakıf 1', yazar: 'Isaac Asimov', seri: 'Vakıf', ciltNo: 1, puan: null }),
+      bitmis({ ad: 'Vakıf 2', yazar: 'Isaac Asimov', seri: 'Vakıf', ciltNo: 2, puan: null }),
+      okunacak({ ad: 'İkinci Vakıf', yazar: 'Isaac Asimov', seri: 'Vakıf', ciltNo: 3 }),
+    ]);
+    await rafAc(page);
+    const s = await page.evaluate(() => window.__oneri.hesapla());
+    const oge = s.ana.find(o => o.kitap.ad === 'İkinci Vakıf');
+    expect(oge.neden.indexOf('Vakıf serisinin 3. cildi'), 'seri cümlesi BİRİNCİL').toBe(0);
+    expect(oge.neden).toContain('önceki 2 cildi bitirdin');
+  });
+
+  test('(d) eklenme damgası geçersiz/absürtse bekleme ifadesi HİÇ çıkmaz', async ({ page }) => {
+    const bozukEski = okunacak({ ad: 'Epoch Kitabı', tur: 'Roman' });
+    bozukEski.eklenme = 1;                                   // 1970 → ~683 ay: absürt
+    const gelecek = okunacak({ ad: 'Gelecekten Gelen', tur: 'Roman' });
+    gelecek.eklenme = Date.now() + 30 * 86400000;            // gelecekte: geçersiz
+    await tohumla(page, [
+      bitmis({ ad: 'Roman 1', yazar: 'R Yazar 1', tur: 'Roman', puan: 9 }),
+      bitmis({ ad: 'Roman 2', yazar: 'R Yazar 2', tur: 'Roman', puan: 9 }),
+      bitmis({ ad: 'Roman 3', yazar: 'R Yazar 3', tur: 'Roman', puan: 9 }),
+      bozukEski, gelecek,
+    ]);
+    await page.goto('/');
+    const s = await page.evaluate(() => window.__oneri.hesapla());
+    for (const o of s.ana) {
+      expect(o.neden, o.kitap.ad + ' sayılı bekleme taşımaz').not.toMatch(/aydır|gündür/);
+    }
+    // gerçek render: Ana Sayfa'da da absürt süre yok
+    const ui = await page.locator('#asSiradaki').textContent();
+    expect(ui).not.toMatch(/aydır rafta|gündür rafta/);
+  });
+
+  test('(e) hiçbir güçlü sinyal yoksa dürüst genel cümle — uydurma sayı YOK', async ({ page }) => {
+    const issiz = okunacak({ ad: 'Sinyalsiz Kitap', yazar: 'Tanınmayan Yazar' });
+    issiz.eklenme = 1;   // bekleme de geçersiz: hiçbir özgül sinyal kalmaz
+    await tohumla(page, [...taban(), issiz]);
+    await rafAc(page);
+    const s = await page.evaluate(() => window.__oneri.hesapla());
+    const oge = s.ana.find(o => o.kitap.ad === 'Sinyalsiz Kitap');
+    expect(oge.neden).toBe('Rafında seni bekliyor.');
+    expect(oge.neden).not.toMatch(/\d/);
+  });
+
+  test('tür-genel yedeği: tür cümlesi kullanılmışsa ikinci kitap sayısız tür cümlesi alır', async ({ page }) => {
+    /* 3 aday, hepsi aynı tür, bekleme damgaları geçersiz: 1.si tür ortalamasını
+       alır, 2.si sayısız tür-geneline düşer, 3.sü (genel de kullanıldı)
+       gerekçesiz kalır — hiçbir cümle iki kez görünmez. */
+    const adaylar = ['Aday 1', 'Aday 2', 'Aday 3'].map((ad, i) => {
+      const k = okunacak({ ad, yazar: 'A Yazar ' + i, tur: 'Roman' });
+      k.eklenme = 1;
+      return k;
+    });
+    await tohumla(page, [
+      bitmis({ ad: 'Roman 1', yazar: 'R Yazar 1', tur: 'Roman', puan: 9 }),
+      bitmis({ ad: 'Roman 2', yazar: 'R Yazar 2', tur: 'Roman', puan: 9 }),
+      bitmis({ ad: 'Roman 3', yazar: 'R Yazar 3', tur: 'Roman', puan: 9 }),
+      ...adaylar,
+    ]);
+    await rafAc(page);
+    const s = await page.evaluate(() => window.__oneri.hesapla());
+    const nedenler = s.ana.map(o => o.neden);
+    expect(nedenler[0]).toContain('ortalama 9,0');
+    expect(nedenler[1]).toBe('Roman türünden kitapları beğeniyorsun');
+    expect(nedenler[2]).toBe('');   // dürüst: uydurmaktansa gerekçesiz
+    const dolular = nedenler.filter(Boolean);
+    expect(new Set(dolular).size).toBe(dolular.length);
+  });
+});
