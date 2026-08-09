@@ -275,6 +275,13 @@
     for(const [id, t] of Object.entries((yerel && yerel.silinenler) || {}))
       if(!silinenler[id] || t > silinenler[id]) silinenler[id] = t;
 
+    /* kesfetGizli (v51): Keşfet-B "İlgilenmiyorum" tercihi — silinenler'le aynı
+       ÖZ-DAMGALI UNION deseni (mezar taşı değil, kalıcı tercih): iki cihaz
+       farklı öneri gizlediyse İKİSİ de gizli kalır, LWW birini kaybederdi. */
+    const kesfetGizli = { ...((uzak && uzak.kesfetGizli) || {}) };
+    for(const [anah, t] of Object.entries((yerel && yerel.kesfetGizli) || {}))
+      if(!kesfetGizli[anah] || t > kesfetGizli[anah]) kesfetGizli[anah] = t;
+
     const ciftler = new Map();   // id → { u: uzak kopya, y: yerel kopya }
     ((uzak && uzak.kitaplar) || []).forEach(k => { if(k && k.id) ciftler.set(k.id, { u: k }); });
     ((yerel && yerel.kitaplar) || []).forEach(k => {
@@ -310,7 +317,7 @@
       const yg = ((yerel && yerel.hedefSayfaG) || {})[yil] || 0;
       if(!(yil in hedefSayfa) || yg >= (hedefSayfaG[yil]||0)){ hedefSayfa[yil] = v; hedefSayfaG[yil] = yg; }
     }
-    return { kitaplar, hedef, hedefG, hedefSayfa, hedefSayfaG, silinenler };
+    return { kitaplar, hedef, hedefG, hedefSayfa, hedefSayfaG, silinenler, kesfetGizli };
   }
 
   /* ---------- senkron ---------- */
@@ -391,6 +398,7 @@
         veri.kitaplar = bir.kitaplar; veri.hedef = bir.hedef;
         veri.hedefG = bir.hedefG; veri.silinenler = bir.silinenler;
         veri.hedefSayfa = bir.hedefSayfa; veri.hedefSayfaG = bir.hedefSayfaG;
+        veri.kesfetGizli = bir.kesfetGizli || {};
         /* M4b: önce depo, başarılıysa parmak izi — ters sıra kota hatasında
            taze iz + bayat depo uyumsuzluğu bırakıyordu */
         let depoTamam = true;

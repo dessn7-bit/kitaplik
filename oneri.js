@@ -351,7 +351,64 @@
     return true;
   }
 
+  /* ---------- Keşfet-B sinyalleri (v51): kütüphane-DIŞI öneri ----------
+     Motor tek yer: yazar ortalaması okumaOzet ile (arşivli okumalar dahil),
+     cümleler BURADA kurulur (A bölümüyle aynı sayı biçimi — fmt). */
+  // "beğendim" çıtası 8: sevilen-etiket eşiğiyle (puan≥8) aynı; n≥1 çünkü
+  // Kaan ölçeğinde yazar başına çoğunlukla 1-2 okuma var, n≥2 havuzu boşaltırdı —
+  // sorgu kotası (Keşfet-B: en iyi 3 yazar) zaten sınırı koyuyor.
+  const SEVILEN_YAZAR_ORT = 8;
+  function sevilenYazarlar(){
+    const kitaplar = (typeof veri === 'object' && Array.isArray(veri.kitaplar)) ? veri.kitaplar : [];
+    const ist = new Map();
+    kitaplar.forEach(k => {
+      if(!k.yazar) return;
+      const o = okumaOzet(k);
+      if(!o.bitti || o.puan === null) return;
+      const a = kat(k.yazar);
+      const y = ist.get(a) || { ad: k.yazar, toplam: 0, n: 0 };
+      y.toplam += o.puan; y.n++;
+      ist.set(a, y);
+    });
+    return [...ist.values()]
+      .map(y => ({ ad: y.ad, ort: y.toplam / y.n, n: y.n }))
+      .filter(y => y.ort >= SEVILEN_YAZAR_ORT)
+      .sort((a, b) => b.ort - a.ort || b.n - a.n)
+      .map(y => ({ ...y,
+        cumle: y.ad + ': bitirdiğin ' + y.n + ' kitaba ortalama ' + fmt(y.ort) + ' verdin' }));
+  }
+  /* Eksik seri ciltleri: sahip olunan ciltlerin min-maks aralığındaki boşluklar
+     (detay ekranıyla aynı semantik; anahtar kat(seri) — motor sözleşmesi).
+     En az bir cilt BİTMİŞ olmalı: "N. cildi bitirdin" gerekçesi gerçek kalsın. */
+  function eksikSeriler(){
+    const kitaplar = (typeof veri === 'object' && Array.isArray(veri.kitaplar)) ? veri.kitaplar : [];
+    const seriler = new Map();
+    kitaplar.forEach(k => {
+      if(!k.seri || !k.ciltNo) return;
+      const a = kat(k.seri);
+      const s = seriler.get(a) || { seri: k.seri, yazar: '', ciltler: new Set(), bitenler: new Set() };
+      s.ciltler.add(k.ciltNo);
+      if(okumaOzet(k).bitti) s.bitenler.add(k.ciltNo);   // Set: çift edisyon "1 ve 1" üretmesin
+      if(!s.yazar && k.yazar) s.yazar = k.yazar;
+      seriler.set(a, s);
+    });
+    const sonuc = [];
+    for(const s of seriler.values()){
+      const nums = [...s.ciltler].sort((x, y) => x - y);
+      const eksik = [];
+      for(let i = nums[0]; i <= nums[nums.length - 1]; i++)
+        if(!s.ciltler.has(i)) eksik.push(i);
+      const bitenler = [...s.bitenler].sort((x, y) => x - y);
+      if(!eksik.length || !bitenler.length) continue;
+      sonuc.push({ seri: s.seri, yazar: s.yazar, eksik,
+        cumle: s.seri + ' serisinin ' + eksik.join(' ve ') + '. cildi eksik — ' +
+          bitenler.join(' ve ') + '. cildi bitirdin' });
+    }
+    return sonuc;
+  }
+
   window.__oneri = { hesapla, hesaplaHam, cesitlilikSec, nedenAta,
     basla, ertele, erteleGeriAl, ertelemeAktif,
+    sevilenYazarlar, eksikSeriler, SEVILEN_YAZAR_ORT,
     ERTELEME_GUN, MIN_PUANLI, AGIRLIK };
 })();

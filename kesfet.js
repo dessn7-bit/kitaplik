@@ -46,18 +46,18 @@
     // tint + ağırlık verir, metin okunur kalır.
     '.ks-chip.secili{border-color:var(--brass);color:var(--paper);font-weight:600;' +
       'background:color-mix(in srgb,var(--brass) 7%,transparent)}',
-    '.ks-item{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--cizgi)}',
+    '.ks-item,.ks-b-item{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--cizgi)}',
     '.ks-ic{flex:1;min-width:0}',
     '.ks-ad{display:block;font-family:var(--serif);font-size:1.05rem;font-weight:600;line-height:1.25;' +
       'text-align:left;overflow-wrap:break-word;padding:0;background:none;border:none;color:var(--paper)}',
-    '.ks-yazar{font-style:italic;font-size:.78rem;color:var(--muted);margin-top:1px}',
-    '.ks-neden{font-size:.8rem;color:var(--muted2);line-height:1.5;margin-top:4px}',
+    '.ks-yazar,.ks-b-yazar{font-style:italic;font-size:.78rem;color:var(--muted);margin-top:1px}',
+    '.ks-neden,.ks-b-neden{font-size:.8rem;color:var(--muted2);line-height:1.5;margin-top:4px}',
     '.ks-skor{display:block;width:64px}',
     '.ks-eylem{display:flex;gap:16px;margin-top:8px;align-items:center}',
-    '.ks-basla{font-family:var(--serif);font-weight:600;font-size:.8rem;color:var(--brass);' +
+    '.ks-basla,.ks-b-ekle{font-family:var(--serif);font-weight:600;font-size:.8rem;color:var(--brass);' +
       'padding:2px 0;position:relative;background:none;border:none}',
-    '.ks-basla::after{content:"";position:absolute;inset:-8px}',
-    '.ks-sessiz{font-size:.78rem;color:var(--muted);text-decoration:underline;text-underline-offset:3px;' +
+    '.ks-basla::after,.ks-b-ekle::after{content:"";position:absolute;inset:-8px}',
+    '.ks-sessiz,.ks-b-gizle{font-size:.78rem;color:var(--muted);text-decoration:underline;text-underline-offset:3px;' +
       'text-decoration-color:var(--muted2);padding:2px 0;background:none;border:none}',
     '.ks-rozet{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--brass)}',
     '.ks-not{font-size:.85rem;color:var(--muted);line-height:1.5;padding:14px 0}',
@@ -67,7 +67,14 @@
       'padding:10px 0;border-bottom:1px solid var(--cizgi);font-size:.85rem;color:var(--muted)}',
     '.ks-erteli-ad{flex:1;min-width:0;overflow-wrap:break-word}',
     '.ks-erteli-sag{display:flex;align-items:center;gap:12px;white-space:nowrap}',
-    '.ks-erteli-gun{font-size:.72rem;color:var(--muted2);font-variant-numeric:tabular-nums}'
+    '.ks-erteli-gun{font-size:.72rem;color:var(--muted2);font-variant-numeric:tabular-nums}',
+    // ---- B bölümü: YENİ KİTAPLAR (kütüphane-dışı; v51) ----
+    '.ks-b-bas{display:flex;align-items:center;justify-content:space-between;gap:10px;' +
+      'padding:16px 0 6px;margin-top:8px;border-top:1px solid var(--cizgi)}',
+    '.ks-b-ad{display:block;font-family:var(--serif);font-size:1.05rem;font-weight:600;' +
+      'line-height:1.25;overflow-wrap:break-word}',
+    '.ks-b-not{font-size:.85rem;color:var(--muted);line-height:1.5;padding:10px 0}',
+    '.ks-b-getir{margin-top:8px}'
   ].join('\n');
 
   function chip(grup, deger, etiket, secili, ipucu){
@@ -137,6 +144,183 @@
           '<button class="ks-sessiz" data-act="ks-ertele" data-id="' + escAttr(k.id) + '">Şimdi değil</button>' +
         '</div>' +
       '</div></div>';
+  }
+
+  /* ---------- B bölümü: YENİ KİTAPLAR (v51) ----------
+     Kütüphanede OLMAYAN kitaplar; sinyaller yalnız YAZAR + SERİ (tür bazlı
+     keşif ölçüldü, kaynaklar yetersiz — kapsam dışı). TEMBEL: Keşfet açılışı
+     sorgu ATMAZ (Rafından anlık kalsın, kota kullanıcı niyetine harcansın);
+     kullanıcı "Yeni kitapları getir" der ya da taze önbellek varsa (ağ maliyeti
+     sıfır) doğrudan gösterilir. Sorgular window.__ara üzerinden (canliAra ile
+     AYNI kaynak yolu — kopya istemci yok). */
+  const B_ONBELLEK = 'kk_kesfet_b_v1';
+  /* TTL 24 saat: Google kotası günlük, yazar kataloğu günlük değişmez. Anahtar
+     İMZA sorgu setinden (yazar+seri katla'lı) — kütüphane değişip sinyal seti
+     değişirse önbellek kendiliğinden düşer. Cihaz-yerel, senkron DIŞI
+     (türetilmiş veri DERIVED yazılmaz — W1 ilkesi). */
+  const B_TTL_MS = 24 * 3600 * 1000;
+  /* Kota: koşum başına ≤3 yazar + ≤3 seri sorgusu (≤6 istek). Google 1000/gün;
+     24 saatlik önbellekle gün başına tek sorgu seti — kota güvenli. */
+  const B_YAZAR_KOTA = 3, B_SERI_KOTA = 3, B_YAZAR_ADAY = 3, B_SERI_ADAY = 4;
+  const B = { durum: 'bekliyor', adaylar: null, gorunen: [] };
+
+  function isbnTemiz(s){
+    // barkod.js ihraçlı temizleyici; eklenti yüklenmemişse aynı kural (emniyet)
+    return (window.__barkod && window.__barkod.isbnTemizle)
+      ? window.__barkod.isbnTemizle(s)
+      : String(s || '').replace(/[^0-9Xx]/g, '').toUpperCase();
+  }
+  /* Anahtar HER ZAMAN ad|yazar (araTekillestir emsali) — ISBN-öncelikli anahtar
+     iki edisyonu iki satır yapıyor ve gizlemeyi edisyon değişiminde deliyordu
+     (v51 inceleme K1/K2). ISBN eleme kütüphane karşılaştırmasında AYRICA yaşar. */
+  function bAnahtar(a){
+    return katla(a.ad) + '|' + katla(a.yazar || '');
+  }
+  function bImza(){
+    const M = window.__oneri;
+    return JSON.stringify([
+      M.sevilenYazarlar().slice(0, B_YAZAR_KOTA).map(y => katla(y.ad)),
+      M.eksikSeriler().slice(0, B_SERI_KOTA).map(s => katla(s.seri))]);
+  }
+  function bOnbellekOku(){
+    try{
+      const v = JSON.parse(localStorage.getItem(B_ONBELLEK) || 'null');
+      if(!v || !Array.isArray(v.adaylar)) return null;
+      if(v.imza !== bImza() || (Date.now() - v.t) > B_TTL_MS) return null;
+      return v.adaylar;
+    }catch(e){ return null; }
+  }
+  /* Eleme HER ÇİZİMDE taze: kütüphanede olan (ad+yazar TR-katlamalı VE ISBN),
+     gizlenen ve yinelenen adaylar düşer. Önbellek HAM aday saklar — kitap
+     eklenince/gizlenince liste sorgusuz güncellenir. */
+  function bElenmis(){
+    const adSet = new Set(), isbnSet = new Set();
+    (veri.kitaplar || []).forEach(k => {
+      adSet.add(katla(k.ad) + '|' + katla(k.yazar || ''));
+      if(k.isbn){ const t = isbnTemiz(k.isbn); if(t) isbnSet.add(t); }
+    });
+    const gizli = veri.kesfetGizli || {};
+    const gorulen = new Set();
+    return (B.adaylar || []).filter(a => {
+      if(!a || !a.ad) return false;
+      const anah = bAnahtar(a);
+      if(gorulen.has(anah)) return false;
+      gorulen.add(anah);
+      if(adSet.has(katla(a.ad) + '|' + katla(a.yazar || ''))) return false;
+      const t = a.isbn ? isbnTemiz(a.isbn) : '';
+      if(t && isbnSet.has(t)) return false;
+      if(gizli[anah]) return false;
+      return true;
+    });
+  }
+  async function bGetir(){
+    const M = window.__oneri, A = window.__ara;
+    if(!M || !A || B.durum === 'yukleniyor') return;
+    B.durum = 'yukleniyor';
+    if(typeof durum === 'object' && durum.sekme === 'kesfet') ciz();
+    // imza sorgu BAŞINDA dondurulur (inceleme K4): yükleme sırasında kütüphane
+    // değişirse eski sinyalle çekilen adaylar yeni imzayla mühürlenmesin
+    const imza = bImza();
+    const yazarlar = M.sevilenYazarlar().slice(0, B_YAZAR_KOTA);
+    const seriler = M.eksikSeriler().slice(0, B_SERI_KOTA);
+    // zaman aşımı canliAra ile aynı: 9 sn (inceleme K3 — asılı fetch süresiz
+    // "yükleniyor"da bırakıyordu)
+    const ctl = new AbortController();
+    const zam = setTimeout(() => ctl.abort(), 9000);
+    let hataOldu = false;
+    const dene = p => p.catch(() => { hataOldu = true; return []; });
+    const adaylar = [];
+    // EN GÜÇLÜ sinyal önce: eksik seri sorguları liste başında
+    for(const s of seriler){
+      const q = s.yazar ? '"' + s.seri + '" inauthor:"' + s.yazar + '"' : '"' + s.seri + '"';
+      (await dene(A.google(q, null, ctl.signal))).slice(0, B_SERI_ADAY)
+        .forEach(a => adaylar.push({ ...a, neden: s.cumle }));
+    }
+    for(const y of yazarlar){
+      (await dene(A.google(y.ad, 'yazar', ctl.signal))).slice(0, B_YAZAR_ADAY)
+        .forEach(a => adaylar.push({ ...a, neden: y.cumle }));
+    }
+    clearTimeout(zam);
+    if(!adaylar.length && hataOldu){
+      B.durum = 'hata';   // hiç sonuç yok VE ağ düştü → dürüst hata; kısmi sonuç gösterilir
+    }else{
+      B.adaylar = adaylar;
+      B.durum = 'hazir';
+      try{ localStorage.setItem(B_ONBELLEK,
+        JSON.stringify({ imza, t: Date.now(), adaylar })); }catch(e){}
+    }
+    if(typeof durum === 'object' && durum.sekme === 'kesfet') ciz();
+  }
+  function bSatirHtml(a, i){
+    return '<div class="ks-b-item">' +
+      (typeof ktPlate === 'function'
+        ? ktPlate({ ad: a.ad, yazar: a.yazar || '', kapak: a.kapak || null }, 'p-mini') : '') +
+      '<div class="ks-ic">' +
+        '<span class="ks-b-ad">' + esc(a.ad) + '</span>' +
+        (a.yazar ? '<div class="ks-b-yazar">' + esc(a.yazar) + '</div>' : '') +
+        '<div class="ks-b-neden">' + esc(a.neden || '') + '</div>' +
+        '<div class="ks-eylem">' +
+          '<button class="ks-b-ekle" data-act="ks-b-ekle" data-i="' + i + '">İstek listeme ekle</button>' +
+          '<button class="ks-b-gizle" data-act="ks-b-gizle" data-i="' + i + '">İlgilenmiyorum</button>' +
+        '</div>' +
+      '</div></div>';
+  }
+  function bBolumHtml(){
+    const M = window.__oneri;
+    if(!M || !M.sevilenYazarlar) return '';
+    const sinyalVar = M.sevilenYazarlar().length || M.eksikSeriler().length;
+    let ic;
+    if(!sinyalVar){
+      // yetersiz veri: sorgu da atılmaz — uydurma öneri YOK
+      ic = '<div class="ks-b-not">Yeni kitap önerisi için önce sinyal gerek: bir yazarın ' +
+        'kitabını bitirip 8 ve üzeri puan ver ya da bir serinin ciltlerini kütüphanene işle.</div>';
+    }else{
+      if(B.durum === 'bekliyor'){
+        const c = bOnbellekOku();
+        if(c){ B.adaylar = c; B.durum = 'hazir'; }   // taze önbellek: ağ maliyeti sıfır
+      }
+      if(B.durum === 'bekliyor'){
+        ic = '<div class="ks-b-not">Sevdiğin yazarların ve eksik serilerinin kütüphanende ' +
+          'OLMAYAN kitapları kaynaklardan sorulur — sen istemeden sorgu atılmaz.</div>' +
+          '<button class="btn btn-cerceve ks-b-getir" data-act="ks-b-getir">Yeni kitapları getir</button>';
+      }else if(B.durum === 'yukleniyor'){
+        ic = '<div class="ks-b-not">Kaynaklara soruluyor…</div>';
+      }else if(B.durum === 'hata'){
+        ic = '<div class="ks-b-not">İnternete ulaşılamadı — yeni kitap önerileri şimdilik yok; ' +
+          'rafından öneriler etkilenmez.</div>' +
+          '<button class="btn btn-cerceve ks-b-getir" data-act="ks-b-getir">Yeniden dene</button>';
+      }else{
+        B.gorunen = bElenmis();
+        ic = B.gorunen.length
+          ? B.gorunen.map(bSatirHtml).join('')
+          : '<div class="ks-b-not">Kaynaklarda kütüphanende olmayan yeni bir şey bulunamadı.</div>';
+      }
+    }
+    return '<div class="ks-b" id="ksB">' +
+      '<div class="ks-b-bas"><span class="kicker">Yeni kitaplar</span></div>' + ic + '</div>';
+  }
+  function bEkle(i){
+    const a = B.gorunen[+i];
+    if(!a || typeof kitapNormalize !== 'function' || typeof uid !== 'function') return;
+    // katalog.js kodIsle emsali: normalize + push + depoKaydet + hepsiniCiz
+    const yeni = kitapNormalize({ id: uid(), ad: a.ad, yazar: a.yazar || '',
+      yayinevi: a.yayinevi || '', yil: a.yil || null, sayfa: a.sayfa || null,
+      kapak: a.kapak || null, isbn: a.isbn || '', durum: 'okunacak',
+      sahiplik: 'istek', eklenme: Date.now(), g: Date.now() });
+    veri.kitaplar.push(yeni);
+    depoKaydet();
+    if(typeof toast === 'function') toast('İstek listene eklendi');
+    if(typeof hepsiniCiz === 'function') hepsiniCiz();   // sarmalama Keşfet'i tazeler
+    ciz();
+  }
+  function bGizle(i){
+    const a = B.gorunen[+i];
+    if(!a) return;
+    veri.kesfetGizli = veri.kesfetGizli || {};
+    veri.kesfetGizli[bAnahtar(a)] = Date.now();   // kalıcı tercih; senkronda union
+    depoKaydet();
+    if(typeof toast === 'function') toast('Bir daha önerilmeyecek');
+    ciz();
   }
 
   function ciz(){
@@ -213,6 +397,7 @@
             '</span></div>';
         }).join('') : '') + '</div>';
     }
+    html += bBolumHtml();   // v51: YENİ KİTAPLAR — Rafından'ın altında, kıl payı ayraçlı
     kap.innerHTML = html;
     if(typeof ktPlateHata === 'function') ktPlateHata(kap);   // levha kapakları tek yedek yoluna (v44)
   }
@@ -265,6 +450,9 @@
           if(window.__oneri && window.__oneri.erteleGeriAl(el.dataset.id) &&
              typeof hepsiniCiz === 'function') hepsiniCiz();
           ciz(); break;
+        case 'ks-b-getir': bGetir(); break;
+        case 'ks-b-ekle': bEkle(el.dataset.i); break;
+        case 'ks-b-gizle': bGizle(el.dataset.i); break;
       }
     });
   }

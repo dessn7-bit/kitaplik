@@ -24,7 +24,10 @@ function bitmisK(ek) {
 }
 /* bugün yapılmış, unutulmamış bir okuma oturumu */
 function bugunOturum(dakika, sa, sb) {
-  return { b: Date.now() - 3600000, s: dakika * 60000, sa, sb };
+  // gün-sınırı güvenli (v51 flaky onarımı): Date.now()-1sa gece 00-01
+  // penceresinde DÜNE düşüyordu — bugünün 12:00'sine sabitlenir.
+  const d = new Date(); d.setHours(12, 0, 0, 0);
+  return { b: d.getTime(), s: dakika * 60000, sa, sb };
 }
 /* dünden beri tekrar için bekleyen aktif alıntı */
 function bekleyenAlinti(i) {

@@ -1220,9 +1220,12 @@ function damgaSuz(o){
   return c;
 }
 function depoYukle(){
+  /* kesfetGizli (v51): Keşfet-B "İlgilenmiyorum" tercihi — {anahtar: zaman}.
+     silinenler gibi öz-damgalı harita; düşerse gizlenen öneri geri gelir. */
   try{
     const raw = localStorage.getItem(DEPO);
-    if(!raw) return { kitaplar:[], hedef:{}, hedefG:{}, hedefSayfa:{}, hedefSayfaG:{}, silinenler:{} };
+    if(!raw) return { kitaplar:[], hedef:{}, hedefG:{}, hedefSayfa:{}, hedefSayfaG:{},
+      silinenler:{}, kesfetGizli:{} };
     const v = JSON.parse(raw);
     return {
       kitaplar: Array.isArray(v.kitaplar) ? v.kitaplar.map(kitapNormalize) : [],
@@ -1230,9 +1233,11 @@ function depoYukle(){
       hedefG: damgaSuz(v.hedefG),
       hedefSayfa: damgaSuz(v.hedefSayfa),
       hedefSayfaG: damgaSuz(v.hedefSayfaG),
-      silinenler: damgaSuz(v.silinenler)
+      silinenler: damgaSuz(v.silinenler),
+      kesfetGizli: damgaSuz(v.kesfetGizli)
     };
-  }catch(e){ return { kitaplar:[], hedef:{}, hedefG:{}, hedefSayfa:{}, hedefSayfaG:{}, silinenler:{} }; }
+  }catch(e){ return { kitaplar:[], hedef:{}, hedefG:{}, hedefSayfa:{}, hedefSayfaG:{},
+    silinenler:{}, kesfetGizli:{} }; }
 }
 function depoKaydet(){
   /* dönüş: yazım başarılı mı — senkron sarmalayıcısı parmak izini yalnız
@@ -1636,6 +1641,37 @@ function canliAraTetikle(){
   if(q.length < 3 || q === sonAramaMetni){ if(q.length < 3) sonucTemizle(); return; }
   araZaman = setTimeout(() => canliAra(q), 450);
 }
+/* Arama söz kurucuları (v51): canliAra VE Keşfet-B AYNI kaynak yolunu kullanır —
+   kopya istemci yok. Çıplak reject ederler; çağıran kendi catch'ini kurar.
+   Aday şekli canliAra ile aynı + isbn (Google industryIdentifiers'tan; olSec
+   isbn'i okumadığı için form davranışı değişmez). */
+function aramaGoogle(q, tip, sinyal){
+  const gbSorgu = tip === 'yazar' ? 'inauthor:' + q
+    : tip === 'yayinevi' ? 'inpublisher:' + q : q;
+  return fetch('https://www.googleapis.com/books/v1/volumes?key=AIzaSyCjjwU2NcpAgTVVSop0YNhIaQPmWWpHc04&country=TR&maxResults=6&printType=books&q='
+      + encodeURIComponent(gbSorgu), sinyal ? { signal: sinyal } : undefined)
+    .then(r => r.json())
+    .then(j => (j.items || []).map(it => {
+      const v = it.volumeInfo || {};
+      const kimlik = v.industryIdentifiers || [];
+      const i13 = kimlik.find(x => x && x.type === 'ISBN_13');
+      const i10 = kimlik.find(x => x && x.type === 'ISBN_10');
+      return { ad: v.title || '', yazar: (v.authors||[]).slice(0,2).join(', '),
+        yayinevi: v.publisher || '',
+        yil: v.publishedDate ? parseInt(v.publishedDate.slice(0,4)) || null : null,
+        sayfa: v.pageCount || null, dil: (v.language||'').toUpperCase(), kaynak: 'Google',
+        isbn: (i13 && i13.identifier) || (i10 && i10.identifier) || '',
+        kapak: (v.imageLinks && v.imageLinks.thumbnail)
+          ? v.imageLinks.thumbnail.replace('http://','https://') : null };
+    }).filter(a => a.ad));
+}
+function aramaWorker(q, sinyal){
+  return fetch('https://kitaplik-ara.dessn7.workers.dev/ara?q=' + encodeURIComponent(q),
+      sinyal ? { signal: sinyal } : undefined)
+    .then(r => r.json())
+    .then(j => (j.sonuclar || []).filter(a => a && a.ad));
+}
+window.__ara = { google: aramaGoogle, worker: aramaWorker };
 async function canliAra(q){
   sonAramaMetni = q;
   const dEl = document.getElementById('olDurum'), sEl = document.getElementById('olSonuc');
@@ -1646,27 +1682,12 @@ async function canliAra(q){
   const zam = setTimeout(() => araCtl.abort(), 9000);
   let agSorunu = false;
   const tip = durum.araTip;
-  const gbSorgu = tip === 'yazar' ? 'inauthor:' + q
-    : tip === 'yayinevi' ? 'inpublisher:' + q : q;
   // 1) Google Books — yayınevi/yıl/sayfa zengin
-  const gbSoz = fetch('https://www.googleapis.com/books/v1/volumes?key=AIzaSyCjjwU2NcpAgTVVSop0YNhIaQPmWWpHc04&country=TR&maxResults=6&printType=books&q='
-      + encodeURIComponent(gbSorgu), { signal: sinyal })
-    .then(r => r.json())
-    .then(j => (j.items || []).map(it => {
-      const v = it.volumeInfo || {};
-      return { ad: v.title || '', yazar: (v.authors||[]).slice(0,2).join(', '),
-        yayinevi: v.publisher || '',
-        yil: v.publishedDate ? parseInt(v.publishedDate.slice(0,4)) || null : null,
-        sayfa: v.pageCount || null, dil: (v.language||'').toUpperCase(), kaynak: 'Google',
-        kapak: (v.imageLinks && v.imageLinks.thumbnail)
-          ? v.imageLinks.thumbnail.replace('http://','https://') : null };
-    }).filter(a => a.ad))
+  const gbSoz = aramaGoogle(q, tip, sinyal)
     .catch(e => { agSorunu = true; return []; });
   // 2) kitaplik-ara Worker — Goodreads + 1000Kitap (Türkçe derinlik)
   const wSoz = tip === 'yayinevi' ? Promise.resolve([])
-    : fetch('https://kitaplik-ara.dessn7.workers.dev/ara?q=' + encodeURIComponent(q), { signal: sinyal })
-    .then(r => r.json())
-    .then(j => (j.sonuclar || []).filter(a => a && a.ad))
+    : aramaWorker(q, sinyal)
     .catch(e => { agSorunu = true; return []; });
 
   const [gb, wk] = await Promise.all([gbSoz, wSoz]);
@@ -2422,6 +2443,8 @@ function iceAktar(dosya){
         mevcut.add(anah(k)); eklendi++;
       });
       if(y.hedef && typeof y.hedef === 'object') veri.hedef = { ...y.hedef, ...veri.hedef };
+      if(y.kesfetGizli && typeof y.kesfetGizli === 'object')
+        veri.kesfetGizli = { ...y.kesfetGizli, ...(veri.kesfetGizli || {}) };   // v51: gizleme tercihi yedekten döner
       depoKaydet(); hepsiniCiz();
       toast(eklendi ? `${eklendi} kitap geri yüklendi` : 'Yeni kitap yok — hepsi zaten kayıtlı');
     }catch(e){ toast('Dosya okunamadı — geçerli bir Kitaplık yedeği değil'); }
@@ -3203,10 +3226,11 @@ document.addEventListener('click', e => {
          confirm('Son kez soruyorum — yedek aldın mı? Bu işlem geri alınamaz.')){
         // Yalnız KİTAPLAR silinir. Hedefler kişisel ayardır, kütüphane içeriği değil —
         // sessizce silinmeleri sürpriz olurdu (üstelik senkronda uzaktan geri geliyorlardı).
+        // kesfetGizli de kişisel tercihtir, aynı gerekçeyle korunur (v51).
         // Mezar taşları korunur; damgala silinen kitaplar için yenilerini üretir.
         veri = { kitaplar:[], hedef: veri.hedef || {}, hedefG: veri.hedefG || {},
           hedefSayfa: veri.hedefSayfa || {}, hedefSayfaG: veri.hedefSayfaG || {},
-          silinenler: veri.silinenler || {} };
+          silinenler: veri.silinenler || {}, kesfetGizli: veri.kesfetGizli || {} };
         if(window.__kapak) window.__kapak.hepsiniSil(true); // kapak fotoğrafları da yetim kalmasın
         depoKaydet(); hepsiniCiz(); toast('Kütüphane boşaltıldı — hedeflerin duruyor');
       }
