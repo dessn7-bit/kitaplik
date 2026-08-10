@@ -211,6 +211,92 @@
     return null;   // eşleşme yok → bu tür ATLANIR
   }
 
+  /* ---- ALAKA DENETİMİ (v53) ----
+     KUSUR: dönen adayın gerçekten sorgulanan yazara ait olduğu doğrulanmıyordu.
+     Canlı kanıt: kütüphanede "Yazar 0" varken öneriler "YOLCU — Metin Yazar",
+     "İç ses — Meçhul yazar", "Baharla gelen — Erhan Bener (Türk yazar)" oldu ve
+     hepsine "Yazar 0: bitirdiğin 3 kitaba ortalama 9,0 verdin" gerekçesi asıldı.
+
+     SORGU SÖZDİZİMİ ÇÖZÜM DEĞİL (ölçüldü, Google Books canlı):
+       inauthor:Yazar 0    →   5 sonuç, hepsi adında "yazar" GEÇEN başka yazarlar
+       inauthor:"Yazar 0"  → 117 sonuç, tamamen alakasız (Library of Congress…)
+       inauthor:"Ali Kemal"→ "Ali Kemal Sunal", "Ali Kemal Saran"
+     Yani tırnak işi DÜZELTMİYOR, kötüleştiriyor. Tek güvenilir savunma DÖNEN
+     sonucun kendisini denetlemek. Sorgu biçimi bilerek DEĞİŞTİRİLMEDİ.
+
+     ASİMETRİ (bu projede aramanın TERSİ): katla() yorumunda "kaçırmak yanlış
+     eşleşmekten daha pahalı" yazar — orada kullanıcı KENDİ kitabını arıyor.
+     Burada tersi geçerli: yanlış öneri görünür çöp ve yanlış bir iddia taşır
+     ("bu senin sevdiğin yazarın kitabı"), kaçan öneri görünmez. Bu yüzden
+     denetim KATI; şüphede olan aday elenir, doldurma yapılmaz. */
+  const GENEL_YAZAR = ['yazar', 'anonim', 'kolektif', 'anonymous', 'unknown',
+    'various', 'derleme', 'muhtelif', 'bilinmiyor', 'bilinmeyen', 'yok'];
+  /* Parantezli ekler SÖKÜLÜR: Google Books hem ayırt edici not ("Erhan Bener
+     (Türk yazar)") hem alternatif yazım ("Halil Cibran (Kahlil Gibran)") için
+     kullanıyor; ikisi de soyadı denetimini yanlış yerden kırardı. */
+  function adSozcukler(s){
+    return String(s || '')
+      .replace(/\([^)]*\)/g, ' ')
+      .split(/[^A-Za-zÇĞİÖŞÜçğıöşüÂÎÛâîû0-9]+/)
+      .map(w => katla(w).replace(/[^a-z0-9]+/g, ''))
+      .filter(Boolean);
+  }
+  /* Sorgulanabilirlik: hiç ANLAMLI sözcüğü olmayan ad kaynağa HİÇ sorulmaz —
+     "Yazar 0", "Anonim", "Kolektif" gibi değerler kotayı harcar ve tanım gereği
+     hiçbir gerçek eşleşme üretemez. (Tek harfli parçalar da anlamlı sayılmaz.) */
+  function anlamliSozcukler(ad){
+    return adSozcukler(ad).filter(w => w.length >= 2 && GENEL_YAZAR.indexOf(w) < 0);
+  }
+  function sorulabilirYazar(ad){ return anlamliSozcukler(ad).length > 0; }
+
+  /* Yazar eşleşmesi — TR-katlamalı, iki kural:
+     · ÇOK SÖZCÜKLÜ ad: adayın SON sözcüğü (soyadı) sorgununkiyle TAM eşleşmeli
+       VE sorgunun ≥2 harfli tüm sözcükleri adayda geçmeli.
+       - Soyadı TEK BAŞINA yetmez (vaka c): "Janet Asimov" ≠ "Isaac Asimov";
+         Türkçede birçok ad aynı zamanda soyadıdır ("Yaşar Kemal"/"Kemal Tahir"),
+         yalnız soyadına bakmak kütüphaneyi çapraz kirletirdi.
+       - Son sözcük şartı, adayın FAZLADAN sözcüğünü ayırt eder: "Ali Kemal" →
+         "Ali Kemal Sunal" ELENİR (başka kişi), ama "Fyodor Dostoyevski" →
+         "Fyodor Mihayloviç Dostoyevski" GEÇER (göbek adı, aynı kişi).
+       - Baş harfler (J.K.) alt küme şartına girmez: "J.K. Rowling" →
+         "Joanne Rowling" geçer.
+     · TEK SÖZCÜKLÜ ad (mononim): adayın TAMAMI o sözcüğe eşit olmalı. Alt küme
+       kuralı burada çöker — "Ali" sorgusu "Sabahattin Ali"yi yakalardı. Uzunluk
+       eşiği yerine tam eşleşme: keyfi bir harf sayısı seçmeden aynı korumayı
+       verir ("Homeros" → "Homeros ve Hesiodos" elenir, "Homeros" geçer).
+     Aday alanı çok yazarlı olabilir ("Isaac Asimov, Ali Kaftan") — virgülle
+     ayrılıp her parça ayrı denenir (aramaGoogle bu biçimi üretiyor). */
+  function yazarEslesir(sorguAd, adayAd){
+    const s = adSozcukler(sorguAd);
+    if(!s.length) return false;
+    const soyad = s[s.length - 1];
+    const govde = s.filter(w => w.length >= 2);
+    for(const p of String(adayAd || '').split(',')){
+      const a = adSozcukler(p);
+      if(!a.length) continue;
+      if(s.length === 1){
+        if(a.length === 1 && a[0] === s[0]) return true;
+        continue;
+      }
+      if(a[a.length - 1] !== soyad) continue;
+      if(govde.every(w => a.indexOf(w) >= 0)) return true;
+    }
+    return false;
+  }
+  /* Seri eşleşmesi: seri adının ≥2 harfli TÜM sözcükleri adayın BAŞLIĞINDA
+     sözcük olarak geçmeli. Alt dizi değil sözcük eşleşmesi — "Ada" serisi
+     "Adalet"i yakalamasın. Ölçülen gerekçe: `"Harry Potter" inauthor:"J.K.
+     Rowling"` sorgusu "Ozan Beedle'ın Hikâyeleri" ve "Çağlar Boyu Quidditch"
+     de döndürüyor; bunlar gerçek Rowling kitapları ama Harry Potter CİLDİ
+     değil — "N. cildi eksik" gerekçesiyle sunulsalardı yanlış iddia olurdu.
+     Denetlenemeyen seri adı (tümü tek harf) engellenmez. */
+  function seriEslesir(seriAd, adayBaslik){
+    const s = adSozcukler(seriAd).filter(w => w.length >= 2);
+    if(!s.length) return true;
+    const b = adSozcukler(adayBaslik);
+    return s.every(w => b.indexOf(w) >= 0);
+  }
+
   /* Sayı biçimi DETERMİNİSTİK (toLocaleString değil): ICU sürümüne göre
      değişmeyen tek doğru çıktı — 138762 → "138.762", 8.45 → "8,5". */
   function binlik(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
@@ -256,10 +342,17 @@
     const M = window.__oneri;
     return (M && typeof M.sevilenTurler === 'function') ? M.sevilenTurler() : [];
   }
+  /* Sorgulanamaz yazarlar (v53) TEK YERDE elenir: imza, sinyal kontrolü ve
+     sorgu döngüsü hep bu listeyi kullanır. Süzgeç kotadan ÖNCE uygulanır —
+     yoksa "Anonim" ilk 3 yazar yuvasından birini işgal ederdi. */
+  function bYazarlar(){
+    const M = window.__oneri;
+    return (M.sevilenYazarlar() || []).filter(y => sorulabilirYazar(y.ad));
+  }
   function bImza(){
     const M = window.__oneri;
     return JSON.stringify([
-      M.sevilenYazarlar().slice(0, B_YAZAR_KOTA).map(y => katla(y.ad)),
+      bYazarlar().slice(0, B_YAZAR_KOTA).map(y => katla(y.ad)),
       M.eksikSeriler().slice(0, B_SERI_KOTA).map(s => katla(s.seri)),
       bSevilenTurler().slice(0, B_TUR_KOTA).map(t => katla(t.ad))]);
   }
@@ -302,7 +395,7 @@
     // imza sorgu BAŞINDA dondurulur (inceleme K4): yükleme sırasında kütüphane
     // değişirse eski sinyalle çekilen adaylar yeni imzayla mühürlenmesin
     const imza = bImza();
-    const yazarlar = M.sevilenYazarlar().slice(0, B_YAZAR_KOTA);
+    const yazarlar = bYazarlar().slice(0, B_YAZAR_KOTA);
     const seriler = M.eksikSeriler().slice(0, B_SERI_KOTA);
     // zaman aşımı canliAra ile aynı: 9 sn (inceleme K3 — asılı fetch süresiz
     // "yükleniyor"da bırakıyordu)
@@ -316,14 +409,25 @@
        koşar, duvar saatine eklediği süre pratikte ~0 (ölçüm: /turler 0,23 sn,
        /tur 0,56 sn; Google döngüsü tipik 1-3 sn). İptal sinyali ORTAK. */
     const turSozu = (A.turler && A.tur) ? dene(bTurAdaylari(A, ctl.signal)) : Promise.resolve([]);
+    /* ALAKA SÜZGECİ kotadan ÖNCE (v53): eleme slice'tan sonra yapılsaydı ilk 3
+       sıradaki çöp, 4. sıradaki gerçek kitabı listeden dışarıda bırakırdı.
+       Eşleşen kalmazsa o yazar/seri sessizce ATLANIR — doldurma yok. */
     // EN GÜÇLÜ sinyal önce: eksik seri sorguları liste başında
     for(const s of seriler){
       const q = s.yazar ? '"' + s.seri + '" inauthor:"' + s.yazar + '"' : '"' + s.seri + '"';
-      (await dene(A.google(q, null, ctl.signal))).slice(0, B_SERI_ADAY)
+      // Seride İKİ denetim: kitap gerçekten o seriden mi, gerçekten o yazarın mı.
+      // Yazar denetlenemiyorsa (ad yok ya da "Anonim") yalnız seri adı bağlar.
+      const yazarDenetli = !!s.yazar && sorulabilirYazar(s.yazar);
+      (await dene(A.google(q, null, ctl.signal)))
+        .filter(a => seriEslesir(s.seri, a.ad) &&
+          (!yazarDenetli || yazarEslesir(s.yazar, a.yazar)))
+        .slice(0, B_SERI_ADAY)
         .forEach(a => adaylar.push({ ...a, kaynakTip: 'seri', neden: s.cumle }));
     }
     for(const y of yazarlar){
-      (await dene(A.google(y.ad, 'yazar', ctl.signal))).slice(0, B_YAZAR_ADAY)
+      (await dene(A.google(y.ad, 'yazar', ctl.signal)))
+        .filter(a => yazarEslesir(y.ad, a.yazar))
+        .slice(0, B_YAZAR_ADAY)
         .forEach(a => adaylar.push({ ...a, kaynakTip: 'yazar', neden: y.cumle }));
     }
     (await turSozu).forEach(a => adaylar.push(a));   // en zayıf sinyal en sonda
@@ -389,7 +493,9 @@
   function bBolumHtml(){
     const M = window.__oneri;
     if(!M || !M.sevilenYazarlar) return '';
-    const sinyalVar = M.sevilenYazarlar().length || M.eksikSeriler().length
+    // sinyal sayımı SORGULANABİLİR yazarlar üzerinden: yalnız "Anonim" okuyan
+    // birine "getir" düğmesi göstermek, basınca hiç sorgu atmamak olurdu.
+    const sinyalVar = bYazarlar().length || M.eksikSeriler().length
       || bSevilenTurler().length;
     let ic;
     if(!sinyalVar){
