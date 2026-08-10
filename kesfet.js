@@ -74,7 +74,11 @@
     '.ks-b-ad{display:block;font-family:var(--serif);font-size:1.05rem;font-weight:600;' +
       'line-height:1.25;overflow-wrap:break-word}',
     '.ks-b-not{font-size:.85rem;color:var(--muted);line-height:1.5;padding:10px 0}',
-    '.ks-b-getir{margin-top:8px}'
+    '.ks-b-getir{margin-top:8px}',
+    // Kaynak etiketi: .ks-suz-ad ile AYNI tipografik rol (mikro versal, muted2)
+    // — yeni bir görsel dil değil, kurulmuş bir rolün ikinci kullanımı.
+    '.ks-b-kaynak{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;' +
+      'color:var(--muted2);margin-bottom:2px}'
   ].join('\n');
 
   function chip(grup, deger, etiket, secili, ipucu){
@@ -146,13 +150,14 @@
       '</div></div>';
   }
 
-  /* ---------- B bölümü: YENİ KİTAPLAR (v51) ----------
-     Kütüphanede OLMAYAN kitaplar; sinyaller yalnız YAZAR + SERİ (tür bazlı
-     keşif ölçüldü, kaynaklar yetersiz — kapsam dışı). TEMBEL: Keşfet açılışı
-     sorgu ATMAZ (Rafından anlık kalsın, kota kullanıcı niyetine harcansın);
-     kullanıcı "Yeni kitapları getir" der ya da taze önbellek varsa (ağ maliyeti
-     sıfır) doğrudan gösterilir. Sorgular window.__ara üzerinden (canliAra ile
-     AYNI kaynak yolu — kopya istemci yok). */
+  /* ---------- B bölümü: YENİ KİTAPLAR (v51, tür kaynağı v52) ----------
+     Kütüphanede OLMAYAN kitaplar; sinyaller SERİ + YAZAR + TÜR. TEMBEL: Keşfet
+     açılışı sorgu ATMAZ (Rafından anlık kalsın, kota kullanıcı niyetine
+     harcansın); kullanıcı "Yeni kitapları getir" der ya da taze önbellek varsa
+     (ağ maliyeti sıfır) doğrudan gösterilir. Sorgular window.__ara üzerinden
+     (canliAra ile AYNI kaynak yolu — kopya istemci yok).
+     SIRA seri → yazar → tür: motorun kendi ağırlık sırası (seri 35 > yazar 30 >
+     tür 20). Tür en zayıf sinyal, listenin sonunda durur. */
   const B_ONBELLEK = 'kk_kesfet_b_v1';
   /* TTL 24 saat: Google kotası günlük, yazar kataloğu günlük değişmez. Anahtar
      İMZA sorgu setinden (yazar+seri katla'lı) — kütüphane değişip sinyal seti
@@ -162,7 +167,74 @@
   /* Kota: koşum başına ≤3 yazar + ≤3 seri sorgusu (≤6 istek). Google 1000/gün;
      24 saatlik önbellekle gün başına tek sorgu seti — kota güvenli. */
   const B_YAZAR_KOTA = 3, B_SERI_KOTA = 3, B_YAZAR_ADAY = 3, B_SERI_ADAY = 4;
+  /* TÜR KOTASI 2 (3 değil): tür motorun en zayıf sinyali (ağırlık 20 vs yazar
+     30 / seri 35) ve 3. sıradaki tür zaten ilk ikisinin altında kalmış bir
+     ortalamadır — listeyi uzatır, isabeti artırmaz. Maliyet tarafı bağlayıcı
+     değil (worker Cloudflare ücretsiz katmanında, kaynak 1000Kitap'ın kendi
+     API'si); bağlayıcı olan 9 sn'lik iptal bütçesi, o da tür dalının Google
+     döngüsüyle ÖRTÜŞMESİYLE korunuyor. */
+  const B_TUR_KOTA = 2, B_TUR_ADAY = 4;
+  const B_KAYNAK_AD = { seri: 'Seri', yazar: 'Yazar', tur: 'Tür' };
   const B = { durum: 'bekliyor', adaylar: null, gorunen: [] };
+
+  /* ---- kullanıcı türü → 1000Kitap tür slug'ı (v52) ----
+     UYDURMA EŞLEME YOK. Dört kademe, ilk isabet kazanır; hiçbiri tutmazsa tür
+     ATLANIR. Bulanık/edit-mesafeli eşleme bilinçli olarak YOK: "Tarih" ile
+     "Tarihi"yi birbirine bağlayan bir kural sessizce yanlış türü sorar ve
+     kullanıcı bunu gerekçe cümlesinden anlayamaz.
+       1) katlanmış tam eşleşme — slug
+       2) katlanmış tam eşleşme — görünen ad
+       3) SÖZCÜK eşleşmesi — slug sözcükleri
+       4) SÖZCÜK eşleşmesi — görünen ad sözcükleri
+     Sözcük eşiği 3 harf, ÖLÇÜMLE seçildi: 78 türün sözcük envanterinde 3
+     harfli olanların hepsi gerçek tür adı (din, tıp, anı, fal, aşk); tek
+     anlamsız parçalar 2 harfli ("ve", "iş"), onlar da eşiğin altında kalıyor.
+     Kaynak listesi KENDİ sırasında (1000Kitap'ın gösterim sırası) taranır —
+     aynı kademede birden çok tür tutarsa popüler olan kazanır, sonuç
+     deterministik. kitapSayisi=0 türler (78'in 8'i: novella, arkeoloji, uzay…)
+     havuzdan düşer: boş türe sorgu atmak kotayı harcar, sonuç dönmez. */
+  function turAnahtar(s){ return katla(s).replace(/[^a-z0-9]+/g, ''); }
+  function turSozcukler(s){
+    return String(s || '').split(/[^A-Za-zÇĞİÖŞÜçğıöşüÂÎÛâîû0-9]+/)
+      .map(turAnahtar).filter(w => w.length >= 3);
+  }
+  function turEslestir(kullaniciTur, kaynakTurler){
+    const a = turAnahtar(kullaniciTur);
+    if(!a || !Array.isArray(kaynakTurler)) return null;
+    const havuz = kaynakTurler.filter(t => t && t.seo && t.ad && t.kitapSayisi !== 0);
+    for(const t of havuz) if(turAnahtar(t.seo) === a) return t;
+    for(const t of havuz) if(turAnahtar(t.ad) === a) return t;
+    if(a.length >= 3){
+      for(const t of havuz) if(turSozcukler(t.seo).indexOf(a) >= 0) return t;
+      for(const t of havuz) if(turSozcukler(t.ad).indexOf(a) >= 0) return t;
+    }
+    return null;   // eşleşme yok → bu tür ATLANIR
+  }
+
+  /* Sayı biçimi DETERMİNİSTİK (toLocaleString değil): ICU sürümüne göre
+     değişmeyen tek doğru çıktı — 138762 → "138.762", 8.45 → "8,5". */
+  function binlik(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function ondalik(n){ return (Math.round(n * 10) / 10).toFixed(1).replace('.', ','); }
+  /* Gerekçe İKİ YARIM, ikisi de gerçek veri:
+       [kullanıcı]  "Felsefe türünde 12 kitap bitirdin, ortalama 8,4 verdin"
+       [kaynak]     "1000Kitap'ta 138.762 okur, ★8,5"
+     Kullanıcının kendi tür etiketi 1000Kitap'ınkinden FARKLIYSA bu açıkça
+     yazılır ("… Felsefe-Düşünce içinde …"): eşleştirmeyi gizlemek, kullanıcının
+     12 kitabını sanki 1000Kitap'ın türüne saymak olurdu. Kaynak sayısı yoksa o
+     yarım hiç kurulmaz — uydurma sayı yok. */
+  function turCumle(sinyal, kaynakTur, aday){
+    const parcalar = [sinyal.cumle];
+    const ayni = turAnahtar(sinyal.ad) === turAnahtar(kaynakTur.ad);
+    const kaynakParca = [];
+    if(aday.okuyan > 0) kaynakParca.push(binlik(aday.okuyan) + ' okur');
+    if(aday.puan > 0) kaynakParca.push('★' + ondalik(aday.puan));
+    if(kaynakParca.length)
+      parcalar.push('1000Kitap\'ta ' + (ayni ? '' : kaynakTur.ad + ' içinde ')
+        + kaynakParca.join(', '));
+    else if(!ayni)
+      parcalar.push('1000Kitap\'ta ' + kaynakTur.ad + ' türünden');
+    return parcalar.join(' · ');
+  }
 
   function isbnTemiz(s){
     // barkod.js ihraçlı temizleyici; eklenti yüklenmemişse aynı kural (emniyet)
@@ -176,11 +248,20 @@
   function bAnahtar(a){
     return katla(a.ad) + '|' + katla(a.yazar || '');
   }
+  /* İmzaya tür sinyali de girer: kütüphaneye yeni bir tür işlenip sıralama
+     değişince 24 saat beklemeden önbellek düşer. (M.sevilenTurler kontrolü
+     bilinçli: SW güncellemesi sırasında taze kesfet.js + bayat oneri.js
+     eşleşebilir; eksik API çökme değil, tür dalının sessiz yokluğu olmalı.) */
+  function bSevilenTurler(){
+    const M = window.__oneri;
+    return (M && typeof M.sevilenTurler === 'function') ? M.sevilenTurler() : [];
+  }
   function bImza(){
     const M = window.__oneri;
     return JSON.stringify([
       M.sevilenYazarlar().slice(0, B_YAZAR_KOTA).map(y => katla(y.ad)),
-      M.eksikSeriler().slice(0, B_SERI_KOTA).map(s => katla(s.seri))]);
+      M.eksikSeriler().slice(0, B_SERI_KOTA).map(s => katla(s.seri)),
+      bSevilenTurler().slice(0, B_TUR_KOTA).map(t => katla(t.ad))]);
   }
   function bOnbellekOku(){
     try{
@@ -230,16 +311,22 @@
     let hataOldu = false;
     const dene = p => p.catch(() => { hataOldu = true; return []; });
     const adaylar = [];
+    /* TÜR dalı Google döngülerinden ÖNCE ateşlenir, SONRA toplanır: başka
+       kökene giden bağımsız istekler sıradaki ≤6 Google sorgusunun gölgesinde
+       koşar, duvar saatine eklediği süre pratikte ~0 (ölçüm: /turler 0,23 sn,
+       /tur 0,56 sn; Google döngüsü tipik 1-3 sn). İptal sinyali ORTAK. */
+    const turSozu = (A.turler && A.tur) ? dene(bTurAdaylari(A, ctl.signal)) : Promise.resolve([]);
     // EN GÜÇLÜ sinyal önce: eksik seri sorguları liste başında
     for(const s of seriler){
       const q = s.yazar ? '"' + s.seri + '" inauthor:"' + s.yazar + '"' : '"' + s.seri + '"';
       (await dene(A.google(q, null, ctl.signal))).slice(0, B_SERI_ADAY)
-        .forEach(a => adaylar.push({ ...a, neden: s.cumle }));
+        .forEach(a => adaylar.push({ ...a, kaynakTip: 'seri', neden: s.cumle }));
     }
     for(const y of yazarlar){
       (await dene(A.google(y.ad, 'yazar', ctl.signal))).slice(0, B_YAZAR_ADAY)
-        .forEach(a => adaylar.push({ ...a, neden: y.cumle }));
+        .forEach(a => adaylar.push({ ...a, kaynakTip: 'yazar', neden: y.cumle }));
     }
+    (await turSozu).forEach(a => adaylar.push(a));   // en zayıf sinyal en sonda
     clearTimeout(zam);
     if(!adaylar.length && hataOldu){
       B.durum = 'hata';   // hiç sonuç yok VE ağ düştü → dürüst hata; kısmi sonuç gösterilir
@@ -251,11 +338,45 @@
     }
     if(typeof durum === 'object' && durum.sekme === 'kesfet') ciz();
   }
+  /* Tür adayları: önce taksonomi (/turler), sonra eşleşen ≤2 tür için İLK
+     SAYFA (türün en çok okunanları — kaynak zaten okunma sırasına dizili,
+     hasMore takip edilmiyor: keşif için ilk 16 yeterli, 2. sayfa kuyruğa
+     iniyor). Eşleşmeyen kullanıcı türü SESSİZCE atlanır; hiç tür eşleşmezse
+     tek istek bile atılmaz. Kısmi arıza kısmi sonuç verir; HİÇ sonuç yokken
+     arıza varsa dışarı fırlatılır (dış katmanın "dürüst hata" kuralı). */
+  async function bTurAdaylari(A, sinyal){
+    const sevilen = bSevilenTurler();
+    if(!sevilen.length) return [];
+    const kaynakTurler = await A.turler(sinyal);
+    const secilen = [], kullanilan = new Set();
+    for(const t of sevilen){
+      if(secilen.length >= B_TUR_KOTA) break;
+      const e = turEslestir(t.ad, kaynakTurler);
+      if(!e || kullanilan.has(e.seo)) continue;
+      kullanilan.add(e.seo);
+      secilen.push({ sinyal: t, kaynakTur: e });
+    }
+    if(!secilen.length) return [];
+    let turHata = false;
+    const paketler = await Promise.all(secilen.map(s => A.tur(s.kaynakTur.seo, 1, sinyal)
+      .then(p => ({ s, p })).catch(() => { turHata = true; return null; })));
+    const adaylar = [];
+    paketler.filter(Boolean).forEach(({ s, p }) => {
+      (p.sonuclar || []).slice(0, B_TUR_ADAY).forEach(a => adaylar.push({
+        ad: a.ad, yazar: a.yazar || '', kapak: a.kapak || null,
+        kaynakTip: 'tur', neden: turCumle(s.sinyal, s.kaynakTur, a) }));
+    });
+    if(!adaylar.length && turHata) throw new Error('tur-kaynagi');
+    return adaylar;
+  }
+
   function bSatirHtml(a, i){
+    const kaynakAd = B_KAYNAK_AD[a.kaynakTip] || '';
     return '<div class="ks-b-item">' +
       (typeof ktPlate === 'function'
         ? ktPlate({ ad: a.ad, yazar: a.yazar || '', kapak: a.kapak || null }, 'p-mini') : '') +
       '<div class="ks-ic">' +
+        (kaynakAd ? '<span class="ks-b-kaynak">' + esc(kaynakAd) + '</span>' : '') +
         '<span class="ks-b-ad">' + esc(a.ad) + '</span>' +
         (a.yazar ? '<div class="ks-b-yazar">' + esc(a.yazar) + '</div>' : '') +
         '<div class="ks-b-neden">' + esc(a.neden || '') + '</div>' +
@@ -268,12 +389,14 @@
   function bBolumHtml(){
     const M = window.__oneri;
     if(!M || !M.sevilenYazarlar) return '';
-    const sinyalVar = M.sevilenYazarlar().length || M.eksikSeriler().length;
+    const sinyalVar = M.sevilenYazarlar().length || M.eksikSeriler().length
+      || bSevilenTurler().length;
     let ic;
     if(!sinyalVar){
       // yetersiz veri: sorgu da atılmaz — uydurma öneri YOK
       ic = '<div class="ks-b-not">Yeni kitap önerisi için önce sinyal gerek: bir yazarın ' +
-        'kitabını bitirip 8 ve üzeri puan ver ya da bir serinin ciltlerini kütüphanene işle.</div>';
+        'kitabını bitirip 8 ve üzeri puan ver, bir serinin ciltlerini kütüphanene işle ' +
+        'ya da aynı türden en az 2 kitabı bitirip 7 ve üzeri puan ver.</div>';
     }else{
       if(B.durum === 'bekliyor'){
         const c = bOnbellekOku();

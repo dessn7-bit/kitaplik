@@ -407,8 +407,44 @@
     return sonuc;
   }
 
+  /* Sevilen türler (v52) — Keşfet-B'nin ÜÇÜNCÜ sinyali.
+     EŞİKLER motorun kendi sabitlerinden türer, yeni sihirli sayı yok:
+     - n ≥ MIN_TUR_KITAP (2): motorun tür bileşeninin zaten kullandığı çıta —
+       "tek kitaplık tür genellenemez".
+     - ort ≥ SEVILEN_TUR_ORT (7): yazar çıtası 8, çünkü yazar SPESİFİK bir
+       tercihtir; tür ortalaması ortalamaya regresyon yapar (bir türde 12 kitap
+       okuyan biri 8,4'te tavan yapar, 8 çıtası tür havuzunu boşaltırdı).
+       7, motorun tür bileşeninin ağırlığının ~üçte birini pozitif verdiği nokta
+       ((7−5,5)/4,5×20 ≈ +6,7) — yani motorun "bu türü yukarı it" dediği bölge.
+     SIRA: ort ↓, n ↓ — sevilenYazarlar ile AYNI sözleşme. Böylece 2 kitaplık
+     9,5'lik tür, 12 kitaplık 8,4'lük türün önüne geçebilir; n cümlede AÇIKÇA
+     yazdığı için kullanıcı kendi tartısını yapabilir (gizli ağırlık yok).
+     `ad` kullanıcının KENDİ yazdığı tür etiketidir (ilk görülen yazım) —
+     1000Kitap'ın etiketiyle karıştırılmaz; eşleştirme kesfet.js'in işi. */
+  const SEVILEN_TUR_ORT = 7;
+  function sevilenTurler(){
+    const kitaplar = (typeof veri === 'object' && Array.isArray(veri.kitaplar)) ? veri.kitaplar : [];
+    const ist = new Map();
+    kitaplar.forEach(k => {
+      if(!k.tur) return;
+      const o = okumaOzet(k);
+      if(!o.bitti || o.puan === null) return;
+      const a = kat(k.tur);
+      const t = ist.get(a) || { ad: k.tur, toplam: 0, n: 0 };
+      t.toplam += o.puan; t.n++;
+      ist.set(a, t);
+    });
+    return [...ist.values()]
+      .map(t => ({ ad: t.ad, ort: t.toplam / t.n, n: t.n }))
+      .filter(t => t.n >= MIN_TUR_KITAP && t.ort >= SEVILEN_TUR_ORT)
+      .sort((a, b) => b.ort - a.ort || b.n - a.n)
+      .map(t => ({ ...t,
+        cumle: t.ad + ' türünde ' + t.n + ' kitap bitirdin, ortalama ' + fmt(t.ort) + ' verdin' }));
+  }
+
   window.__oneri = { hesapla, hesaplaHam, cesitlilikSec, nedenAta,
     basla, ertele, erteleGeriAl, ertelemeAktif,
-    sevilenYazarlar, eksikSeriler, SEVILEN_YAZAR_ORT,
-    ERTELEME_GUN, MIN_PUANLI, AGIRLIK };
+    sevilenYazarlar, eksikSeriler, sevilenTurler,
+    SEVILEN_YAZAR_ORT, SEVILEN_TUR_ORT,
+    ERTELEME_GUN, MIN_PUANLI, MIN_TUR_KITAP, AGIRLIK };
 })();

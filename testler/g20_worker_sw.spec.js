@@ -30,14 +30,40 @@ const BK_HTML = '<script id="__NEXT_DATA__" type="application/json">'
   + JSON.stringify({ props: { liste: [{ adi: 'Tanrı Yanılgısı (Cep)', yazarAdi: 'Richard Dawkins',
       resim: 'https://1k-cdn.com/x.jpg', puan: 8.2 }] } }) + '</script>';
 
+/* v52 — 1000Kitap v2 API taklidi (tür keşfi). Şekiller CANLI kaynaktan ölçüldü:
+   geçerli slug → kitapTuru + liste; GEÇERSİZ slug → HTTP 200 ama kitapTuru YOK. */
+const TURLER_YANIT = { liste: [
+  { id: '26', adi: 'Felsefe-Düşünce', seo_adi: 'Felsefe-Dusunce', kitapSayisi: '4114' },
+  { id: '12', adi: 'Roman', seo_adi: 'Roman', kitapSayisi: '25393' },
+  { id: '99', adi: 'Novella', seo_adi: 'novella', kitapSayisi: '0' }] };
+const TUR_YANIT = {
+  hasMore: true, sayfa: 1, sayfaBasi: 15,
+  kitapTuru: { id: '26', adi: 'Felsefe-Düşünce', seo_adi: 'Felsefe-Dusunce', kitapSayisi: '4114' },
+  liste: [
+    { adi: 'Yabancı', yazarAdi: 'Albert Camus', ilkYazar: 'Albert Camus',
+      puan: 7.9, okuduDuz: 138767, resim: 'https://1k-cdn.com/y.jpg' },
+    { adi: 'Simyacı', yazarAdi: 'Paulo Coelho', puan: 8.3, okuduDuz: 248735, resim: null },
+    { adi: '', yazarAdi: 'Adsız', puan: 5, okuduDuz: 1 }] };   // adsız kayıt elenmeli
+const TUR_YOK_YANIT = { toplamSayfa: 1, kume: -1, sayfa: 1, z: 0, b: 0, sayfaBasi: 4, liste: [] };
+
 async function workerKos(url, ayar) {
   const a = ayar || {};
   const cacheKayit = [];
+  const istekKayit = [];
   global.caches = { default: {
     match: async () => (a.cacheHit ? sahteYanit({ sonuclar: ['onbellek'] }) : undefined),
     put: async (istek, yanit) => { cacheKayit.push({ url: istek.url, yanit }); }
   } };
-  global.fetch = async (u) => {
+  global.fetch = async (u, secenek) => {
+    istekKayit.push({ url: String(u), baslik: (secenek && secenek.headers) || {} });
+    if (String(u).includes('api.1000kitap.com')) {
+      if (a.apiHata) throw new Error('ag');
+      if (a.apiKod) return sahteYanit({}, false);
+      if (String(u).includes('kitap-turleri/turler'))
+        return sahteYanit(a.turlerBos ? { liste: [] } : TURLER_YANIT);
+      return sahteYanit(a.turYok ? TUR_YOK_YANIT
+        : a.turBos ? Object.assign({}, TUR_YANIT, { liste: [] }) : TUR_YANIT);
+    }
     if (String(u).includes('goodreads.com')) {
       if (a.grHata) throw new Error('ag');
       return sahteYanit(a.grBos ? [] : GR_YANIT);
@@ -52,7 +78,7 @@ async function workerKos(url, ayar) {
   const bekleyenler = [];
   const yanit = await mod.default.fetch(new Request(url), {}, { waitUntil: p => bekleyenler.push(p) });
   await Promise.all(bekleyenler);
-  return { yanit, govde: await yanit.json(), cacheKayit };
+  return { yanit, govde: await yanit.json(), cacheKayit, istekKayit };
 }
 
 test.describe('G20 M3 — worker sessiz arıza önlemleri', () => {
@@ -97,6 +123,112 @@ test.describe('G20 M3 — worker sessiz arıza önlemleri', () => {
     expect(govde.goodreads).toBe(0);
     expect(govde.binkitap).toBe(0);
     expect(govde.durum).toContain('HIC KAYNAK');
+  });
+});
+
+/* ================= v52: tür keşfi uçları ================= */
+test.describe('G20 M5 — /turler ve /tur uçları', () => {
+
+  test('/turler 78-tür şeklini döner, 7 gün cache\'lenir', async () => {
+    const { govde, yanit, cacheKayit } = await workerKos('https://x.dev/turler');
+    expect(govde.turler.length).toBe(3);
+    expect(govde.turler[0]).toEqual({ seo: 'Felsefe-Dusunce', ad: 'Felsefe-Düşünce', kitapSayisi: 4114 });
+    expect(govde.turler[2].kitapSayisi, '0 kitaplı tür sayısı ham geçer').toBe(0);
+    expect(yanit.headers.get('Cache-Control')).toContain('max-age=' + 7 * 86400);
+    expect(cacheKayit.length).toBe(1);
+  });
+
+  test('/turler BOŞ dönerse cache\'lenMEZ, 502 verir', async () => {
+    const { govde, yanit, cacheKayit } = await workerKos('https://x.dev/turler', { turlerBos: true });
+    expect(yanit.status).toBe(502);
+    expect(govde.hata).toBe('kaynak-bos');
+    expect(yanit.headers.get('Cache-Control')).toContain('no-store');
+    expect(cacheKayit.length, 'arıza 7 gün servis edilmiyor').toBe(0);
+  });
+
+  test('/tur geçerli slug: sonuçlar + hasMore, 12 saat cache\'lenir, gerçek UA + tr-TR gider', async () => {
+    const { govde, yanit, cacheKayit, istekKayit } = await workerKos(
+      'https://x.dev/tur?slug=Felsefe-Dusunce&sayfa=1');
+    expect(govde.tur).toEqual({ seo: 'Felsefe-Dusunce', ad: 'Felsefe-Düşünce' });
+    expect(govde.hasMore).toBe(true);
+    expect(govde.sonuclar.length, 'adsız kayıt elendi').toBe(2);
+    expect(govde.sonuclar[0]).toEqual({ ad: 'Yabancı', yazar: 'Albert Camus',
+      puan: 7.9, okuyan: 138767, kapak: 'https://1k-cdn.com/y.jpg' });
+    expect(govde.sonuclar[1].kapak, 'kapaksız kayıt null taşır').toBeNull();
+    expect(yanit.headers.get('Cache-Control')).toContain('max-age=' + 12 * 3600);
+    expect(cacheKayit.length).toBe(1);
+    // Cloudflare kapısı: sade istemci 403 alıyor — başlıklar gerçekten gidiyor mu?
+    const ist = istekKayit.find(i => i.url.includes('api.1000kitap.com'));
+    expect(ist.baslik['User-Agent']).toContain('Chrome/');
+    expect(ist.baslik['Accept-Language']).toContain('tr-TR');
+    expect(ist.url).toContain('turSeo=Felsefe-Dusunce');
+  });
+
+  test('/tur GEÇERSİZ slug: kaynak 200+kitapTuru YOK → temiz 404, cache\'lenMEZ', async () => {
+    const { govde, yanit, cacheKayit } = await workerKos(
+      'https://x.dev/tur?slug=Boyle-Bir-Tur-Yok', { turYok: true });
+    expect(yanit.status).toBe(404);
+    expect(govde.hata).toBe('tur-bulunamadi');
+    expect(yanit.headers.get('Cache-Control')).toContain('no-store');
+    expect(cacheKayit.length).toBe(0);
+  });
+
+  test('/tur BOŞ sonuç cache\'lenMEZ (mutasyon kilidi)', async () => {
+    const { govde, yanit, cacheKayit } = await workerKos(
+      'https://x.dev/tur?slug=Felsefe-Dusunce', { turBos: true });
+    expect(yanit.status).toBe(404);
+    expect(govde.hata).toBe('tur-bos');
+    expect(yanit.headers.get('Cache-Control')).toContain('no-store');
+    expect(cacheKayit.length, 'boş tür sayfası 12 saat servis edilmiyor').toBe(0);
+  });
+
+  test('/tur biçimsiz slug kaynağa HİÇ gitmez (400)', async () => {
+    for (const kotu of ['', 'a/b', 'x?y=1', 'https://evil.example', 'a'.repeat(61)]) {
+      const { govde, yanit, istekKayit } = await workerKos(
+        'https://x.dev/tur?slug=' + encodeURIComponent(kotu));
+      expect(yanit.status, kotu).toBe(400);
+      expect(govde.hata).toBe('slug-gecersiz');
+      expect(istekKayit.length, 'geçersiz slugda dış istek yok').toBe(0);
+    }
+  });
+
+  test('/tur sayfa parametresi kelepçelenir ve kaynağa aynen gider', async () => {
+    const { istekKayit } = await workerKos('https://x.dev/tur?slug=Roman&sayfa=3');
+    expect(istekKayit[0].url).toContain('sayfa=3');
+    const k = await workerKos('https://x.dev/tur?slug=Roman&sayfa=0');
+    expect(k.istekKayit[0].url, 'sayfa<1 → 1').toContain('sayfa=1');
+    const b = await workerKos('https://x.dev/tur?slug=Roman&sayfa=9999');
+    expect(b.istekKayit[0].url, 'üst sınır 50').toContain('sayfa=50');
+  });
+
+  test('/tur kaynak çökerse 502, cache\'lenMEZ', async () => {
+    const { govde, yanit, cacheKayit } = await workerKos(
+      'https://x.dev/tur?slug=Roman', { apiHata: true });
+    expect(yanit.status).toBe(502);
+    expect(govde.hata).toBe('kaynak-ulasilamadi');
+    expect(cacheKayit.length).toBe(0);
+  });
+
+  test('önbellek isabetinde kaynağa YENİ istek atılmaz', async () => {
+    const { istekKayit } = await workerKos('https://x.dev/tur?slug=Roman', { cacheHit: true });
+    expect(istekKayit.length).toBe(0);
+  });
+
+  test('/saglik tür kaynağını AYRI raporlar (bozulma erken görünür)', async () => {
+    const saglam = await workerKos('https://x.dev/saglik');
+    expect(saglam.govde.turler).toBe(3);
+    expect(saglam.govde.tur).toBe(3);
+    expect(saglam.govde.turSlug).toBe('Felsefe-Dusunce');
+    expect(saglam.govde.turDurum).toContain('tur kaynagi calisiyor');
+    expect(saglam.govde.durum, '/ara hattının sözleşmesi değişmedi')
+      .toContain('iki kaynak da calisiyor');
+    const bozuk = await workerKos('https://x.dev/saglik', { apiHata: true });
+    expect(bozuk.govde.turler).toBe(0);
+    expect(bozuk.govde.tur).toBe(0);
+    expect(bozuk.govde.turDurum).toContain('TUR KAYNAGI BOZUK');
+    expect(bozuk.govde.durum, 'tür çökünce arama hattı yeşil kalır')
+      .toContain('iki kaynak da calisiyor');
+    expect(bozuk.yanit.headers.get('Cache-Control')).toContain('no-store');
   });
 });
 

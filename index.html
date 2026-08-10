@@ -1665,13 +1665,31 @@ function aramaGoogle(q, tip, sinyal){
           ? v.imageLinks.thumbnail.replace('http://','https://') : null };
     }).filter(a => a.ad));
 }
+const ARA_KOK = 'https://kitaplik-ara.dessn7.workers.dev';
 function aramaWorker(q, sinyal){
-  return fetch('https://kitaplik-ara.dessn7.workers.dev/ara?q=' + encodeURIComponent(q),
+  return fetch(ARA_KOK + '/ara?q=' + encodeURIComponent(q),
       sinyal ? { signal: sinyal } : undefined)
     .then(r => r.json())
     .then(j => (j.sonuclar || []).filter(a => a && a.ad));
 }
-window.__ara = { google: aramaGoogle, worker: aramaWorker };
+/* Tür keşfi uçları (v52). Kaynakta CORS yok + Cloudflare sade istemciyi 403'lüyor,
+   bu yüzden istek worker'dan geçer. Arama uçlarından FARKLI olarak HTTP durumu
+   sözleşmenin parçası: worker geçersiz türü 404, kaynak arızasını 502 der —
+   2xx dışını reject'e çeviriyoruz ki çağıran "sonuç yok" ile "kaynak bozuk"u
+   ayırt edebilsin (uydurma eşleşme/uydurma boşluk yok). */
+function aramaTurler(sinyal){
+  return fetch(ARA_KOK + '/turler', sinyal ? { signal: sinyal } : undefined)
+    .then(r => r.ok ? r.json() : Promise.reject(new Error('turler ' + r.status)))
+    .then(j => (j.turler || []).filter(t => t && t.seo && t.ad));
+}
+function aramaTur(slug, sayfa, sinyal){
+  return fetch(ARA_KOK + '/tur?slug=' + encodeURIComponent(slug) + '&sayfa=' + (sayfa || 1),
+      sinyal ? { signal: sinyal } : undefined)
+    .then(r => r.ok ? r.json() : Promise.reject(new Error('tur ' + r.status)))
+    .then(j => ({ tur: j.tur || null, hasMore: !!j.hasMore,
+      sonuclar: (j.sonuclar || []).filter(a => a && a.ad) }));
+}
+window.__ara = { google: aramaGoogle, worker: aramaWorker, turler: aramaTurler, tur: aramaTur };
 async function canliAra(q){
   sonAramaMetni = q;
   const dEl = document.getElementById('olDurum'), sEl = document.getElementById('olSonuc');

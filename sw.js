@@ -1,4 +1,4 @@
-const CACHE = 'kitaplik-v51';
+const CACHE = 'kitaplik-v52';
 const ASSETS = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png', './senkron.js', './barkod.js', './oturum.js', './fikir.js', './katalog.js', './gorunum.js', './kart.js', './zeka.js', './fikirag.js', './rapor.js', './kapak.js', './oneri.js', './kesfet.js', './tekrar.js', './zxing.min.js', './font/cormorant-latin.woff2', './font/cormorant-latin-ext.woff2', './font/lora-latin.woff2', './font/lora-latin-ext.woff2', './font/lora-italik-latin.woff2', './font/lora-italik-latin-ext.woff2'];
 
 self.addEventListener('install', e => {

@@ -83,9 +83,15 @@ async function ayarlarAc(page) {
 /* Ag taklidi. Ayar page.__agAyar uzerinden test sirasinde da degistirilebilir:
    { google: <GB yaniti|'hata'>, worker: <worker yaniti|'hata'>,
      olArama: <OL search yaniti|'hata'>, olKitap: <OL books yaniti|'hata'> }
-   Sayaclar page.__agSayac: { google, worker, olArama, olKitap, firebase, sonGoogleUrl } */
+     turler: <[{seo,ad,kitapSayisi}]|'hata'>,                      // v52 kesif uclari
+     tur: { <slug>: <{tur,sonuclar,hasMore}|'hata'> } }
+   Tur ucu GERCEK worker gibi davranir: haritada olmayan slug 404 doner
+   (kaynaktaki "200 + kitapTuru yok" imzasinin worker'daki karsiligi).
+   Sayaclar page.__agSayac:
+     { google, worker, turler, tur, olArama, olKitap, firebase, sonGoogleUrl, sonTurUrl } */
 async function agTaklit(page, ayar) {
-  const sayac = { google: 0, worker: 0, olArama: 0, olKitap: 0, firebase: 0, sonGoogleUrl: '' };
+  const sayac = { google: 0, worker: 0, turler: 0, tur: 0, olArama: 0, olKitap: 0,
+    firebase: 0, sonGoogleUrl: '', sonTurUrl: '' };
   const beklenmeyen = [];
   page.__agSayac = sayac;
   page.__agBeklenmeyen = beklenmeyen;
@@ -100,6 +106,21 @@ async function agTaklit(page, ayar) {
       sayac.google++; sayac.sonGoogleUrl = url;
       if (a.google === 'hata') return route.abort('failed');
       return json(route, a.google || { totalItems: 0, items: [] });
+    }
+    if (url.includes('kitaplik-ara.dessn7.workers.dev/turler')) {
+      sayac.turler++;
+      if (a.turler === 'hata') return route.abort('failed');
+      return json(route, { turler: a.turler || [] });
+    }
+    if (url.includes('kitaplik-ara.dessn7.workers.dev/tur?')) {
+      sayac.tur++; sayac.sonTurUrl = url;
+      if (a.tur === 'hata') return route.abort('failed');
+      const slug = decodeURIComponent((url.match(/[?&]slug=([^&]*)/) || [])[1] || '');
+      const d = (a.tur || {})[slug];
+      if (d === 'hata') return route.abort('failed');
+      if (!d) return route.fulfill({ status: 404, contentType: 'application/json',
+        body: JSON.stringify({ hata: 'tur-bulunamadi' }) });
+      return json(route, d);
     }
     if (url.includes('kitaplik-ara.dessn7.workers.dev')) {
       sayac.worker++;
