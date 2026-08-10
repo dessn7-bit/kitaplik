@@ -78,8 +78,15 @@ test.describe('G21 M1 — karanlık tema', () => {
   test('theme-color meta etiketi temayı izler', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await rafAc(page);
-    // GÖÇ (v41 Palet A): koyu #141210 (değişmedi), açık #F2EFE7 (Soluk Parşömen)
-    expect(await page.getAttribute('#temaRengi', 'content')).toBe('#141210');
+    /* GÖÇ (v57 Palet A Gece): karanlık taban #141210 → #1E1A15. Eski değer
+       Palet A'dan 16 sürüm önceydi (v25) ve nötre yakındı; yeni taban sıcak
+       "amber kâğıt". Açık taban #F2EFE7 (Soluk Parşömen) değişmedi.
+       Meta değeri PALETLE AYNI olmalı — aksi hâlde tarayıcı çubuğu ile sayfa
+       zemini arasında görünür bir dikiş kalır. */
+    expect(await page.getAttribute('#temaRengi', 'content')).toBe('#1E1A15');
+    expect(await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()),
+      'meta ile --bg aynı').toBe('#1E1A15');
     await ayarlarAc(page);
     await page.click('#tmSecim [data-act="tm-tema"][data-v="acik"]');
     expect(await page.getAttribute('#temaRengi', 'content')).toBe('#F2EFE7');

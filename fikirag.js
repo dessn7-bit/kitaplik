@@ -165,7 +165,7 @@
       .fa-vurgu{font-size:.82rem;color:var(--brass);font-weight:600;margin-top:8px}
       .fa-sira{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:3px;scrollbar-width:none}
       .fa-sira::-webkit-scrollbar{display:none}
-      .fa-cip{flex:0 0 auto;padding:6px 12px;border-radius:var(--r-sm);border:1px solid var(--cizgi);
+      .fa-cip{flex:0 0 auto;padding:6px 12px;border-radius:var(--r-sm);border:1px solid var(--kontur);
         background:transparent;color:var(--muted);font-size:.75rem;white-space:nowrap}
       .fa-cip.fa-secili{border-color:var(--brass);color:var(--brass);font-weight:600;
         background:color-mix(in srgb,var(--brass) 7%,transparent)}

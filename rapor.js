@@ -227,7 +227,7 @@
       .rp-blok{margin-top:0}
       .rp-yillar{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
       .rp-yillar::-webkit-scrollbar{display:none}
-      .rp-yil{flex:0 0 auto;padding:7px 12px;border-radius:var(--r-sm);border:1px solid var(--cizgi);
+      .rp-yil{flex:0 0 auto;padding:7px 12px;border-radius:var(--r-sm);border:1px solid var(--kontur);
         background:transparent;color:var(--muted);font-size:.78rem;white-space:nowrap}
       .rp-yil.rp-secili{border-color:var(--brass);color:var(--paper);font-weight:600;
         background:color-mix(in srgb,var(--brass) 7%,transparent)}

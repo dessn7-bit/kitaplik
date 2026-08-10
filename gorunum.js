@@ -104,17 +104,17 @@
         background:var(--bg);border-top:1px solid var(--cizgi);padding:10px 14px;
         display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 -2px 8px var(--golge-orta)}
       .toplu-cubuk .sayi{font-size:.85rem;color:var(--brass);font-weight:600;margin-right:auto}
-      .toplu-cubuk button{padding:8px 12px;border-radius:var(--r-md);border:1px solid var(--cizgi);
+      .toplu-cubuk button{padding:8px 12px;border-radius:var(--r-md);border:1px solid var(--kontur);
         background:transparent;font-size:.8rem;color:var(--paper)}
       .toplu-cubuk button.tehlike{border-color:var(--drop);color:var(--drop)}
-      .gorunum-dugme{padding:8px 12px;border-radius:var(--r-md);border:1px solid var(--cizgi);
+      .gorunum-dugme{padding:8px 12px;border-radius:var(--r-md);border:1px solid var(--kontur);
         background:transparent;font-size:.8rem;color:var(--muted)}
       .gorunum-dugme.aktif{border-color:var(--brass);color:var(--brass);
         background:color-mix(in srgb,var(--brass) 7%,transparent);font-weight:600}
       /* Üç düzen anahtarı (v42): görsel 32×30, dokunma alanı ::after ile ~40px */
       .duzen-anahtar{display:flex;gap:4px}
       .duzen-dugme{width:32px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;
-        border:1px solid var(--cizgi);border-radius:var(--r-sm);background:transparent;
+        border:1px solid var(--kontur);border-radius:var(--r-sm);background:transparent;
         color:var(--muted);position:relative}
       .duzen-dugme::after{content:'';position:absolute;inset:-5px -4px}
       .duzen-dugme .ikon{width:15px;height:15px}

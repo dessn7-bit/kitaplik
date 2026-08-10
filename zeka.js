@@ -306,7 +306,7 @@
       .zk-satir-giris{display:flex;gap:8px;margin-top:12px}
       .zk-satir-giris input{width:100px}
       .zk-dugme{flex:0 0 auto;padding:12px 16px;border-radius:var(--r-md);
-        border:1px solid var(--cizgi);background:transparent;color:var(--paper);
+        border:1px solid var(--kontur);background:transparent;color:var(--paper);
         font-family:var(--serif);font-size:.9rem;font-weight:600}
     `;
     document.head.appendChild(s);

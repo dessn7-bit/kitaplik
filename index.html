@@ -24,7 +24,7 @@
     var cozum = window.temaCoz();
     document.documentElement.setAttribute('data-tema', cozum);
     var m = document.getElementById('temaRengi');
-    if(m) m.setAttribute('content', cozum === 'karanlik' ? '#141210' : '#F2EFE7');
+    if(m) m.setAttribute('content', cozum === 'karanlik' ? '#1E1A15' : '#F2EFE7');
     return cozum;
   };
   window.temaTercihi = tercih;
@@ -122,6 +122,14 @@
   --r-sm:2px; --r-md:4px; --r-lg:7px;
   /* Ciltli ayraç: metin renginin %16 saydamı — tema değişince kendiliğinden uyar */
   --cizgi:color-mix(in srgb,var(--paper) 16%,transparent);
+  /* KONTROL KONTURU — ayraçtan AYRI rol (v57). WCAG 1.4.11 form/düğme
+     sınırlarını 3:1 ister; ayraç (bölüm çizgisi) dekoratiftir ve Ciltli'de
+     bilerek kıl payıdır. İki iş tek değişkende toplanınca ya ayraç bağırır ya
+     kontrol kaybolur. AÇIK TEMADA şimdilik ayraçla AYNI değer — yani görünüm
+     birebir korunuyor; açık temanın kontrol konturu 1.37 ile eşiğin altında
+     (ÖLÇÜLDÜ) ama onu değiştirmek tüm düğme/çip görünümünü değiştirir, ayrı
+     karar. Karanlıkta %38'e çıkarılıp 3.02'ye taşındı. */
+  --kontur:color-mix(in srgb,var(--paper) 16%,transparent);
   /* "Ciltli" tipografi (v41): başlık = Cormorant Garamond, gövde = Lora.
      Değişken ADLARI (--serif/--sans) korunur — tüm eklentiler bunları kullanır;
      --sans artık bilinçli olarak bir SERIF gövde fontuna işaret eder (kasıtlı,
@@ -129,15 +137,30 @@
   --serif:'Cormorant Garamond','Iowan Old Style',Georgia,serif;
   --sans:'Lora',Georgia,'Times New Roman',serif;
 }
+/* PALET A GECE — "Amber kâğıt" (v57). Açık temanın parşömen kimliğinin gece
+   karşılığı; ESKİ karanlık blok v25'ten (a81f31d) kalmıştı ve Palet A v41'de
+   (93f4bee) geldiği için 16 sürüm bayattı — nötre yakın #141210 tabanı
+   parşömenin gece hâli değildi.
+   ÖLÇÜLDÜ (en kötü zemin, bg/surface/surface2 üçlüsünden):
+     METİN AA≥4.5 — paper 11.97 · muted 6.74 · muted2 5.20 · brass 7.81 ·
+                    ok 6.46 · drop 5.53 · mavi 6.23
+     GRAFİK ≥3.0  — brass-dim 3.70 · kontur 3.02
+     AYRAÇ        — cizgi 1.88/1.90 (görünür, bağırmıyor) · border 1.60 (dekoratif)
+   Taban SAF SİYAH DEĞİL (bg luminansı 0.0107) ve SICAK (R−B: bg 9, paper 24).
+   Yüzey düzeni açık temayla aynı yönde: bg < surface2 < surface. */
 :root[data-tema="karanlik"]{
-  --bg:#141210; --surface:#221F1A; --surface2:#2B2722;
-  --border:#423C31; --brass:#D9AE5F; --brass-dim:#8A6F35; --paper:#EDE6D8;
-  --muted:#B3A88F; --muted2:#9A8F78;
-  --ok:#8FB265; --drop:#E0805C; --mavi:#8FA8C4;
-  --uzeri:#141210; --toast-zemin:#EDE6D8; --toast-metin:#171512;
-  /* v46: karanlıkta da sıcak perde (salt siyah nötrdü) */
-  --ortu-perde:rgba(26,19,9,.68); --nav-zemin:rgba(34,31,26,.97);
-  --header-fade:rgba(20,18,16,.92); --golge:rgba(0,0,0,.35);
+  --bg:#1E1A15; --surface:#2E2820; --surface2:#262019;
+  --border:#524A3E; --brass:#E3B76A; --brass-dim:#9A7C3E; --paper:#F0E8D8;
+  --muted:#BCAF95; --muted2:#A6997F;
+  --ok:#93B86A; --drop:#E5875F; --mavi:#93ACC8;
+  --uzeri:#1E1A15; --toast-zemin:#F0E8D8; --toast-metin:#1E1A15;
+  /* Ayraç karanlıkta %16'da kayboluyordu (1.31); %22 görünür kılar ama kıl payı
+     karakterini korur. Kontrol konturu ayrı rol — aşağıda. */
+  --cizgi:color-mix(in srgb,var(--paper) 22%,transparent);
+  --kontur:color-mix(in srgb,var(--paper) 38%,transparent);
+  /* v46: karanlıkta da sıcak perde; yeni tabana göre bir tık daha koyu/sıcak */
+  --ortu-perde:rgba(24,17,6,.70); --nav-zemin:rgba(46,40,32,.97);
+  --header-fade:rgba(30,26,21,.92); --golge:rgba(0,0,0,.35);
   --golge-orta:rgba(0,0,0,.45); --golge-guclu:rgba(0,0,0,.55);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -149,7 +172,7 @@ body{background:var(--bg);color:var(--paper);font-family:var(--sans);font-style:
   padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 button{font-family:inherit;font-style:normal;cursor:pointer;border:none;background:none;color:inherit}
 input,select,textarea{font-family:inherit;font-style:normal;font-size:1rem;background:transparent;
-  color:var(--paper);border:1px solid var(--cizgi);border-radius:var(--r-md);padding:10px 12px;width:100%}
+  color:var(--paper);border:1px solid var(--kontur);border-radius:var(--r-md);padding:10px 12px;width:100%}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--brass);outline-offset:-1px;border-color:var(--brass)}
 textarea{resize:vertical;min-height:60px}
 label{display:block;font-size:.8rem;color:var(--muted);margin:14px 0 4px;letter-spacing:.03em}
@@ -180,7 +203,7 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
    sekmesinde görünüyor (sekmeGec), ayarlar ise her sekmeden erişilebilmeli. */
 .baslik-satir{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .ayar-btn{flex:0 0 40px;width:40px;height:40px;border-radius:var(--r-md);background:transparent;
-  border:1px solid var(--cizgi);color:var(--muted);display:flex;align-items:center;justify-content:center}
+  border:1px solid var(--kontur);color:var(--muted);display:flex;align-items:center;justify-content:center}
 .search-row{display:flex;gap:8px;margin-top:8px;position:relative}
 /* Ciltli arama: kontur + altın büyüteç ikonu (soldan içeride). Yazı .9rem —
    ikon dolgusuna rağmen placeholder 360px'te sığar (D1 vakası ölçer). */
@@ -189,7 +212,7 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
   pointer-events:none;display:flex}
 .ara-ikon .ikon{width:17px;height:17px}
 /* 46→40px (D1): arama girdisine 12px kazandırır, 40px dokunma hedefi korunur */
-.zar-btn{flex:0 0 40px;background:transparent;border:1px solid var(--cizgi);border-radius:var(--r-md);
+.zar-btn{flex:0 0 40px;background:transparent;border:1px solid var(--kontur);border-radius:var(--r-md);
   color:var(--muted);display:flex;align-items:center;justify-content:center}
 .zar-btn:active{transform:rotate(20deg) scale(.9)}
 
@@ -207,7 +230,7 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
   mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent)}
 /* Ciltli çip: hap değil KUTU (r-sm), dolgu yok; aktif = altın kontur + altın
    metin + %7 tint (v41 AA ölçümü: brass/%7-tint 4.57). */
-.chip{flex:0 0 auto;padding:8px 12px;border-radius:var(--r-sm);border:1px solid var(--cizgi);
+.chip{flex:0 0 auto;padding:8px 12px;border-radius:var(--r-sm);border:1px solid var(--kontur);
   background:transparent;color:var(--muted);font-size:.8rem;letter-spacing:.02em}
 .chip.active{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
   border-color:var(--brass);font-weight:600}
@@ -538,7 +561,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   background:transparent;border:1px solid transparent}
 .btn-brass{border-color:var(--brass);color:var(--brass)}
 .btn-brass:active{background:color-mix(in srgb,var(--brass) 18%,transparent)}
-.btn-cerceve{border-color:var(--cizgi);color:var(--paper)}
+.btn-cerceve{border-color:var(--kontur);color:var(--paper)}
 .btn-cerceve:active{background:color-mix(in srgb,var(--paper) 12%,transparent)}
 .btn-tehlike{border:1px solid var(--drop);color:var(--drop);background:transparent}
 .btn:active{transform:scale(.98)}
@@ -555,7 +578,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .tutamac{width:38px;height:4px;background:var(--muted2);border-radius:999px;margin:6px auto 12px}
 .sheet-baslik{font-family:var(--serif);font-size:1.28rem;line-height:1.3;padding-right:34px}
 .sheet-kapat{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:999px;
-  background:transparent;border:1px solid var(--cizgi);color:var(--muted);font-size:1.05rem;
+  background:transparent;border:1px solid var(--kontur);color:var(--muted);font-size:1.05rem;
   display:flex;align-items:center;justify-content:center;z-index:2}
 /* ---- Detay Ciltli (v45) ---- */
 .d-ust-satir{display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -626,7 +649,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .d-durum-sec{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-top:8px}
 .d-sessiz{font-size:.8rem;color:var(--muted);padding:10px 10px;border-radius:var(--r-ic);
   text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--muted2)}
-.d-katla{margin-top:12px;border:1px solid var(--cizgi);border-radius:var(--r-md);
+.d-katla{margin-top:12px;border:1px solid var(--kontur);border-radius:var(--r-md);
   background:transparent;box-shadow:none}
 .d-katla summary{list-style:none;cursor:pointer;padding:12px 14px;font-size:.85rem;
   color:var(--muted);letter-spacing:.03em;display:flex;align-items:center;
@@ -644,12 +667,12 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   font-size:inherit;padding:4px}
 .form-iki{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .durum-secim{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
-.durum-btn{padding:9px 4px;border-radius:var(--r-md);border:1px solid var(--cizgi);font-size:.75rem;
+.durum-btn{padding:9px 4px;border-radius:var(--r-md);border:1px solid var(--kontur);font-size:.75rem;
   color:var(--muted);background:transparent}
 .durum-btn.secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
   border-color:var(--brass);font-weight:600}
 .puan-secim{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
-.puan-btn{width:40px;height:40px;border-radius:var(--r-md);border:1px solid var(--cizgi);
+.puan-btn{width:40px;height:40px;border-radius:var(--r-md);border:1px solid var(--kontur);
   background:transparent;color:var(--muted);font-size:.9rem}
 .puan-btn.secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
   border-color:var(--brass);font-weight:600}
@@ -664,7 +687,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .not-sil{position:absolute;top:8px;right:8px;color:var(--muted2);font-size:.95rem;padding:4px}
 .not-ekle-satir{display:flex;gap:8px;margin-top:10px;align-items:flex-start}
 .not-tip-sec{display:flex;gap:6px;margin-top:8px;align-items:center}
-.mini-chip{padding:6px 12px;border-radius:var(--r-sm);border:1px solid var(--cizgi);font-size:.75rem;color:var(--muted)}
+.mini-chip{padding:6px 12px;border-radius:var(--r-sm);border:1px solid var(--kontur);font-size:.75rem;color:var(--muted)}
 .mini-chip.secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
   border-color:var(--brass);font-weight:600}
 .sayfa-input{width:86px !important;font-size:.85rem;padding:6px 10px;margin-left:auto}
@@ -692,7 +715,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 
 /* tema seçici — kendi ad alanı (tm-) */
 .tm-secim{display:flex;gap:8px;flex-wrap:wrap}
-.tm-dugme{flex:1 1 auto;padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--cizgi);
+.tm-dugme{flex:1 1 auto;padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--kontur);
   background:transparent;color:var(--muted);font-size:.85rem}
 .tm-dugme.tm-secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
   border-color:var(--brass);font-weight:600}
@@ -782,7 +805,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .kp-depo-satir{font-size:.85rem;color:var(--muted);margin:10px 0}
 /* Ampul düğmesi (v50: pencere değil KEŞFET sekmesine götürür; on- panel CSS'i
    emekli — liste/eylem stilleri artık kesfet.js'in ks- ad alanında) */
-.on-ac-btn{flex:0 0 40px;background:transparent;border:1px solid var(--cizgi);border-radius:var(--r-md);
+.on-ac-btn{flex:0 0 40px;background:transparent;border:1px solid var(--kontur);border-radius:var(--r-md);
   color:var(--muted);display:flex;align-items:center;justify-content:center}
 .on-ac-btn:active{transform:scale(.9)}
 /* ---------- Aralıklı alıntı tekrarı (tk-) — mantık tekrar.js'te ---------- */

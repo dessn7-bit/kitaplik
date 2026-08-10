@@ -39,7 +39,7 @@
     '.ks-suz{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:6px 0;align-items:center}',
     '.ks-suz::-webkit-scrollbar{display:none}',
     '.ks-suz-ad{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);flex:0 0 auto;margin-right:2px}',
-    '.ks-chip{flex:0 0 auto;padding:7px 12px;border:1px solid var(--cizgi);border-radius:var(--r-sm);' +
+    '.ks-chip{flex:0 0 auto;padding:7px 12px;border:1px solid var(--kontur);border-radius:var(--r-sm);' +
       'font-size:.78rem;color:var(--muted);background:transparent;white-space:nowrap}',
     // seçili çip metni PAPER: brass metin %7 tint üzerinde 4.23'e düşüyor (AA
     // kaçağı — g42 doğru renk çözücüyle ölçünce çıktı); seçililiği kontur +
