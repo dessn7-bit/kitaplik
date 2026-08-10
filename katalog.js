@@ -293,14 +293,17 @@
   }
 
   function kartEkle(){
-    const kap = document.querySelector('.yedek-wrap');
+    // v56: konum YUVA ile sabit ("Katalog araçları" bölümü); yuva yoksa eski yol.
+    const yuva = document.getElementById('ayYuvaKatalog');
+    const kap = yuva || document.querySelector('.yedek-wrap');
     if(!kap || document.getElementById('katalogKart')) return;
     const kart = document.createElement('div');
-    kart.className = 'yedek-kart'; kart.id = 'katalogKart';
-    kart.innerHTML = '<h3>Toplu katalog (seri tarama)</h3>'
-      + '<p>Fiziksel rafını sisteme geçir: kamera açık kalır, kitapları arka arkaya okutursun. Her kitap için form açılmaz, raf konumu hepsine birden yazılır.</p>'
-      + '<button class="btn btn-cerceve" data-act="seri-ac">' + (window.ikon?window.ikon('kitaplik'):'') + ' Seri taramayı başlat</button>';
-    kap.insertBefore(kart, kap.firstChild);
+    kart.className = 'ay-blok'; kart.id = 'katalogKart';
+    kart.innerHTML = '<h3 class="ay-baslik">Toplu katalog (seri tarama)</h3>'
+      + '<p class="ay-not">Fiziksel rafını sisteme geçir: kamera açık kalır, kitapları arka arkaya okutursun. Her kitap için form açılmaz, raf konumu hepsine birden yazılır.</p>'
+      + '<div class="ay-eylem"><button class="btn btn-cerceve" data-act="seri-ac">'
+      + (window.ikon?window.ikon('kitaplik'):'') + ' Seri taramayı başlat</button></div>';
+    yuva ? kap.appendChild(kart) : kap.insertBefore(kart, kap.firstChild);
   }
 
   /* D1 (görsel ince ayar): placeholder'ın TEK sahibi index.html. Buradaki eski

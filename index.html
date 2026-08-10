@@ -499,12 +499,36 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .ga-kaynak{font-size:.78rem;color:var(--muted);margin-top:10px;letter-spacing:.02em}
 #alintiArama{margin-bottom:4px}
 
-.yedek-wrap{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+/* ---------- Ayarlar penceresi (ay-, v56 Ciltli) — dönüşümün SON parçası ----------
+   `.yedek-kart` kutuları emekli: 9 kart × (zemin + 1px kenarlık + 16px iç boşluk
+   + gölge) pencereyi gereksiz uzatıyordu. Artık kıl payı ayraçlı bölümler +
+   kicker. `.yedek-wrap` ADI KORUNUYOR: senkron.js/katalog.js boot'ta o seçiciyi
+   arıyor (yuva bulunamazsa geri düşecekleri yol). */
+.yedek-wrap{padding:14px 16px}
 /* Ayarlar penceresinde: .sheet zaten yatay iç boşluk veriyor, ikilenmesin. */
-#ortuAyar .yedek-wrap{padding:14px 0 0}
-.yedek-kart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--yukselti-1)}
-.yedek-kart h3{font-family:var(--serif);font-size:1rem;margin-bottom:6px}
-.yedek-kart p{font-size:.85rem;color:var(--muted);line-height:1.5;margin-bottom:12px}
+#ortuAyar .yedek-wrap{padding:6px 0 0}
+.ay-bolum{padding:14px 0 16px;border-bottom:1px solid var(--cizgi)}
+.ay-bolum-bas{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  margin-bottom:10px}
+.ay-baslik{font-family:var(--serif);font-size:1rem;font-weight:600;margin:18px 0 4px}
+.ay-bolum-bas + .ay-baslik,.ay-yuva > :first-child .ay-baslik{margin-top:0}
+.ay-not{font-size:.85rem;color:var(--muted);line-height:1.55;margin-bottom:10px}
+.ay-eylem{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.ay-eylem .btn{width:auto}
+/* TEHLİKELİ BÖLGE — Ciltli'de dolgu yok, ayrım ÜÇ eksende birden kuruluyor:
+   KONUM (en altta, 26px ekstra boşlukla kopuk), RENK (kicker + üst ayraç
+   --drop), DURUM (katlı gelir → düğmeye ulaşmak kasıtlı bir adım ister).
+   Katlama burada gezinme aracı değil KAZA ENGELİ; iki confirm'e ek üçüncü
+   kasıt katmanı. */
+.ay-tehlike{margin-top:26px;padding-top:16px;border-top:1px solid var(--drop);border-bottom:none}
+.ay-tehlike > summary{list-style:none;display:flex;align-items:baseline;gap:10px}
+.ay-tehlike > summary::-webkit-details-marker{display:none}
+.ay-tehlike .kicker{color:var(--drop)}
+.ay-tehlike-ozet{flex:1;min-width:0;font-size:.78rem;color:var(--muted2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ay-katla-ok{flex:0 0 auto;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--drop)}
+.ay-tehlike[open] .ay-katla-ok{visibility:hidden}
 /* Ciltli düğme dili (v42): DOLGU YOK — tüm düğmeler kontur. Birincil (.btn-brass)
    = altın kontur + altın metin; ikincil (.btn-cerceve) = ayraç kontur + normal
    metin. Basılı hal %12-22 saydam zemin (color-mix). Sınıf ADLARI korunur:
@@ -939,52 +963,86 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     <div class="tutamac"></div>
       <button class="sheet-kapat" data-act="ayar-kapat" aria-label="Kapat">✕</button>
     <div class="sheet-baslik" id="ortuAyarBaslik">Ayarlar</div>
+    <!-- BÖLÜM SIRASI (v56): (1) SENKRON ve (2) GÖRÜNÜM önce çünkü ikisi de KISA
+         ve DURUM taşıyor — pencere açılır açılmaz "bu cihaz nasıl ayarlı?"
+         sorusunu kaydırmadan yanıtlıyorlar. Sonra veri kümesi bir yaşam
+         döngüsü sırasıyla: (3) aktarım (önce GÜVENLİ çıktı, sonra kütüphaneyi
+         DEĞİŞTİREN girdi), (4) toplu girdi aracı, (5) o girdinin yerel
+         depolamada bıraktığı iz. (6) tehlikeli bölge en altta, kopuk. -->
     <div class="yedek-wrap">
-      <div class="yedek-kart">
-        <h3>Yedek al</h3>
-        <p>Tüm kütüphaneni (kitaplar, notlar, seanslar, hedefler) tek JSON dosyası olarak indir.</p>
-        <button class="btn btn-brass" data-act="disa-aktar">JSON indir</button>
-        <div style="height:8px"></div>
-        <button class="btn btn-cerceve" data-act="csv-aktar">CSV indir (Excel için)</button>
-      </div>
-      <div class="yedek-kart">
-        <h3>Görünüm</h3>
-        <p>Gece okurken ekran gözünü yormasın. “Sistem” seçilirse telefonunun/bilgisayarının karanlık mod ayarını izler.</p>
+      <section class="ay-bolum" id="ayBolumSenkron">
+        <div class="ay-bolum-bas"><span class="kicker">Senkron</span></div>
+        <div class="ay-yuva" id="ayYuvaSenkron"></div>
+      </section>
+
+      <section class="ay-bolum" id="ayBolumGorunum">
+        <div class="ay-bolum-bas"><span class="kicker">Görünüm</span></div>
+        <p class="ay-not">Gece okurken ekran gözünü yormasın. “Sistem” seçilirse telefonunun/bilgisayarının karanlık mod ayarını izler.</p>
         <div class="tm-secim" id="tmSecim">
           <button class="tm-dugme" data-act="tm-tema" data-v="acik"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg> Açık</button>
           <button class="tm-dugme" data-act="tm-tema" data-v="karanlik"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 13.6A8.1 8.1 0 0 1 10.4 4a8.1 8.1 0 1 0 9.6 9.6z"/></svg> Karanlık</button>
           <button class="tm-dugme" data-act="tm-tema" data-v="sistem"><svg class="ikon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg> Sistem</button>
         </div>
-      </div>
-      <div class="yedek-kart">
-        <h3>Alıntı ve notları dışa aktar</h3>
-        <p>Bütün alıntıların ve notların, kitaplara göre gruplanmış tek bir Markdown (.md) dosyası olarak iner — yazı çalışmanda doğrudan kullanabilirsin.</p>
-        <button class="btn btn-cerceve" data-act="md-alinti">Sadece alıntılar (.md)</button>
-        <div style="height:8px"></div>
-        <button class="btn btn-cerceve" data-act="md-hepsi">Alıntılar + notlar (.md)</button>
-      </div>
-      <div class="yedek-kart">
-        <h3>Goodreads'ten aktar</h3>
-        <p>Goodreads → My Books → sol menüde <b>Import and export</b> → <b>Export Library</b> ile CSV indir, buraya yükle. Kitaplar rafları (okundu/okunuyor/okunacak), puanların (5'lik → 10'luğa çevrilir), tarihler, yorumların ve kapaklarıyla gelir.</p>
-        <button class="btn btn-cerceve" data-act="gr-aktar">Goodreads CSV yükle</button>
-      </div>
-      <div class="yedek-kart">
-        <h3>Yedekten geri yükle</h3>
-        <p>JSON yedeğini seç. Mevcut kayıtlarla birleştirilir; aynı kitap (ad + yazar) iki kez eklenmez.</p>
-        <button class="btn btn-cerceve" data-act="ice-aktar">Dosya seç</button>
-      </div>
-      <div class="yedek-kart">
-        <h3>Kapak fotoğrafları</h3>
-        <p>Kendi çektiğin kapak fotoğrafları <b>yalnız bu cihazda</b> saklanır — senkrona ve JSON
+      </section>
+
+      <section class="ay-bolum" id="ayBolumAktarim">
+        <div class="ay-bolum-bas"><span class="kicker">İçe / dışa aktarım</span></div>
+        <h3 class="ay-baslik">Yedek al</h3>
+        <p class="ay-not">Tüm kütüphaneni (kitaplar, notlar, seanslar, hedefler) tek JSON dosyası olarak indir.</p>
+        <div class="ay-eylem">
+          <button class="btn btn-brass" data-act="disa-aktar">JSON indir</button>
+          <button class="btn btn-cerceve" data-act="csv-aktar">CSV indir (Excel için)</button>
+        </div>
+        <h3 class="ay-baslik">Alıntı ve notları dışa aktar</h3>
+        <p class="ay-not">Bütün alıntıların ve notların, kitaplara göre gruplanmış tek bir Markdown (.md) dosyası olarak iner — yazı çalışmanda doğrudan kullanabilirsin.</p>
+        <div class="ay-eylem">
+          <button class="btn btn-cerceve" data-act="md-alinti">Sadece alıntılar (.md)</button>
+          <button class="btn btn-cerceve" data-act="md-hepsi">Alıntılar + notlar (.md)</button>
+        </div>
+        <h3 class="ay-baslik">Goodreads'ten aktar</h3>
+        <p class="ay-not">Goodreads → My Books → sol menüde <b>Import and export</b> → <b>Export Library</b> ile CSV indir, buraya yükle. Kitaplar rafları (okundu/okunuyor/okunacak), puanların (5'lik → 10'luğa çevrilir), tarihler, yorumların ve kapaklarıyla gelir.</p>
+        <div class="ay-eylem">
+          <button class="btn btn-cerceve" data-act="gr-aktar">Goodreads CSV yükle</button>
+        </div>
+        <h3 class="ay-baslik">Yedekten geri yükle</h3>
+        <p class="ay-not">JSON yedeğini seç. Mevcut kayıtlarla birleştirilir; aynı kitap (ad + yazar) iki kez eklenmez.</p>
+        <div class="ay-eylem">
+          <button class="btn btn-cerceve" data-act="ice-aktar">Dosya seç</button>
+        </div>
+      </section>
+
+      <section class="ay-bolum" id="ayBolumKatalog">
+        <div class="ay-bolum-bas"><span class="kicker">Katalog araçları</span></div>
+        <div class="ay-yuva" id="ayYuvaKatalog"></div>
+      </section>
+
+      <section class="ay-bolum" id="ayBolumDepolama">
+        <div class="ay-bolum-bas"><span class="kicker">Depolama</span></div>
+        <h3 class="ay-baslik">Kapak fotoğrafları</h3>
+        <p class="ay-not">Kendi çektiğin kapak fotoğrafları <b>yalnız bu cihazda</b> saklanır — senkrona ve JSON
       yedeğine girmezler. Cihaz değiştirirsen fotoğrafları yeni cihazda yeniden çekmen gerekir.</p>
         <div class="kp-depo-satir" id="kpDepoBilgi">Hesaplanıyor…</div>
-        <button class="btn btn-tehlike" data-act="kp-tum-sil">Tüm fotoğrafları sil</button>
-      </div>
-      <div class="yedek-kart">
-        <h3>Tümünü sil</h3>
-        <p>Bütün kayıtları kalıcı olarak siler. Önce yedek almadan kullanma.</p>
-        <button class="btn btn-tehlike" data-act="tumunu-sil">Kütüphaneyi boşalt</button>
-      </div>
+        <div class="ay-eylem">
+          <button class="btn btn-tehlike" data-act="kp-tum-sil">Tüm fotoğrafları sil</button>
+        </div>
+      </section>
+
+      <!-- Kapak fotoğrafı silme BİLEREK tehlikeli bölgede DEĞİL: cihaz-yereli,
+           yedeğe zaten girmeyen, yeniden çekilebilir veri; ve bağlamı (sayaç +
+           boyut) hemen üstünde. Tehlikeli bölge GERİ ALINAMAZ ve TÜM kütüphaneyi
+           etkileyen tek eyleme ayrılmış — iki kalem koysaydım oraya girmek
+           sıradanlaşır ve uyarı gücünü yitirirdi. -->
+      <details class="ay-bolum ay-tehlike" id="ayBolumTehlike">
+        <summary>
+          <span class="kicker">Tehlikeli bölge</span>
+          <span class="ay-tehlike-ozet">Kütüphaneyi boşalt</span>
+          <span class="ay-katla-ok">Aç</span>
+        </summary>
+        <p class="ay-not" style="margin-top:12px">Bütün kayıtları kalıcı olarak siler. Önce yedek almadan kullanma.</p>
+        <div class="ay-eylem">
+          <button class="btn btn-tehlike" data-act="tumunu-sil">Kütüphaneyi boşalt</button>
+        </div>
+      </details>
     </div>
     </div>
 </div>

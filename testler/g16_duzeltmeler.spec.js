@@ -1,6 +1,6 @@
 'use strict';
 const { test, expect, tohumla, sahteKitap,
-  onaylariKabulEt, rafAc, rafYenile, ayarlarAc } = require('./yardim');
+  onaylariKabulEt, rafAc, rafYenile, ayarlarAc, tehlikeAc } = require('./yardim');
 
 const YIL = new Date().getFullYear();
 
@@ -48,6 +48,7 @@ test.describe('G16 D2 — kütüphaneyi boşalt', () => {
     await rafAc(page);
     await page.evaluate(() => depoKaydet());        // anlık görüntü tabanı
     await ayarlarAc(page);
+    await tehlikeAc(page);
     await page.click('[data-act="tumunu-sil"]');
     await expect(page.locator('#toast')).toContainText('boşaltıldı');
     const s = await page.evaluate(() => ({
@@ -72,6 +73,7 @@ test.describe('G16 D2 — kütüphaneyi boşalt', () => {
     await rafAc(page);
     await page.evaluate(() => depoKaydet());
     await ayarlarAc(page);
+    await tehlikeAc(page);
     await page.click('[data-act="tumunu-sil"]');
     await rafYenile(page);
     const s = await page.evaluate(() => ({

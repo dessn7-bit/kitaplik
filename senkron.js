@@ -443,28 +443,34 @@
 
   /* ---------- arayüz ---------- */
   function kartEkle(){
-    const kap = document.querySelector('.yedek-wrap');
+    /* v56: konum YUVA ile sabit ("Senkron" bölümü). Eskiden .yedek-wrap'ın
+       BAŞINA sokuluyordu; katalog.js de aynısını yapıyordu, yani ikisinin
+       sırası hangisinin sonra koştuğuna bağlıydı. Yuva yoksa eski yola düşer. */
+    const yuva = document.getElementById('ayYuvaSenkron');
+    const kap = yuva || document.querySelector('.yedek-wrap');
     if(!kap || document.getElementById('senkronKart')) return;
     const kart = document.createElement('div');
-    kart.className = 'yedek-kart';
+    kart.className = 'ay-blok';
     kart.id = 'senkronKart';
     kart.innerHTML =
-      '<h3>Cihazlar arası senkron</h3>' +
-      '<p id="senkronDurum"></p>' +
+      '<h3 class="ay-baslik">Cihazlar arası senkron</h3>' +
+      '<p class="ay-not" id="senkronDurum"></p>' +
       '<div id="senkronForm">' +
         '<label for="s-oda">Oda adı</label>' +
         '<input id="s-oda" placeholder="ör. kabir-kitaplik-7431" autocomplete="off">' +
         '<label for="s-cihaz">Bu cihazın adı</label>' +
         '<input id="s-cihaz" placeholder="ör. Telefon" autocomplete="off">' +
-        '<div style="height:12px"></div>' +
-        '<button class="btn btn-cerceve" data-act="senkron-bagla">Bağlan ve senkronize et</button>' +
+        '<div class="ay-eylem" style="margin-top:12px">' +
+          '<button class="btn btn-cerceve" data-act="senkron-bagla">Bağlan ve senkronize et</button>' +
+        '</div>' +
       '</div>' +
       '<div id="senkronBagli" style="display:none">' +
-        '<button class="btn btn-cerceve" data-act="senkron-simdi">Şimdi senkronize et</button>' +
-        '<div style="height:8px"></div>' +
-        '<button class="btn btn-cerceve" data-act="senkron-kes">Bağlantıyı kes</button>' +
+        '<div class="ay-eylem">' +
+          '<button class="btn btn-cerceve" data-act="senkron-simdi">Şimdi senkronize et</button>' +
+          '<button class="btn btn-cerceve" data-act="senkron-kes">Bağlantıyı kes</button>' +
+        '</div>' +
       '</div>';
-    kap.insertBefore(kart, kap.firstChild);
+    yuva ? kap.appendChild(kart) : kap.insertBefore(kart, kap.firstChild);
   }
   function durumCiz(){
     const dEl = document.getElementById('senkronDurum');

@@ -268,7 +268,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     await ayarlarAc(page);
     const [indirme] = await Promise.all([
       page.waitForEvent('download'),
-      page.click('#ortuAyar .yedek-kart [data-act="disa-aktar"]')
+      page.click('#ortuAyar [data-act="disa-aktar"]')
     ]);
     const metin = fs.readFileSync(await indirme.path(), 'utf8');
     const icerik = JSON.parse(metin);

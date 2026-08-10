@@ -79,6 +79,14 @@ async function ayarlarAc(page) {
   await page.click('header [data-act="ayar-ac"]');
   await expect(page.locator('#ortuAyar')).toHaveClass(/acik/);
 }
+/* v56: "Kutuphaneyi bosalt" TEHLIKELI BOLGE'de ve KATLI geliyor — katlama burada
+   gezinme degil KAZA ENGELI (iki confirm'e ek ucuncu kasit katmani). Yikici
+   eylemi tiklayan vakalar once bolumu acar. */
+async function tehlikeAc(page) {
+  const d = page.locator('#ayBolumTehlike');
+  if (!(await d.evaluate(e => e.open))) await page.click('#ayBolumTehlike summary');
+  await expect(page.locator('#ortuAyar [data-act="tumunu-sil"]')).toBeVisible();
+}
 
 /* Ag taklidi. Ayar page.__agAyar uzerinden test sirasinde da degistirilebilir:
    { google: <GB yaniti|'hata'>, worker: <worker yaniti|'hata'>,
@@ -224,4 +232,4 @@ async function ayrintilarAc(page) {
 }
 
 module.exports = { test, expect, tohumla, sahteKitap, agTaklit, kameraTaklit, kameraYok,
-  onaylariKabulEt, bugunISO, rafAc, rafaGec, rafYenile, ayarlarAc, ayrintilarAc };
+  onaylariKabulEt, bugunISO, rafAc, rafaGec, rafYenile, ayarlarAc, tehlikeAc, ayrintilarAc };

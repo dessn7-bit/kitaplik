@@ -10,7 +10,7 @@
    altında, sayımlarda :visible. */
 'use strict';
 const { test, expect, tohumla, sahteKitap, bugunISO,
-  kameraTaklit, onaylariKabulEt, rafAc, ayarlarAc } = require('./yardim');
+  kameraTaklit, onaylariKabulEt, rafAc, ayarlarAc, tehlikeAc } = require('./yardim');
 
 const YIL = new Date().getFullYear();
 
@@ -298,9 +298,15 @@ test.describe('G30 — Ayarlar penceresi', () => {
     await ayarlarAc(page);
     const p = page.locator('#ortuAyar');
     for (const act of ['disa-aktar', 'csv-aktar', 'md-alinti', 'md-hepsi',
-      'gr-aktar', 'ice-aktar', 'kp-tum-sil', 'tumunu-sil', 'seri-ac']) {
+      'gr-aktar', 'ice-aktar', 'kp-tum-sil', 'seri-ac']) {
       await expect(p.locator(`[data-act="${act}"]`), act + ' düğmesi').toBeVisible();
     }
+    /* v56: "Kütüphaneyi boşalt" TEHLİKELİ BÖLGE'de ve katlı — kapalıyken
+       ÖZETİ görünür (bulunabilir), düğmesi değil (kaza engeli). */
+    await expect(p.locator('#ayBolumTehlike .ay-tehlike-ozet')).toBeVisible();
+    await expect(p.locator('[data-act="tumunu-sil"]')).toBeHidden();
+    await tehlikeAc(page);
+    await expect(p.locator('[data-act="tumunu-sil"]'), 'tumunu-sil düğmesi').toBeVisible();
     await expect(p.locator('#tmSecim .tm-dugme')).toHaveCount(3);   // tema
     await expect(p.locator('#senkronKart')).toBeVisible();          // senkron eklentisi
     await expect(p.locator('#katalogKart')).toBeVisible();          // seri tarama eklentisi
@@ -397,6 +403,7 @@ test.describe('G30 — Ayarlar penceresi', () => {
     await tohumla(page, [bitmisK(), okunanK()]);
     await page.goto('/');
     await ayarlarAc(page);
+    await tehlikeAc(page);
     await page.click('#ortuAyar [data-act="tumunu-sil"]');
     await expect(page.locator('#ortuAyar')).toHaveClass(/acik/);
     await page.keyboard.press('Escape');

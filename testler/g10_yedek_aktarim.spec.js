@@ -22,7 +22,7 @@ test.describe('G10 yedek ve aktarım', () => {
     const [indirme] = await Promise.all([
       page.waitForEvent('download'),
       // Kota uyarı şeridinde de aynı eylem var (M5); Yedek panelindekini hedefle.
-      page.click('#ortuAyar .yedek-kart [data-act="disa-aktar"]')
+      page.click('#ortuAyar [data-act="disa-aktar"]')
     ]);
     expect(indirme.suggestedFilename()).toMatch(/^kitaplik-yedek-.*\.json$/);
     const icerik = JSON.parse(fs.readFileSync(await indirme.path(), 'utf8'));

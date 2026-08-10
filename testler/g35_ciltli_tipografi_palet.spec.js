@@ -217,8 +217,10 @@ test.describe('G35 Ciltli tipografi + Palet A', () => {
     await rafAc(page);
     await page.click('[data-act="ayar-ac"]');
     await ciftleriDogrula(page, [
-      ['#ortuAyar .yedek-kart h3', '#ortuAyar .yedek-kart', 'kart başlığı'],
-      ['#ortuAyar .yedek-kart p', '#ortuAyar .yedek-kart', 'kart açıklaması'],
+      // v56: kutu emekli — bölüm başlığı/açıklaması artık .ay-baslik / .ay-not
+      ['#ortuAyar .ay-baslik', '#ortuAyar .ay-bolum', 'bölüm başlığı'],
+      ['#ortuAyar .ay-not', '#ortuAyar .ay-bolum', 'bölüm açıklaması'],
+      ['#ortuAyar .kicker', '#ortuAyar .ay-bolum', 'bölüm kicker'],
       ['#ortuAyar .btn-brass', null, 'pirinç düğme'],
       ['#ortuAyar .tm-dugme:not(.tm-secili)', null, 'tema düğmesi']
     ], 'ayarlar');
