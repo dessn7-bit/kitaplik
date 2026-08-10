@@ -12,7 +12,9 @@ function bitmis(ad, tur, yazar, puan, sayfa) {
 async function istAc(page) {
   await rafAc(page);
   await page.click('[data-act="sekme"][data-v="ist"]');
-  await expect(page.locator('#zkSarmal')).toBeVisible();
+  // v54: zekâ kartları tek sarmal yerine anlam YUVALARINA dağılıyor;
+  // sayfa hedefi bloğu her zaman çizilir → "yerleşti" göstergesi odur.
+  await expect(page.locator('#zkSayfaHedefKart')).toBeVisible();
 }
 
 /* --------- M1: tür / yazar puan analizi --------- */

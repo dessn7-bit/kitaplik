@@ -148,8 +148,10 @@ test.describe('G31 görsel dil', () => {
 
   /* ---------- M3 derinlik + kapaksız yer tutucu ---------- */
   /* v42 KARAR: Kütüphane satırları KART değil ÇİZGİ dilinde — kutu/gölge/yarıçap
-     yok, satırlar 1px ayraçla ayrılır. v47: Ana Sayfa da Ciltli'ye geçti; kutu
-     dili yalnız İstatistik/Alıntılar'da yaşıyor (sonraki sprint). */
+     yok, satırlar 1px ayraçla ayrılır. v47: Ana Sayfa Ciltli'ye geçti.
+     v54: İSTATİSTİK de geçti — bu vaka eskiden ".ist-kart gölgeli KALMALI"
+     diyerek kutu dilini DONDURUYORDU (projenin bilinen tuzağı: test kusuru da
+     dondurur). Artık ters yönde kilitliyor: İstatistik bölümü de dolgusuz. */
   test('Kütüphane satırı çizgi dilinde; kart kalan yüzeyler kendi içinde tutarlı', async ({ page }) => {
     await tohumla(page, [kitapAlinti()]);
     await page.goto('/');
@@ -166,9 +168,14 @@ test.describe('G31 görsel dil', () => {
     expect(kart.r, 'satırda yarıçap yok').toBe('0px');
     expect(kart.altCizgi, 'satır 1px ayraçla biter').toBe('1px');
     expect(kart.zemin, 'satır dolgusuz').toBe('rgba(0, 0, 0, 0)');
-    // kutu dili yalnız İstatistik'te yaşıyor; Ana Sayfa'da eski kutu sınıfı KALMADI (v47)
-    const istKart = await oku('#istIcerik .ist-kart');
-    expect(istKart.golge).not.toBe('none');
+    // v54: İstatistik bölümü de kutusuz — dolgu/gölge/yarıçap yok, kıl payı ayraç var
+    const istBolum = await oku('#istIcerik .is-bolum');
+    expect(istBolum.golge, 'istatistik bölümünde gölge yok').toBe('none');
+    expect(istBolum.r, 'istatistik bölümünde yarıçap yok').toBe('0px');
+    expect(istBolum.zemin, 'istatistik bölümü dolgusuz').toBe('rgba(0, 0, 0, 0)');
+    expect(istBolum.altCizgi, 'bölüm 1px ayraçla biter').toBe('1px');
+    expect(await page.evaluate(() => document.querySelectorAll('#istIcerik .ist-kart').length),
+      'eski kutu sınıfı kalmadı').toBe(0);
     const asKutu = await page.evaluate(() =>
       document.querySelectorAll('#anaIcerik .as-blok').length);
     expect(asKutu, "Ana Sayfa'da .as-blok kalmadı").toBe(0);
@@ -243,7 +250,7 @@ test.describe('G31 görsel dil', () => {
     await tohumla(page, [kitapAlinti()]);   // yalnız bu ay bitmiş 200 sayfa
     await page.goto('/');
     await page.click('nav [data-act="sekme"][data-v="ist"]');
-    const kartlar = page.locator('#istIcerik .ist-kart', { hasText: 'Aylık sayfa' });
+    const kartlar = page.locator('#istAylikSayfa');   // v54: katlanır bölüm (id ile kapsanır)
     await expect(kartlar.locator('.bar-satir')).toHaveCount(12);
     await expect(kartlar.locator('.bar-satir.bar-sifir')).toHaveCount(11);
     expect(await kartlar.locator('.bar-satir.bar-sifir .bar-govde > div').count()).toBe(0);

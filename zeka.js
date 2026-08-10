@@ -74,7 +74,7 @@
   function puanKartHtml(){
     const t = turOrtalamalari(), y = yazarOrtalamalari();
     if(!t.yeterli.length && !y.yeterli.length && !t.zayif.length && !y.zayif.length) return '';
-    let h = '<div class="zk-kart" id="zkPuanKart"><div class="zk-baslik">Neyden keyif alıyorsun?</div>';
+    let h = '<div class="zk-blok" id="zkPuanKart"><div class="zk-baslik">Neyden keyif alıyorsun?</div>';
     if(t.yeterli.length){
       h += '<div class="zk-alt-baslik">Türlere göre ortalama puanın</div>' + barSatirlari(t.yeterli);
     }
@@ -112,7 +112,7 @@
   function birakmaKartHtml(){
     const b = birakmaAnalizi();
     if(!b.bitti && !b.yarim) return '';
-    let h = '<div class="zk-kart" id="zkBirakmaKart"><div class="zk-baslik">Bitirme ve yarım kalanlar</div>';
+    let h = '<div class="zk-blok" id="zkBirakmaKart"><div class="zk-baslik">Bitirme ve yarım kalanlar</div>';
     if(b.oran === null){
       h += '<div class="zk-not">Henüz bitmiş ya da yarım kalmış kitap yok.</div>';
       return h + '</div>';
@@ -164,10 +164,16 @@
         + '<div class="zk-bar-govde"><div style="width:' + Math.round(v / enB * 100) + '%"></div></div>'
         + '<div class="zk-bar-deger">' + v + '</div></div>';
     }).join('');
-    return '<div class="zk-kart" id="zkAylikKart"><div class="zk-baslik">Fiilen okuduğun sayfa (son 12 ay)</div>'
-      + '<div class="zk-not">Oturum kayıtlarından: sayfalar hangi ay okunduysa o aya yazılır. '
+    /* Uzun liste (12 satır) KATLI gelir — özet satırı toplamı taşır, yani
+       katlama sayıyı değil yalnız dökümü gizler (çekirdeğin istKatla kararı). */
+    const ic = '<div class="zk-not">Oturum kayıtlarından: sayfalar hangi ay okunduysa o aya yazılır. '
       + 'Yukarıdaki “Aylık sayfa” grafiği ise bitirdiğin kitapların hacmini bitiş ayına yazar — ikisi farklı sorulara cevap verir.</div>'
-      + satirlar + '</div>';
+      + satirlar;
+    const govde = (typeof istKatla === 'function')
+      ? istKatla('zkAylikKatla', 'Fiilen okuduğun sayfa (son 12 ay)',
+          'oturumlardan ' + a.toplam.toLocaleString('tr') + ' sayfa', ic)
+      : '<div class="zk-baslik">Fiilen okuduğun sayfa (son 12 ay)</div>' + ic;
+    return '<div class="zk-blok" id="zkAylikKart">' + govde + '</div>';
   }
 
   /* ---------- M4: saat bazlı alışkanlık ---------- */
@@ -189,7 +195,7 @@
   function saatKartHtml(){
     const s = saatDagilimi();
     if(!s.toplamOturum) return '';
-    let h = '<div class="zk-kart" id="zkSaatKart"><div class="zk-baslik">Günün hangi saatinde okuyorsun?</div>';
+    let h = '<div class="zk-blok" id="zkSaatKart"><div class="zk-baslik">Günün hangi saatinde okuyorsun?</div>';
     if(!s.yeterli){
       h += '<div class="zk-not" id="zkSaatYetersiz">Yeterli veri yok — dağılım için en az ' + SAAT_ESIK
         + ' okuma oturumu gerekiyor (şu an ' + s.toplamOturum + ').</div>';
@@ -232,12 +238,12 @@
   }
   function sayfaHedefKartHtml(){
     const d = sayfaHedefDurum();
-    let h = '<div class="zk-kart" id="zkSayfaHedefKart"><div class="zk-baslik">' + d.yil + ' sayfa hedefi</div>';
+    let h = '<div class="zk-blok" id="zkSayfaHedefKart"><div class="ist-bolum-baslik">Sayfa hedefi</div>';
     if(d.hedef > 0){
       const tempo = d.projeksiyon >= d.hedef
         ? 'Bu tempoyla yıl sonunda ~<b class="zk-iyi">' + d.projeksiyon.toLocaleString('tr') + '</b> sayfa — hedefin üstünde.'
         : 'Bu tempoyla yıl sonu projeksiyonu ~<b class="zk-dusuk">' + d.projeksiyon.toLocaleString('tr') + '</b> sayfa — tempo artmalı.';
-      h += '<div class="zk-bar" id="zkSayfaBar"><div style="width:' + d.yuzde + '%"></div></div>'
+      h += '<div class="ilerleme" id="zkSayfaBar"><div style="width:' + d.yuzde + '%"></div></div>'
         + '<div class="zk-not"><b class="zk-vurgu">' + d.ilerleme.toLocaleString('tr') + ' / '
         + d.hedef.toLocaleString('tr') + '</b> sayfa (%' + d.yuzde + '). ' + tempo
         + '<br>Bitirdiğin ' + d.kitapSayisi + ' kitabın sayfa toplamı sayılır (sayfa sayısı girilmiş olanlar).</div>';
@@ -272,48 +278,67 @@
     if(document.getElementById('zkStil')) return;
     const s = document.createElement('style');
     s.id = 'zkStil';
+    /* v54 Ciltli: kutu dili emekli — kartlar artık İstatistik bölümlerinin
+       içindeki bloklar. Çubuklarda ray YOK (çekirdeğin .bar-* reçetesiyle aynı
+       karar), ilerleme çubuğu ortak .ilerleme kalıbını kullanıyor, düğme kontur. */
     s.textContent = `
-      .zk-kart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-        padding:14px;box-shadow:var(--yukselti-1);margin-top:14px}
+      .zk-blok{margin-top:18px}
+      .is-yuva > .zk-blok:first-child{margin-top:0}
       .zk-baslik{font-family:var(--serif);font-size:1.05rem}
-      .zk-alt-baslik{font-size:.8rem;color:var(--muted2);margin:10px 0 2px;letter-spacing:.03em}
+      .zk-alt-baslik{font-size:.72rem;color:var(--muted2);margin:14px 0 2px;
+        letter-spacing:.06em;text-transform:uppercase}
       .zk-not{font-size:.8rem;color:var(--muted);margin-top:8px;line-height:1.55}
-      .zk-buyuk{font-family:var(--serif);font-size:1.7rem;color:var(--brass);margin-top:8px}
+      .zk-buyuk{font-family:var(--serif);font-size:1.5rem;line-height:1.1;color:var(--paper);
+        margin-top:8px;font-variant-numeric:tabular-nums}
       .zk-vurgu{color:var(--brass);font-weight:600}
       .zk-iyi{color:var(--ok)}
       .zk-dusuk{color:var(--drop)}
       .zk-bar-satir{display:flex;align-items:center;gap:8px;margin-top:8px}
       .zk-bar-ad{flex:0 0 96px;font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .zk-bar-govde{flex:1;height:14px;background:var(--surface2);border-radius:999px;overflow:hidden}
-      .zk-bar-govde > div{height:100%;background:var(--brass-dim);border-radius:999px}
-      .zk-bar-deger{flex:0 0 30px;text-align:right;font-size:.8rem;color:var(--muted)}
-      .zk-bar-adet{flex:0 0 58px;text-align:right;font-size:.7rem;color:var(--muted2)}
+      .zk-bar-govde{flex:1;height:6px;background:transparent;overflow:hidden}
+      .zk-bar-govde > div{height:100%;background:var(--brass)}
+      .zk-bar-deger{flex:0 0 30px;text-align:right;font-size:.8rem;color:var(--muted);
+        font-variant-numeric:tabular-nums}
+      .zk-bar-adet{flex:0 0 58px;text-align:right;font-size:.66rem;color:var(--muted2);
+        font-variant-numeric:tabular-nums}
       .zk-satir{display:flex;justify-content:space-between;gap:10px;font-size:.8rem;color:var(--muted);margin-top:8px}
       .zk-satir span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      .zk-bar{height:12px;background:var(--surface2);border-radius:999px;overflow:hidden;margin-top:12px}
-      .zk-bar > div{height:100%;background:var(--brass);border-radius:999px;transition:width .4s}
       .zk-satir-giris{display:flex;gap:8px;margin-top:12px}
       .zk-satir-giris input{width:100px}
-      .zk-dugme{flex:0 0 auto;padding:10px 12px;border-radius:var(--r-ic);border:1px solid var(--border);
-        background:var(--surface2);color:var(--paper);font-size:.85rem;font-weight:600}
+      .zk-dugme{flex:0 0 auto;padding:12px 16px;border-radius:var(--r-md);
+        border:1px solid var(--cizgi);background:transparent;color:var(--paper);
+        font-family:var(--serif);font-size:.9rem;font-weight:600}
     `;
     document.head.appendChild(s);
   }
+  /* v54: kartlar artık ekranın SONUNA yığılmıyor — çekirdeğin açtığı anlam
+     yuvalarına dağılıyor (hedef / alışkanlık / zevk / tarihçe). Yuvalar DOM
+     sırasında da doğru yerde: görsel sıra ile okuma-klavye sırası ayrışmıyor
+     (CSS `order` ile yapılsaydı ayrışırdı). */
+  const BLOKLAR = ['zkSayfaHedefKart', 'zkPuanKart', 'zkBirakmaKart', 'zkAylikKart', 'zkSaatKart'];
+  function yuvaya(yuvaId, html){
+    if(!html) return;
+    const y = document.getElementById(yuvaId);
+    if(!y) return;
+    const d = document.createElement('div');
+    d.innerHTML = html;
+    while(d.firstChild) y.appendChild(d.firstChild);
+  }
   function zekaEkle(){
     const kap = document.getElementById('istIcerik');
-    if(!kap || document.getElementById('zkSarmal')) return;
+    // sayfaHedefKartHtml HER ZAMAN içerik üretir → varlığı "zaten yerleşti" demek
+    if(!kap || document.getElementById('zkSayfaHedefKart')) return;
     if(!kitaplar().length) return;                     // boş kütüphanede istatistik zaten çizilmiyor
-    if(!kap.querySelector('.ist-kart')) return;        // çekirdek henüz çizmemiş
+    if(!kap.querySelector('.is-bolum')) return;        // çekirdek henüz çizmemiş
     stilEkle();
-    const sarmal = document.createElement('div');
-    sarmal.id = 'zkSarmal';
-    sarmal.innerHTML = sayfaHedefKartHtml() + puanKartHtml() + birakmaKartHtml()
-      + aylikKartHtml() + saatKartHtml();
-    kap.appendChild(sarmal);
+    yuvaya('istYuvaHedef', sayfaHedefKartHtml());
+    yuvaya('istYuvaZevk', puanKartHtml());
+    yuvaya('istYuvaAliskanlik', birakmaKartHtml() + saatKartHtml());
+    yuvaya('istYuvaTarihce', aylikKartHtml());
+    if(typeof istBolumTemizle === 'function') istBolumTemizle();
   }
   function tazele(){
-    const eski = document.getElementById('zkSarmal');
-    if(eski) eski.remove();
+    BLOKLAR.forEach(id => { const e = document.getElementById(id); if(e) e.remove(); });
     zekaEkle();
   }
 

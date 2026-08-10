@@ -219,35 +219,44 @@
     if(document.getElementById('rpStil')) return;
     const s = document.createElement('style');
     s.id = 'rpStil';
+    /* v54 Ciltli: kutu/hap/dolgu dili emekli. Kart → bölüm içi blok; yıl hapları
+       → kontur çip (.ks-chip reçetesi: seçili = altın kontur + %7 tint, DOLGU
+       DEĞİL); sayı kutuları → ayraçlı hücre; PNG düğmesi altın KONTUR.
+       PNG tuvali bundan etkilenmez: krem palet canvas'ta sabit, tema bağımsız. */
     s.textContent = `
-      .rp-kart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-        padding:14px;box-shadow:var(--yukselti-1);margin-top:14px}
-      .rp-baslik{font-family:var(--serif);font-size:1.05rem}
-      .rp-yillar{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:4px;scrollbar-width:none}
+      .rp-blok{margin-top:0}
+      .rp-yillar{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
       .rp-yillar::-webkit-scrollbar{display:none}
-      .rp-yil{flex:0 0 auto;padding:6px 12px;border-radius:999px;border:1px solid var(--border);
-        background:var(--surface2);color:var(--muted);font-size:.8rem}
-      .rp-yil.rp-secili{background:var(--brass);color:var(--uzeri);border-color:var(--brass);font-weight:600}
+      .rp-yil{flex:0 0 auto;padding:7px 12px;border-radius:var(--r-sm);border:1px solid var(--cizgi);
+        background:transparent;color:var(--muted);font-size:.78rem;white-space:nowrap}
+      .rp-yil.rp-secili{border-color:var(--brass);color:var(--paper);font-weight:600;
+        background:color-mix(in srgb,var(--brass) 7%,transparent)}
       .rp-not{font-size:.8rem;color:var(--muted);margin-top:9px;line-height:1.55}
-      .rp-sayilar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-      .rp-kutu{background:var(--surface2);border-radius:10px;padding:10px 12px}
-      .rp-sayi{font-family:var(--serif);font-size:1.5rem;color:var(--brass)}
-      .rp-etiket{font-size:.72rem;color:var(--muted);margin-top:2px}
-      .rp-bolum{font-size:.76rem;color:var(--muted2);margin:14px 0 4px;letter-spacing:.03em}
+      .rp-sayilar{display:flex;flex-wrap:wrap;row-gap:14px;margin-top:14px}
+      .rp-kutu{flex:1 1 40%;min-width:0;padding:0 12px;border-left:1px solid var(--cizgi)}
+      .rp-sayilar .rp-kutu:nth-child(2n+1){padding-left:0;border-left:none}
+      .rp-sayi{display:block;font-family:var(--serif);font-size:1.5rem;line-height:1.1;
+        color:var(--paper);font-variant-numeric:tabular-nums}
+      .rp-etiket{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
+        color:var(--muted);margin-top:5px}
+      .rp-bolum{font-size:.72rem;color:var(--muted2);margin:16px 0 4px;
+        letter-spacing:.06em;text-transform:uppercase}
       .rp-satir{display:flex;justify-content:space-between;gap:10px;font-size:.85rem;
-        color:var(--paper);padding:6px 0;border-bottom:1px solid var(--border)}
+        color:var(--paper);padding:7px 0;border-bottom:1px solid var(--cizgi)}
       .rp-satir:last-child{border-bottom:none}
       .rp-satir span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .rp-vurgu{color:var(--brass);font-weight:600;white-space:nowrap}
       .rp-aylar{display:flex;gap:3px;align-items:flex-end;height:56px;margin-top:10px}
-      .rp-ay{flex:1;background:var(--brass-dim);border-radius:3px 3px 0 0;min-height:3px} /* mikro grafik istisnası (999 hap grafikte yanlış durur) */
+      .rp-ay{flex:1;background:var(--brass);border-radius:0;min-height:2px}
       .rp-ay-etiket{display:flex;gap:3px;margin-top:4px}
       .rp-ay-etiket span{flex:1;text-align:center;font-size:.6rem;color:var(--muted2)}
       .rp-hedef{font-size:.82rem;margin-top:8px;color:var(--muted)}
       .rp-tuttu{color:var(--ok);font-weight:600}
       .rp-tutmadi{color:var(--drop);font-weight:600}
-      .rp-dugme{width:100%;margin-top:14px;padding:12px 16px;border-radius:var(--r-ic); /* .btn ile aynı reçete */
-        background:var(--brass);color:var(--uzeri);font-size:.9rem;font-weight:600}
+      .rp-dugme{width:100%;margin-top:16px;padding:12px 16px;border-radius:var(--r-md);
+        background:transparent;border:1px solid var(--brass);color:var(--brass);
+        font-family:var(--serif);font-size:.95rem;font-weight:600;
+        display:inline-flex;align-items:center;justify-content:center;gap:6px}
     `;
     document.head.appendChild(s);
   }
@@ -257,7 +266,7 @@
     if(!seciliYil || ys.indexOf(seciliYil) < 0) seciliYil = ys[0];
     const o = yilOzeti(seciliYil);
     const k = karsilastir(seciliYil);
-    let h = '<div class="rp-kart" id="rpKart"><div class="rp-baslik">Yıl sonu okuma raporu</div>'
+    let h = '<div class="rp-blok" id="rpKart">'
       + '<div class="rp-yillar" id="rpYillar">'
       + ys.map(y => '<button class="rp-yil' + (y === seciliYil ? ' rp-secili' : '')
         + '" data-act="rp-yil" data-v="' + y + '">' + y + '</button>').join('')
@@ -328,13 +337,15 @@
     if(!kap) return;
     if(!document.getElementById('panel-ist')
        || !document.getElementById('panel-ist').classList.contains('active')) return;
-    if(!kap.querySelector('.ist-kart')) return;
+    if(!kap.querySelector('.is-bolum')) return;
     const eski = document.getElementById('rpKart');
     if(eski) eski.remove();
     stilEkle();
     const sar = document.createElement('div');
     sar.innerHTML = kartHtml();
-    kap.appendChild(sar.firstElementChild);
+    // v54: rapor kendi bölümünün YUVASINA girer (ekran sonuna yığılmaz)
+    (document.getElementById('istYuvaRapor') || kap).appendChild(sar.firstElementChild);
+    if(typeof istBolumTemizle === 'function') istBolumTemizle();
   }
 
   function pngIndir(){

@@ -199,11 +199,15 @@ test.describe('G35 Ciltli tipografi + Palet A', () => {
     ], 'alıntılar');
     await page.click('nav [data-act="sekme"][data-v="ist"]');
     await ciftleriDogrula(page, [
-      ['#istIcerik .ist-sayi', '#istIcerik .ist-kart', 'istatistik sayısı'],
-      ['#istIcerik .ist-etiket', '#istIcerik .ist-kart', 'istatistik etiketi'],
-      ['#istIcerik .bar-ad', '#istIcerik .ist-kart', 'çubuk adı'],
-      ['#istIcerik .mini-not', '#istIcerik .ist-kart', 'mini not'],
-      ['#istIcerik .ist-bolum-baslik', '#istIcerik .ist-kart', 'bölüm başlığı']
+      ['#istIcerik .is-hero-sayi', '#istIcerik .is-hero', 'hero sayısı'],
+      ['#istIcerik .is-hucre-ad', '#istIcerik .is-hero', 'hero etiketi'],
+      ['#istIcerik .ist-sayi', '#istIcerik .is-bolum', 'istatistik sayısı'],
+      ['#istIcerik .ist-etiket', '#istIcerik .is-bolum', 'istatistik etiketi'],
+      ['#istIcerik .is-payda', '#istIcerik .is-bolum', 'payda'],
+      ['#istIcerik .kicker', '#istIcerik .is-bolum', 'bölüm kicker'],
+      ['#istIcerik .bar-ad', '#istIcerik .is-bolum', 'çubuk adı'],
+      ['#istIcerik .mini-not', '#istIcerik .is-bolum', 'mini not'],
+      ['#istIcerik .ist-bolum-baslik', '#istIcerik .is-bolum', 'bölüm başlığı']
     ], 'istatistik');
   });
 

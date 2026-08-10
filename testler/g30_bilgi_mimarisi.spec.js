@@ -511,10 +511,10 @@ test.describe('G30 — geçiş ve tutarlılık', () => {
   test('eklenti zeka.js + rapor.js İstatistik sekmesinde tetiklenir', async ({ page }) => {
     await tohumla(page, [bitmisK({ ad: 'A' }), bitmisK({ ad: 'B', puan: 6 })]);
     await page.goto('/');
-    await expect(page.locator('#zkSarmal')).toHaveCount(0);   // Ana Sayfa'da yok
+    await expect(page.locator('#zkSayfaHedefKart')).toHaveCount(0);   // Ana Sayfa'da yok
     await expect(page.locator('#rpKart')).toHaveCount(0);
     await page.click('nav [data-act="sekme"][data-v="ist"]');
-    await expect(page.locator('#panel-ist #zkSarmal')).toBeVisible();
+    await expect(page.locator('#panel-ist #zkSayfaHedefKart')).toBeVisible();
     await expect(page.locator('#panel-ist #rpKart')).toBeVisible();
   });
 

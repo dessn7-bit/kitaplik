@@ -399,25 +399,75 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.panel.active,.sheet{animation:none!important}}
 
-/* İstatistik */
-.ist-wrap{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
-.ist-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.ist-kart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--yukselti-1)}
-.ist-sayi{font-family:var(--serif);font-size:1.7rem;color:var(--brass)}
-.ist-etiket{font-size:.75rem;color:var(--muted);margin-top:3px}
-.ist-bolum-baslik{font-family:var(--serif);font-size:1.05rem}
+/* ---------- İstatistik → "Rakamlar" (is-, v54 Ciltli) ----------
+   KUTU DİLİ EMEKLİ: .ist-kart'ın zemin/kontur/yarıçap/gölgesi kaldırıldı —
+   ekran artık Ana Sayfa/Kütüphane ile aynı dilde: kıl payı ayraçlı bölümler,
+   kicker etiketler, Cormorant tabular sayılar. `.ist-sayi/.ist-etiket/.bar-*`
+   ADLARI KORUNDU (yalnız reçeteleri değişti): bu sınıflar zaten İstatistik'e
+   özgü, yeniden adlandırmak testleri bedava kırardı. `.ist-kart` ve `.ist-grid`
+   ise ANLAMINI kaybetti (artık kart yok) — kaldırıldılar. */
+.ist-wrap{padding:2px 16px 24px}
+.is-ust{padding:0 0 10px}
+.is-baslik{font-family:var(--serif);font-size:1.8rem;font-weight:400;line-height:1.15;margin-top:2px}
+.is-ozet{font-size:.78rem;color:var(--muted);margin-top:5px;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums}
+/* HERO: ekranın cevaplaması gereken ilk soru — "bu yıl nasıl gidiyorum?".
+   Ana Sayfa'nın üç-hücre deseniyle (.as-bugun) aynı reçete, bir punto büyük;
+   hiyerarşi kutuyla değil TİPOGRAFİYLE kuruluyor. */
+.is-hero{display:flex;padding-bottom:14px;border-bottom:1px solid var(--cizgi)}
+.is-hucre{flex:1;min-width:0;padding:0 12px;border-left:1px solid var(--cizgi)}
+.is-hero .is-hucre:first-child{padding-left:0;border-left:none}
+.is-hero-sayi{display:block;font-family:var(--serif);font-size:2.1rem;line-height:1.05;
+  color:var(--paper);font-variant-numeric:tabular-nums}
+.is-hucre-ad{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin-top:6px}
+/* Bölüm: kutu değil kıl payı ayraç (.kt-bolum ile aynı reçete, ayrı ad alanı —
+   kt- seçicileri Kütüphane/Ana Sayfa testlerinde belge geneli sayılıyor). */
+.is-bolum{padding:14px 0 16px;border-bottom:1px solid var(--cizgi)}
+.is-bolum[hidden]{display:none}   /* UA kuralına güvenme: açıkça kapat */
+.is-bolum-bas{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  margin-bottom:10px}
+.is-toplam{display:flex;flex-wrap:wrap;row-gap:14px}
+.is-toplam .is-hucre{flex:1 1 40%}
+.is-toplam .is-hucre:nth-child(2n+1){padding-left:0;border-left:none}
+.ist-sayi{display:block;font-family:var(--serif);font-size:1.5rem;line-height:1.1;
+  color:var(--paper);font-variant-numeric:tabular-nums}
+.ist-etiket{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin-top:5px}
+/* PAYDA ("N kitaptan"): sayının tabanı — etiketin ALTINDA, kısık ve tabular.
+   Parantezli yazım korundu: uygulamanın her yerinde (rapor, zekâ) aynı notasyon
+   kullanılıyor, tek biçim iki karakterden değerli. */
+.is-payda{display:block;font-size:.66rem;color:var(--muted2);letter-spacing:.02em;
+  margin-top:3px;font-variant-numeric:tabular-nums;text-transform:none}
+.is-blok{margin-top:18px}
+.is-yuva > .is-blok:first-child{margin-top:0}
+.ist-bolum-baslik{font-family:var(--serif);font-size:1.05rem;margin-top:14px}
+.is-bolum-bas + .ist-bolum-baslik,.is-yuva > :first-child .ist-bolum-baslik{margin-top:0}
+/* ÇUBUK: kanal YOK — mürekkep doğrudan kâğıdın üstünde. Ciltli'de kap yok;
+   değer zaten sağda yazılı olduğu için boş rayın taşıdığı bilgi de yok.
+   (Eski 999px hap + dolu ray dili emekli.) */
 .bar-satir{display:flex;align-items:center;gap:10px;margin-top:8px}
 .bar-ad{flex:0 0 92px;font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bar-govde{flex:1;height:16px;background:var(--surface2);border-radius:999px;overflow:hidden}
-.bar-govde > div{height:100%;background:var(--brass-dim);border-radius:999px}
-.bar-deger{flex:0 0 34px;text-align:right;font-size:.8rem;color:var(--muted)}
+.bar-govde{flex:1;height:6px;background:transparent;border-radius:0;overflow:hidden}
+.bar-govde > div{height:100%;background:var(--brass);border-radius:0}
+.bar-deger{flex:0 0 34px;text-align:right;font-size:.8rem;color:var(--muted);
+  font-variant-numeric:tabular-nums}
 /* Sıfır aylar: dolu genişlikte boş ray çizmek 9 satırlık gürültü üretiyordu.
    Sıfır satırı SESSİZLEŞİR: ray çizilmez, ay adı ve değer soluklaşır — zaman
    ekseni bütün kalır (12 ay durur), ama göz yalnız veri olan aylara takılır. */
 .bar-satir.bar-sifir{opacity:.45;margin-top:6px}
-.bar-satir.bar-sifir .bar-govde{background:none;height:1px;border-top:1px dashed var(--border)}
-.hedef-bar{height:12px;background:var(--surface2);border-radius:999px;overflow:hidden;margin-top:12px}
-.hedef-bar > div{height:100%;background:var(--brass);border-radius:999px;transition:width .4s}
+.bar-satir.bar-sifir .bar-govde{background:none;height:1px;border-top:1px dashed var(--cizgi)}
+/* KATLANIR uzun liste: yerli <details> — klavyeyle çalışır, JS istemez, DOM'da
+   kalır (formdaki #fAyrintilar deseni). ÖZET SATIRI BOŞ DEĞİL: kapalıyken bile
+   başlık sayısını taşır, yani katlama SAYIYI değil yalnız DÖKÜMÜ gizler. */
+.is-katla{margin-top:16px}
+.is-katla > summary{list-style:none;display:flex;align-items:baseline;gap:8px}
+.is-katla > summary::-webkit-details-marker{display:none}
+.is-katla-ad{font-family:var(--serif);font-size:1.05rem;flex:0 0 auto}
+.is-katla-ozet{flex:1;min-width:0;font-size:.75rem;color:var(--muted2);
+  font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.is-katla-ok{flex:0 0 auto;font-size:.7rem;color:var(--brass);letter-spacing:.08em;
+  text-transform:uppercase}
 .hedef-satir{display:flex;gap:8px;margin-top:12px}
 .hedef-satir input{width:90px}
 .mini-not{font-size:.8rem;color:var(--muted);margin-top:8px;line-height:1.5}
@@ -660,7 +710,12 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 }
 @media (min-width:1000px){
   #liste{grid-template-columns:1fr 1fr 1fr}
-  .ist-grid{grid-template-columns:1fr 1fr 1fr 1fr}
+  /* Geniş ekranda Toplam/rapor hücreleri tek sıraya açılır (mobilde 2×2) */
+  .is-toplam .is-hucre,.rp-sayilar .rp-kutu{flex:1 1 0}
+  .is-toplam .is-hucre:nth-child(2n+1),.rp-sayilar .rp-kutu:nth-child(2n+1){
+    padding-left:12px;border-left:1px solid var(--cizgi)}
+  .is-toplam .is-hucre:first-child,.rp-sayilar .rp-kutu:first-child{
+    padding-left:0;border-left:none}
 }
 /* Ciltli toast (v42): koyu dolgu yerine zemin + altın kontur (tasarım kalıbı) */
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);
@@ -2225,60 +2280,159 @@ function istKayit(k){
   return { ...k, durum:'bitti', bitisTarihi: son.bit, baslamaTarihi: son.bas || null,
     puan: (son.puan >= 1 && son.puan <= 10) ? son.puan : null };
 }
+/* Katlanır uzun liste üreticisi. ÖZET her zaman gerçek veriden bir cümle taşır:
+   kapalıyken bile başlığın sayısı görünür, katlama yalnız DÖKÜMÜ gizler. */
+function istKatla(id, ad, ozet, ic){
+  return `<details class="is-katla" id="${id}"><summary>
+    <span class="is-katla-ad">${ad}</span><span class="is-katla-ozet">${ozet}</span>
+    <span class="is-katla-ok">Döküm</span></summary>${ic}</details>`;
+}
+function istBar(ad, deger, oran, ekSinif){
+  return `<div class="bar-satir${ekSinif || ''}"><div class="bar-ad">${ad}</div>
+    <div class="bar-govde">${oran === null ? '' : `<div style="width:${oran}%"></div>`}</div>
+    <div class="bar-deger">${deger}</div></div>`;
+}
+/* Kicker'lı ama içi boş bölüm "veri yok" demez, sadece kafa karıştırır — gizlenir.
+   Eklentiler yuvalarını SONRA doldurduğu için çizim sırasının her adımında
+   (çekirdek → zeka → rapor) yeniden çağrılır. */
+function istBolumTemizle(){
+  document.querySelectorAll('#istIcerik .is-bolum').forEach(b => {
+    const dolu = [...b.children].some(c => !c.classList.contains('is-bolum-bas')
+      && c.textContent.trim() !== '');
+    b.hidden = !dolu;
+  });
+}
 function istCiz(){
   const kap = document.getElementById('istIcerik');
   const ks = veri.kitaplar;
+  if(!ks.length){
+    kap.innerHTML = `<div class="bos"><div class="b-ikon">${ikon('istatistik')}</div><p>İstatistik için önce kitap eklemen gerek.</p></div>`;
+    return;
+  }
   const bittiler = ks.map(istKayit).filter(Boolean);
   const yil = new Date().getFullYear();
   const buYil = bittiler.filter(k => k.bitisTarihi && k.bitisTarihi.startsWith(String(yil)));
   const toplamSayfa = bittiler.reduce((t,k) => t + (k.sayfa||0), 0);
+  const buYilSayfa = buYil.reduce((t,k) => t + (k.sayfa||0), 0);
   const puanlilar = bittiler.filter(k => k.puan);
   const ortPuan = puanlilar.length
     ? (puanlilar.reduce((t,k) => t + k.puan, 0) / puanlilar.length).toFixed(1) : '—';
+  const sy = n => n.toLocaleString('tr');
 
-  // hedef
   const hedef = veri.hedef[yil] || 0;
   const gunNo = Math.floor((new Date() - new Date(yil,0,0)) / 86400000);
   const projeksiyon = gunNo > 0 ? Math.round(buYil.length / gunNo * 365) : 0;
-  let hedefHtml = `<div class="ist-kart"><div class="ist-bolum-baslik">${yil} okuma hedefi</div>`;
+  const hedefYuzde = hedef > 0 ? Math.min(100, Math.round(buYil.length / hedef * 100)) : null;
+
+  /* ---- ÜST + HERO: "bu yıl nasıl gidiyorum?" — ekranın ilk sorusu ---- */
+  let html = `<div class="is-ust"><span class="kicker">Rakamlar</span>
+    <h2 class="is-baslik">Okuma haritan</h2>
+    <div class="is-ozet">${sy(ks.length)} kitap · ${sy(bittiler.length)} bitmiş · ${sy(puanlilar.length)} puanlı</div></div>
+    <div class="is-hero" id="istHero">
+      <div class="is-hucre"><span class="is-hero-sayi">${sy(buYil.length)}</span>
+        <span class="is-hucre-ad">${yil} · kitap</span></div>
+      <div class="is-hucre"><span class="is-hero-sayi">${sy(buYilSayfa)}</span>
+        <span class="is-hucre-ad">${yil} · sayfa</span></div>
+      <div class="is-hucre"><span class="is-hero-sayi" id="istHeroHedef">${hedefYuzde === null ? '—' : '%' + hedefYuzde}</span>
+        <span class="is-hucre-ad">${hedefYuzde === null ? 'hedef koymadın' : yil + ' hedefi'}</span></div>
+    </div>`;
+
+  /* ---- TOPLAM: tüm zamanlar; payda ("N kitaptan") burada yaşar ---- */
+  const puansizBitmis = bittiler.filter(k => !k.puan).length;
+  html += `<section class="is-bolum" id="istBolumToplam">
+    <div class="is-bolum-bas"><span class="kicker">Toplam</span></div>
+    <div class="is-toplam">
+      <div class="is-hucre"><span class="ist-sayi">${sy(bittiler.length)}</span><span class="ist-etiket">Bitirilen kitap</span></div>
+      <div class="is-hucre"><span class="ist-sayi">${sy(buYil.length)}</span><span class="ist-etiket">${yil} içinde bitirilen</span></div>
+      <div class="is-hucre"><span class="ist-sayi">${sy(toplamSayfa)}</span><span class="ist-etiket">Okunan toplam sayfa</span></div>
+      <div class="is-hucre"><span class="ist-sayi" id="istOrtPuan">${ortPuan}</span><span class="ist-etiket">Ortalama puan${puanlilar.length ? ` <span class="is-payda">(${puanlilar.length} kitaptan)</span>` : ''}</span></div>
+    </div>`;
+  if(puansizBitmis){
+    html += `<div class="mini-not" id="istPuansiz">${puansizBitmis} bitmiş kitap henüz puansız —
+      <button class="d-link" data-act="puansiz-git">rafta göster, puanla</button></div>`;
+  }
+  html += `</section>`;
+
+  /* ---- 1) HEDEFLER: kitap hedefi burada, sayfa hedefi (zeka.js) yuvada ---- */
+  html += `<section class="is-bolum" id="istBolumHedef">
+    <div class="is-bolum-bas"><span class="kicker">${yil} hedefleri</span></div>
+    <div class="ist-bolum-baslik">Kitap hedefi</div>`;
   if(hedef > 0){
-    const p = Math.min(100, Math.round(buYil.length / hedef * 100));
     const tempoTxt = projeksiyon >= hedef
       ? `Bu tempoyla yıl sonunda ~<b style="color:var(--ok)">${projeksiyon}</b> kitap — hedefin üstünde.`
       : `Bu tempoyla yıl sonu projeksiyonu ~<b style="color:var(--drop)">${projeksiyon}</b> kitap — tempo artmalı.`;
-    hedefHtml += `<div class="hedef-bar"><div style="width:${p}%"></div></div>
-      <div class="mini-not"><b style="color:var(--brass)">${buYil.length} / ${hedef}</b> kitap (%${p}). ${tempoTxt}</div>`;
+    html += `<div class="ilerleme"><div style="width:${hedefYuzde}%"></div></div>
+      <div class="mini-not"><b style="color:var(--brass)">${buYil.length} / ${hedef}</b> kitap (%${hedefYuzde}). ${tempoTxt}</div>`;
   }else{
-    hedefHtml += `<div class="mini-not">Hedef koy, tempo takibini ben yapayım.</div>`;
+    html += `<div class="mini-not">Hedef koy, tempo takibini ben yapayım.</div>`;
   }
-  hedefHtml += `<div class="hedef-satir">
-    <input type="number" inputmode="numeric" min="1" id="hedefInput" placeholder="adet" value="${hedef || ''}">
-    <button class="btn btn-cerceve" style="width:auto" data-act="hedef-kaydet">Hedefi kaydet</button>
-  </div></div>`;
+  html += `<div class="hedef-satir">
+      <input type="number" inputmode="numeric" min="1" id="hedefInput" placeholder="adet" value="${hedef || ''}">
+      <button class="btn btn-cerceve" style="width:auto" data-act="hedef-kaydet">Hedefi kaydet</button>
+    </div>
+    <div class="is-yuva" id="istYuvaHedef"></div></section>`;
 
-  // Ortalama puanın TABANI görünür: kaç kitaptan hesaplandı; puansız bitmişler
-  // görünmez kalmasın diye rafa köprü (puansiz filtresi) verilir.
-  const puansizBitmis = bittiler.filter(k => !k.puan).length;
-  let html = hedefHtml + `<div class="ist-grid">
-    <div class="ist-kart"><div class="ist-sayi">${bittiler.length}</div><div class="ist-etiket">Bitirilen kitap</div></div>
-    <div class="ist-kart"><div class="ist-sayi">${buYil.length}</div><div class="ist-etiket">${yil} içinde bitirilen</div></div>
-    <div class="ist-kart"><div class="ist-sayi">${toplamSayfa.toLocaleString('tr')}</div><div class="ist-etiket">Okunan toplam sayfa</div></div>
-    <div class="ist-kart"><div class="ist-sayi">${ortPuan}</div><div class="ist-etiket">Ortalama puan${puanlilar.length ? ` (${puanlilar.length} kitaptan)` : ''}</div></div>
-  </div>`;
-  if(puansizBitmis){
-    html += `<div class="ist-kart" id="istPuansiz"><div class="mini-not" style="margin-top:0">${puansizBitmis} bitmiş kitap henüz puansız —
-      <button class="d-link" data-act="puansiz-git">rafta göster, puanla</button></div></div>`;
-  }
-
-  // ortalama bitirme süresi
+  /* ---- 2) OKUMA ALIŞKANLIĞI: hız + bırakma + saat (son ikisi zeka.js) ---- */
+  html += `<section class="is-bolum" id="istBolumAliskanlik">
+    <div class="is-bolum-bas"><span class="kicker">Okuma alışkanlığı</span></div>`;
   const sureli = bittiler.filter(k => k.baslamaTarihi && k.bitisTarihi);
   if(sureli.length){
     const ort = Math.round(sureli.reduce((t,k) => t + Math.max(1, gunFarki(k.baslamaTarihi, k.bitisTarihi)), 0) / sureli.length);
-    html += `<div class="ist-kart"><div class="ist-bolum-baslik">Ortalama bitirme süresi</div>
-      <div class="mini-not"><b style="color:var(--brass)">${ort} gün</b> (${sureli.length} kitaptan; başlama-bitiş tarihi girilenler)</div></div>`;
+    html += `<div class="ist-bolum-baslik" id="istBitirmeSuresi">Ortalama bitirme süresi</div>
+      <div class="mini-not"><b style="color:var(--brass)">${ort} gün</b> (${sureli.length} kitaptan; başlama-bitiş tarihi girilenler)</div>`;
   }
+  html += `<div class="is-yuva" id="istYuvaSureklilik"></div>
+    <div class="is-yuva" id="istYuvaAliskanlik"></div></section>`;
 
-  // aylık sayfa (son 12 ay)
+  /* ---- 3) ZEVK ANALİZİ: tür/yazar ortalaması (zeka.js) EN ÜSTTE — bölümün
+       asıl sorusu o; puan dağılımı ve listeler onu destekler ---- */
+  html += `<section class="is-bolum" id="istBolumZevk">
+    <div class="is-bolum-bas"><span class="kicker">Zevk analizi</span></div>
+    <div class="is-yuva" id="istYuvaZevk"></div>`;
+  if(puanlilar.length){
+    const pd = Array(10).fill(0);
+    puanlilar.forEach(k => pd[k.puan - 1]++);
+    const maxP = Math.max(...pd);
+    const enSik = pd.indexOf(maxP) + 1;
+    html += istKatla('istPuanDagilim', 'Puan dağılımı',
+      `en sık ★${enSik} · ${maxP} kitap`,
+      pd.map((n, i) => n ? istBar('★ ' + (i+1), n, Math.round(n/maxP*100)) : '').join(''));
+  }
+  const yazarSay = {};
+  bittiler.forEach(k => { if(k.yazar) yazarSay[k.yazar] = (yazarSay[k.yazar]||0) + 1; });
+  const yazarlar = Object.entries(yazarSay).sort((a,b) => b[1] - a[1]).filter(([,n]) => n > 1).slice(0,6);
+  if(yazarlar.length){
+    const maxYz = yazarlar[0][1];
+    html += `<div class="ist-bolum-baslik" id="istEnCokYazar">En çok bitirdiğin yazarlar</div>` +
+      yazarlar.map(([y,n]) => istBar(esc(y), n, Math.round(n/maxYz*100))).join('');
+  }
+  const turSay = {};
+  ks.forEach(k => { if(k.tur) turSay[k.tur] = (turSay[k.tur]||0) + 1; });
+  const turler = Object.entries(turSay).sort((a,b) => b[1] - a[1]).slice(0,8);
+  if(turler.length){
+    const maxT = turler[0][1];
+    html += `<div class="ist-bolum-baslik" id="istTurler">Türlere göre (tüm raf)</div>` +
+      turler.map(([t,n]) => istBar(esc(t), n, Math.round(n/maxT*100))).join('');
+  }
+  const enIyi = [...puanlilar].sort((a,b) => b.puan - a.puan).slice(0,5);
+  if(enIyi.length){
+    html += `<div class="ist-bolum-baslik" id="istEnIyi">En yüksek puanlılar</div>` +
+      enIyi.map(k => `<div class="bar-satir"><div class="bar-ad" style="flex:1">${esc(k.ad)}</div>
+        <div class="bar-deger" style="flex:0 0 auto;color:var(--brass)">★ ${k.puan}</div></div>`).join('');
+  }
+  html += `</section>`;
+
+  /* ---- 4) TARİHÇE: yıllar + aylık hacim; oturum tabanlı ay grafiği (zeka.js) yuvada ---- */
+  html += `<section class="is-bolum" id="istBolumTarihce">
+    <div class="is-bolum-bas"><span class="kicker">Tarihçe</span></div>`;
+  const yilSay = {};
+  bittiler.forEach(k => { if(k.bitisTarihi){ const y = k.bitisTarihi.slice(0,4); yilSay[y] = (yilSay[y]||0) + 1; } });
+  const yillar = Object.keys(yilSay).sort();
+  if(yillar.length > 1){
+    const maxY = Math.max(...Object.values(yilSay));
+    html += `<div class="ist-bolum-baslik" id="istYillar">Yıllara göre kitap</div>` +
+      yillar.map(y => istBar(y, yilSay[y], Math.round(yilSay[y]/maxY*100))).join('');
+  }
   const aylikSayfa = {};
   const aylar = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
   for(let i = 11; i >= 0; i--){
@@ -2294,76 +2448,26 @@ function istCiz(){
   const aylikDegerler = Object.values(aylikSayfa);
   if(aylikDegerler.some(v => v > 0)){
     const maxA = Math.max(...aylikDegerler);
+    const aylikToplam = aylikDegerler.reduce((a,b) => a + b, 0);
     // Sıfır aylar SESSİZ (.bar-sifir): 12 aylık eksen korunur ama boş dolu-boy
     // ray çizilmez — üst üste 9 boş çubuk sayfayı gürültüye boğuyordu.
-    html += `<div class="ist-kart"><div class="ist-bolum-baslik">Aylık sayfa (son 12 ay)</div>` +
+    html += istKatla('istAylikSayfa', 'Aylık sayfa (son 12 ay)',
+      `son 12 ayda ${sy(aylikToplam)} sayfa`,
       Object.entries(aylikSayfa).map(([ay, v]) => {
         const [y, m] = ay.split('-');
-        return `<div class="bar-satir${v ? '' : ' bar-sifir'}"><div class="bar-ad">${aylar[parseInt(m)-1]} ${y.slice(2)}</div>
-          <div class="bar-govde">${v ? `<div style="width:${maxA ? Math.round(v/maxA*100) : 0}%"></div>` : ''}</div>
-          <div class="bar-deger">${v || '·'}</div></div>`;
-      }).join('') + `</div>`;
+        return istBar(`${aylar[parseInt(m)-1]} ${y.slice(2)}`, v || '·',
+          v ? (maxA ? Math.round(v/maxA*100) : 0) : null, v ? '' : ' bar-sifir');
+      }).join(''));
   }
+  html += `<div class="is-yuva" id="istYuvaTarihce"></div></section>`;
 
-  // yıllara göre
-  const yilSay = {};
-  bittiler.forEach(k => { if(k.bitisTarihi){ const y = k.bitisTarihi.slice(0,4); yilSay[y] = (yilSay[y]||0) + 1; } });
-  const yillar = Object.keys(yilSay).sort();
-  if(yillar.length > 1){
-    const maxY = Math.max(...Object.values(yilSay));
-    html += `<div class="ist-kart"><div class="ist-bolum-baslik">Yıllara göre kitap</div>` +
-      yillar.map(y => `<div class="bar-satir"><div class="bar-ad">${y}</div>
-        <div class="bar-govde"><div style="width:${Math.round(yilSay[y]/maxY*100)}%"></div></div>
-        <div class="bar-deger">${yilSay[y]}</div></div>`).join('') + `</div>`;
-  }
+  /* ---- 5) YIL SONU RAPORU (rapor.js) ---- */
+  html += `<section class="is-bolum" id="istBolumRapor">
+    <div class="is-bolum-bas"><span class="kicker">Yıl sonu raporu</span></div>
+    <div class="is-yuva" id="istYuvaRapor"></div></section>`;
 
-  // puan dağılımı
-  if(puanlilar.length){
-    const pd = Array(10).fill(0);
-    puanlilar.forEach(k => pd[k.puan - 1]++);
-    const maxP = Math.max(...pd);
-    html += `<div class="ist-kart"><div class="ist-bolum-baslik">Puan dağılımı</div>` +
-      pd.map((n, i) => n ? `<div class="bar-satir"><div class="bar-ad">★ ${i+1}</div>
-        <div class="bar-govde"><div style="width:${Math.round(n/maxP*100)}%"></div></div>
-        <div class="bar-deger">${n}</div></div>` : '').join('') + `</div>`;
-  }
-
-  // en çok okunan yazarlar
-  const yazarSay = {};
-  bittiler.forEach(k => { if(k.yazar) yazarSay[k.yazar] = (yazarSay[k.yazar]||0) + 1; });
-  const yazarlar = Object.entries(yazarSay).sort((a,b) => b[1] - a[1]).filter(([,n]) => n > 1).slice(0,6);
-  if(yazarlar.length){
-    const maxYz = yazarlar[0][1];
-    html += `<div class="ist-kart"><div class="ist-bolum-baslik">En çok bitirdiğin yazarlar</div>` +
-      yazarlar.map(([y,n]) => `<div class="bar-satir"><div class="bar-ad">${esc(y)}</div>
-        <div class="bar-govde"><div style="width:${Math.round(n/maxYz*100)}%"></div></div>
-        <div class="bar-deger">${n}</div></div>`).join('') + `</div>`;
-  }
-
-  // türlere göre
-  const turSay = {};
-  ks.forEach(k => { if(k.tur) turSay[k.tur] = (turSay[k.tur]||0) + 1; });
-  const turler = Object.entries(turSay).sort((a,b) => b[1] - a[1]).slice(0,8);
-  if(turler.length){
-    const maxT = turler[0][1];
-    html += `<div class="ist-kart"><div class="ist-bolum-baslik">Türlere göre (tüm raf)</div>` +
-      turler.map(([t,n]) => `<div class="bar-satir"><div class="bar-ad">${esc(t)}</div>
-        <div class="bar-govde"><div style="width:${Math.round(n/maxT*100)}%"></div></div>
-        <div class="bar-deger">${n}</div></div>`).join('') + `</div>`;
-  }
-
-  // en yüksek puanlılar
-  const enIyi = [...puanlilar].sort((a,b) => b.puan - a.puan).slice(0,5);
-  if(enIyi.length){
-    html += `<div class="ist-kart"><div class="ist-bolum-baslik">En yüksek puanlılar</div>` +
-      enIyi.map(k => `<div class="bar-satir"><div class="bar-ad" style="flex:1">${esc(k.ad)}</div>
-        <div class="bar-deger" style="flex:0 0 auto;color:var(--brass)">★ ${k.puan}</div></div>`).join('') + `</div>`;
-  }
-
-  if(!ks.length){
-    html = `<div class="bos"><div class="b-ikon">${ikon('istatistik')}</div><p>İstatistik için önce kitap eklemen gerek.</p></div>`;
-  }
   kap.innerHTML = html;
+  istBolumTemizle();
 }
 
 /* ---------- yedek ---------- */

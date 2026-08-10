@@ -212,32 +212,40 @@
     const hz = genelHiz();
     const ortDk = Math.round(toplamMs / gunSayisi / 60000);
 
-    // son 30 gün ısı şeridi
+    /* Son 30 gün ısı şeridi — v54 Ciltli: yarıçap yok, OKUNMAYAN gün dolgusuz
+       kalır (çekirdeğin "sıfır satırı sessizleşir" kararıyla aynı: boş kutuyu
+       gri dolguyla çizmek 30 hücrelik gürültü üretiyordu, kıl payı çizgi yeter). */
     const kutular = [];
     const enBuyuk = Math.max(...Object.values(harita));
     for(let i = 29; i >= 0; i--){
       const d = new Date(); d.setDate(d.getDate() - i);
       const g = gunStr(d.getTime()), v = harita[g] || 0;
       const yogun = v ? Math.max(0.25, v / enBuyuk) : 0;
-      /* border-radius:3px — mikro grafik istisnası */
-      kutular.push('<div title="' + g + (v ? ' · ' + sureMetni(v) : '') + '" style="flex:1;height:26px;border-radius:3px;'
-        + (v ? 'background:var(--brass);opacity:' + yogun.toFixed(2) : 'background:var(--surface2)') + '"></div>');
+      kutular.push('<div title="' + g + (v ? ' · ' + sureMetni(v) : '') + '" style="flex:1;height:26px;'
+        + (v ? 'background:var(--brass);opacity:' + yogun.toFixed(2)
+             : 'background:transparent;border-bottom:1px solid var(--cizgi)') + '"></div>');
     }
 
+    /* Başlık "Okuma alışkanlığı" DEĞİL "Süreklilik": v54'te bölümün kicker'ı
+       zaten "Okuma alışkanlığı" diyor, aynı ad iki kez görünüyordu. İçerik
+       (seri, ortalama dakika, hız, ısı şeridi) birebir korundu. */
     const blok = document.createElement('div');
-    blok.className = 'ist-kart'; blok.id = 'oturumIst';
-    blok.innerHTML = '<div class="ist-bolum-baslik">Okuma alışkanlığı</div>'
-      + '<div class="ist-grid" style="margin-top:10px">'
-      + '<div><div class="ist-sayi">' + seri + '</div><div class="ist-etiket">gün üst üste</div></div>'
-      + '<div><div class="ist-sayi">' + ortDk + '</div><div class="ist-etiket">okuduğun günlerde ort. dakika</div></div>'
+    blok.className = 'is-blok'; blok.id = 'oturumIst';
+    blok.innerHTML = '<div class="ist-bolum-baslik">Süreklilik</div>'
+      + '<div class="is-toplam" style="margin-top:10px">'
+      + '<div class="is-hucre"><span class="ist-sayi">' + seri + '</span><span class="ist-etiket">gün üst üste</span></div>'
+      + '<div class="is-hucre"><span class="ist-sayi">' + ortDk + '</span><span class="ist-etiket">okuduğun günlerde ort. dakika</span></div>'
       + '</div>'
       + '<div class="mini-not">Toplam <b>' + sureMetni(toplamMs) + '</b> okuma, ' + gunSayisi + ' ayrı günde.'
       + (hz ? ' Genel hızın <b>' + hz + ' sayfa/saat</b>.' : '')
       + (enUzun > seri ? ' En uzun serin ' + enUzun + ' gün.' : '') + '</div>'
-      + '<div style="display:flex;gap:2px;margin-top:12px">' + kutular.join('') + '</div>'
+      + '<div style="display:flex;gap:2px;margin-top:12px;align-items:flex-end">' + kutular.join('') + '</div>'
       + '<div style="font-size:.7rem;color:var(--muted2);margin-top:5px">son 30 gün</div>';
-    const ilk = kap.querySelector('.ist-kart');
-    ilk ? kap.insertBefore(blok, ilk.nextSibling) : kap.appendChild(blok);
+    // v54: kendi yuvasına girer (ekran sonuna değil, "Okuma alışkanlığı" bölümüne)
+    const yuva = document.getElementById('istYuvaSureklilik');
+    if(yuva) yuva.appendChild(blok);
+    else kap.appendChild(blok);
+    if(typeof istBolumTemizle === 'function') istBolumTemizle();
   }
 
   /* ---------- olaylar ---------- */

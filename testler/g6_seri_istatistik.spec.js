@@ -61,6 +61,8 @@ test.describe('G6 seri ve istatistik', () => {
     await page.click('[data-act="hedef-kaydet"]');
     // istCiz yeniden çizer; MutationObserver şeridi geri koymalı
     await expect(page.locator('#oturumIst')).toBeVisible();
-    await expect(page.locator('#oturumIst')).toContainText('Okuma alışkanlığı');
+    // v54: bölüm kicker'ı zaten "Okuma alışkanlığı" diyor; blok başlığı "Süreklilik"
+    await expect(page.locator('#oturumIst')).toContainText('Süreklilik');
+    await expect(page.locator('#istBolumAliskanlik .kicker')).toHaveText('Okuma alışkanlığı');
   });
 });
