@@ -132,9 +132,17 @@
       parcalar.push('</div>');
       blok.innerHTML = parcalar.join('');
     }
-    var arama = document.getElementById('alintiArama');
-    if(arama) kap.insertBefore(blok, arama);
-    else kap.appendChild(blok);
+    /* v55: konum artık YUVA ile sabit ("Fikirler" bölümü). Eski yol arama
+       girdisinden önceye sokuyordu — kırılgandı ve bölüm başlığı yoktu.
+       Yuva yoksa eski davranışa düşer (bayat kabuk emniyeti). */
+    var yuva = document.getElementById('alYuvaFikir');
+    if(yuva){ yuva.appendChild(blok); }
+    else {
+      var arama = document.getElementById('alintiArama');
+      if(arama) kap.insertBefore(blok, arama);
+      else kap.appendChild(blok);
+    }
+    if(typeof alBolumTemizle === 'function') alBolumTemizle();
   }
 
   function kartlariZenginlestir(){
@@ -201,8 +209,11 @@
     h.style.cssText = 'font-size:.85rem;color:var(--muted);margin:6px 0 2px';
     h.innerHTML = '<b style="color:var(--brass)">' + T.fikirBasligi + '#' + kacir(secili) + '</b> \u2014 ' +
       gorunen + T.kayit + ', ' + kitapSayi + T.kitapta;
+    /* v55: bulut artık #alYuvaFikir'in içinde — referans düğümün ebeveyni
+       kap OLMAYABİLİR. Başlık bulutun KENDİ ebeveynine, hemen ardına girer;
+       bu hem yuvalı hem yuvasız (bayat kabuk) düzende çalışır. */
     var bulut = document.getElementById('fikirBulut');
-    if(bulut && bulut.nextSibling) kap.insertBefore(h, bulut.nextSibling);
+    if(bulut && bulut.parentNode) bulut.parentNode.insertBefore(h, bulut.nextSibling);
   }
 
   function tazele(){

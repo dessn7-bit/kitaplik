@@ -151,35 +151,44 @@
     if(document.getElementById('faStil')) return;
     const s = document.createElement('style');
     s.id = 'faStil';
+    /* v55 Ciltli: kutu/hap/dolgu dili emekli. Kartlar → bölüm içi bloklar;
+       çipler kontur + %7 tint (.mini-chip reçetesi); komşu/öneri satırları
+       kıl payı ayraçlı; çubuklarda ray YOK (Rakamlar ekranıyla aynı karar:
+       mürekkep doğrudan kâğıt üzerinde); kesişim alıntısı altın hatlı blok. */
     s.textContent = `
-      #faPanel{display:flex;flex-direction:column;gap:10px;margin:6px 0 2px}
-      .fa-kart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-        padding:12px 13px;box-shadow:var(--yukselti-1)}
-      .fa-baslik{font-family:var(--serif);font-size:.98rem}
+      #faPanel{display:block;margin:14px 0 0}
+      .fa-kart{background:transparent;border:none;border-radius:0;box-shadow:none;
+        padding:0;margin-top:16px}
+      #faPanel > .fa-kart:first-child{margin-top:0}
+      .fa-baslik{font-family:var(--serif);font-size:1.02rem}
       .fa-not{font-size:.76rem;color:var(--muted);margin-top:8px;line-height:1.5}
       .fa-vurgu{font-size:.82rem;color:var(--brass);font-weight:600;margin-top:8px}
-      .fa-sira{display:flex;gap:6px;overflow-x:auto;margin-top:9px;padding-bottom:3px;scrollbar-width:none}
+      .fa-sira{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:3px;scrollbar-width:none}
       .fa-sira::-webkit-scrollbar{display:none}
-      .fa-cip{flex:0 0 auto;padding:6px 12px;border-radius:999px;border:1px solid var(--border);
-        background:var(--surface2);color:var(--muted);font-size:.75rem}
-      .fa-cip.fa-secili{background:var(--brass);color:var(--uzeri);border-color:var(--brass);font-weight:600}
+      .fa-cip{flex:0 0 auto;padding:6px 12px;border-radius:var(--r-sm);border:1px solid var(--cizgi);
+        background:transparent;color:var(--muted);font-size:.75rem;white-space:nowrap}
+      .fa-cip.fa-secili{border-color:var(--brass);color:var(--brass);font-weight:600;
+        background:color-mix(in srgb,var(--brass) 7%,transparent)}
       .fa-komsu{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;
-        text-align:left;padding:8px 10px;margin-top:7px;border:1px solid var(--border);
-        border-radius:var(--r-ic);background:var(--surface2);font-size:.84rem;color:var(--paper)}
-      .fa-komsu span{font-size:.72rem;color:var(--muted2);white-space:nowrap}
-      .fa-oneri{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;margin-top:7px;
-        border:1px dashed var(--brass-dim);border-radius:var(--r-ic);font-size:.82rem;color:var(--muted)}
+        text-align:left;padding:9px 0;margin-top:0;border:none;border-bottom:1px solid var(--cizgi);
+        border-radius:0;background:transparent;font-size:.84rem;color:var(--paper)}
+      .fa-komsu span{font-size:.72rem;color:var(--muted2);white-space:nowrap;font-variant-numeric:tabular-nums}
+      .fa-oneri{display:flex;justify-content:space-between;gap:10px;padding:9px 0;margin-top:0;
+        border:none;border-bottom:1px dashed var(--cizgi);border-radius:0;
+        font-size:.82rem;color:var(--muted)}
       .fa-satir{display:flex;align-items:center;gap:8px;margin-top:8px}
       .fa-ad{flex:0 0 104px;font-size:.78rem;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .fa-govde{flex:1;height:13px;background:var(--surface2);border-radius:999px;overflow:hidden}
-      .fa-govde > div{height:100%;background:var(--brass-dim);border-radius:4px}
-      .fa-deger{flex:0 0 74px;text-align:right;font-size:.72rem;color:var(--muted2)}
-      .fa-kesisim-not{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--brass);
-        border-radius:var(--r-ic);padding:9px 11px;margin-top:8px}
-      .fa-kesisim-metin{font-family:var(--sans);font-style:italic;font-size:.95rem;line-height:1.6;color:var(--paper)}
-      .fa-kesisim-kaynak{font-size:.72rem;color:var(--brass);margin-top:6px}
-      .fa-kapat{margin-top:10px;padding:8px 12px;border-radius:var(--r-ic);border:1px solid var(--border);
-        background:var(--surface2);color:var(--muted);font-size:.78rem}
+      .fa-govde{flex:1;height:6px;background:transparent;border-radius:0;overflow:hidden}
+      .fa-govde > div{height:100%;background:var(--brass);border-radius:0}
+      .fa-deger{flex:0 0 74px;text-align:right;font-size:.72rem;color:var(--muted2);
+        font-variant-numeric:tabular-nums}
+      .fa-kesisim-not{background:transparent;border:none;border-left:1px solid var(--brass);
+        border-radius:0;padding:2px 0 2px 14px;margin-top:12px}
+      .fa-kesisim-metin{font-family:var(--sans);font-style:italic;font-size:.95rem;line-height:1.65;color:var(--paper)}
+      .fa-kesisim-kaynak{font-size:.72rem;color:var(--muted);margin-top:6px}
+      .fa-kapat{margin-top:12px;padding:2px 0;border:none;border-radius:0;background:transparent;
+        color:var(--muted);font-size:.8rem;text-decoration:underline;text-underline-offset:3px;
+        text-decoration-color:var(--muted2)}
     `;
     document.head.appendChild(s);
   }
@@ -257,11 +266,17 @@
     panel.id = 'faPanel';
     panel.innerHTML = (etiket ? komsuKartHtml(etiket) + kesisimKartHtml(etiket) + oneriKartHtml(etiket) : '')
       + haritaKartHtml();
-    const bulut = document.getElementById('fikirBulut');
-    const arama = document.getElementById('alintiArama');
-    if(bulut && bulut.nextSibling) kap.insertBefore(panel, bulut.nextSibling);
-    else if(arama) kap.insertBefore(panel, arama);
-    else kap.appendChild(panel);
+    // v55: konum YUVA ile sabit ("Fikirler" bölümü, bulutun hemen altı).
+    const yuva = document.getElementById('alYuvaFikirAg');
+    if(yuva){ yuva.appendChild(panel); }
+    else {
+      const bulut = document.getElementById('fikirBulut');
+      const arama = document.getElementById('alintiArama');
+      if(bulut && bulut.nextSibling) kap.insertBefore(panel, bulut.nextSibling);
+      else if(arama) kap.insertBefore(panel, arama);
+      else kap.appendChild(panel);
+    }
+    if(typeof alBolumTemizle === 'function') alBolumTemizle();
     altListeyiSuz(etiket);
   }
 

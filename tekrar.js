@@ -174,7 +174,7 @@
     if(bugunku.length){
       const b = bugunku[sira % bugunku.length];
       const n = b.n, k = b.k;
-      govde = '<div class="tk-baslik">Tekrar zamanı'
+      govde = '<div class="tk-baslik"><span class="kicker">Tekrar zamanı</span>'
         + '<span class="tk-rozet-sayi">' + bugunku.length + '</span>'
         + '<span class="tk-baslik-not">zamanı gelen alıntıların — sınav değil, yeniden karşılaşma</span></div>'
         + '<div class="tk-kart" data-nid="' + escAttr(n.id) + '" data-kid="' + escAttr(k.id) + '">'

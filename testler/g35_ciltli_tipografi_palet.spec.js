@@ -193,7 +193,8 @@ test.describe('G35 Ciltli tipografi + Palet A', () => {
     await ciftleriDogrula(page, [
       ['.ga-metin', '.gunun-alintisi', 'günün alıntısı'],
       ['.ga-kaynak', '.gunun-alintisi', 'alıntı kaynağı'],
-      ['.ga-etiket', '.gunun-alintisi', 'alıntı etiketi'],
+      // v55: "Günün alıntısı" etiketi artık bölüm kicker'ı (.ga-etiket emekli)
+      ['#alBolumGunun .kicker', '#alBolumGunun', 'alıntı kicker'],
       ['#panel-alinti .not-metin', '#panel-alinti .not-kart', 'not metni'],
       ['#panel-alinti .alinti-git', '#panel-alinti .not-kart', 'kitaba git']
     ], 'alıntılar');
