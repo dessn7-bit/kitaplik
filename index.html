@@ -180,7 +180,7 @@ input::placeholder,textarea::placeholder{color:var(--muted2);font-style:normal}
 img{display:block}
 /* v41: rakamlar TABULAR — sayfa sayısı, yüzde, istatistik/sayaç değerleri
    hizalı otursun (Lora oransal rakamlarla geliyor). */
-.ist-sayi,.as-sayi,.bar-deger,.bar-ad,.ilerleme-txt,.puan-mini,.count-label,
+.ist-sayi,.bar-deger,.bar-ad,.ilerleme-txt,.puan-mini,.count-label,
 .tk-ist,.tk-rozet-sayi,.hiz-kutu,.d-tarih,.vm-okuma-satir,
 input[type="number"],input[type="date"]{font-variant-numeric:tabular-nums}
 /* ---------- İkon dili: tek çizgi ağırlığında inline SVG ----------
@@ -795,8 +795,9 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   font-size:.8rem;color:var(--muted)}
 .kp-kucuk-btn{padding:8px 12px;border-radius:var(--r-ic);border:1px solid var(--border);
   background:var(--surface);color:var(--drop);font-size:.8rem;font-weight:600;flex:0 0 auto}
-.kp-detay-satir{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
-.kp-detay-satir .kp-kucuk-btn{color:var(--paper)}
+/* .kp-detay-satir kuralları v58'de kaldırıldı: detaydaki fotoğraf eylemleri
+   .form-alt satırına taşındığından beri sınıf hiç uygulanmıyordu (gerçek
+   render'da 34 duraklık taramada 0 eşleşme). */
 .kp-cihaz-notu{font-size:.75rem;color:var(--muted2);width:100%}
 .kp-onizle-kutu{display:flex;justify-content:center;margin-top:12px}
 .kp-onizle-kutu img{max-width:100%;max-height:320px;border-radius:var(--r-ic);border:1px solid var(--border)}

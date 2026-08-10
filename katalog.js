@@ -306,14 +306,14 @@
     yuva ? kap.appendChild(kart) : kap.insertBefore(kart, kap.firstChild);
   }
 
-  /* D1 (görsel ince ayar): placeholder'ın TEK sahibi index.html. Buradaki eski
-     "raf" ekleme override'ı uzun metni geri basıyordu ve 412px'te kesiliyordu —
-     placeholder örnekleyicidir, arama kapsamının sözleşmesi değil (raf araması
-     zaten çalışır ve testlidir). */
-  function aramayaRafEkle(){}
+  /* D1 (görsel ince ayar): arama placeholder'ının TEK sahibi index.html.
+     Buradaki eski "raf" ekleme override'ı uzun metni geri basıyordu ve 412px'te
+     kesiliyordu — placeholder örnekleyicidir, arama kapsamının sözleşmesi değil
+     (raf araması zaten çalışır ve testlidir). v58: geriye kalan boş
+     `aramayaRafEkle(){}` kabuğu ve çağrısı kaldırıldı; karar bu notta yaşıyor. */
 
   function baslat(){
-    kartEkle(); formuBagla(); aramayaRafEkle();
+    kartEkle(); formuBagla();
 
     document.addEventListener('click', e => {
       const el = e.target.closest('[data-act]');
