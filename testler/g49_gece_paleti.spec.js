@@ -161,51 +161,37 @@ test.describe('G49 Palet A Gece — karanlık tema', () => {
     });
   }
 
-  /* AÇIK TEMADA BİLİNEN, ÖNCEDEN VAR OLAN KAÇAKLAR (v57'de ÖLÇÜLDÜ, bu sprintte
-     ÇIKMADI — ilgili bildirimler 6c32ae7 ile bayt bayt aynı; bu sprintin açık
-     temaya tek dokunuşu --kontur'un --cizgi ile AYNI değerde eklenmesi, yani
-     görsel etkisi sıfır).
-     TEK KÖK NEDEN: `color:var(--accent)` + `background: accent %7 tint`.
-     Tint zemini metne DOĞRU kaydırdığı için 4.61 → 4.23'e düşüyor. Karanlıkta
-     aynı desen GÜVENLİ: orada tint zemini açık metinden UZAKLAŞTIRIYOR
-     (gece süpürmeleri sıfır kaçak veriyor).
-     ÇÖZÜM REÇETESİ REPO'DA VAR: kesfet.js v50'de `.ks-chip.secili` için
-     uygulandı — seçili metin `--paper`'a çekilir, seçililiği kontur + tint +
-     ağırlık taşır. Kalan 5 çip türevi + rozet/puan-mini göç ETMEDİ.
-     KAPSAM KARARI: bu sprint KARANLIK tema sprinti; açık temadaki her seçili
-     çipin ve durum rozetinin rengini değiştirmek ayrı bir tasarım kararı
-     (Kaan'a sorulmadan yapılmaz). Liste burada DONDURULUYOR: yeni bir kaçak
-     eklenirse vaka kırmızıya döner, biri onarılırsa liste küçülür ve yine
-     kırmızıya döner — sessizce çürümez. */
-  const BILINEN_ACIK = ['chip.active', 'mini-chip.secili', 'fa-cip.fa-secili',
+  /* AÇIK TEMA KAÇAK GEÇMİŞİ: v57'de 7 seçili-durum yüzeyi AA altı ölçülmüştü
+     (kök neden: `color:var(--accent)` + accent %7 tint zemini metne DOĞRU
+     kayıyor, 4.61 → 4.23) ve BILINEN_ACIK listesiyle dondurulmuştu.
+     v62'DE TAMAMI ONARILDI (Kaan'ın D3 emriyle): çip/düğme türevleri ks-chip
+     reçetesine geçti (seçili metin --paper; seçililiği kontur + tint + ağırlık
+     taşır), rozet/puan-mini/vm-rozet ise renk ANLAM taşıdığı için %86 renk +
+     %14 paper KARIŞIMINA koyulaştırıldı (iki temada da AA — ölçümler g52'de).
+     Bu vaka artık açık temada SIFIR kaçak bekler — yeni kaçak = kırmızı. */
+  const ESKI_KACAKLAR = ['chip.active', 'mini-chip.secili', 'fa-cip.fa-secili',
     'durum-btn.secili', 'tm-dugme.tm-secili', 'rozet.r-', 'puan-mini'];
 
-  test('AÇIK tema REGRESYONSUZ: yalnız bilinen, önceden var olan kaçaklar', async ({ page }) => {
+  test('AÇIK tema süpürmesi TEMİZ: v57 kaçakları onarıldı, yenisi yok', async ({ page }) => {
     await tohumla(page, veriPaketi(), { kk_tema_v1: 'acik' });
     await page.goto('/');
     await expect(page.locator('html')).toHaveAttribute('data-tema', 'acik');
-    const yeni = [], bilinenGorulen = [];
+    const kacaklar = [];
     for (const [ad, git] of EKRANLAR.slice(0, 5)) {
       await git(page);
       await page.waitForTimeout(200);
-      const kacak = await page.evaluate(SUPUR);
-      kacak.forEach(k => BILINEN_ACIK.some(b => k.includes(b))
-        ? bilinenGorulen.push(k) : yeni.push(ad + ' → ' + k));
+      (await page.evaluate(SUPUR)).forEach(k => kacaklar.push(ad + ' → ' + k));
     }
-    expect(yeni, 'açık temada YENİ kaçak').toEqual([]);
-    /* Liste çürümesin: bilinenler onarıldıysa burası düşer ve BILINEN_ACIK
-       küçültülmeli — "bilinen kusur" kaydı sessizce eskimez. */
-    expect(bilinenGorulen.length,
-      'bilinen kaçaklar onarıldıysa BILINEN_ACIK listesini küçült').toBeGreaterThan(0);
+    expect(kacaklar, 'açık temada kaçak').toEqual([]);
   });
 
-  test('aynı desen KARANLIKTA güvenli: seçili çipler eşiği geçiyor', async ({ page }) => {
+  test('aynı desen KARANLIKTA da güvenli: seçili çipler eşiği geçiyor', async ({ page }) => {
     await gece(page);
     await page.click('nav [data-v="raf"]');
     await expect(page.locator('#liste')).toBeVisible();
     const kacak = await page.evaluate(SUPUR);
-    expect(kacak.filter(k => BILINEN_ACIK.some(b => k.includes(b))),
-      'gece paletinde tint deseni metinden UZAKLAŞTIRIYOR').toEqual([]);
+    expect(kacak.filter(k => ESKI_KACAKLAR.some(b => k.includes(b))),
+      'gece paletinde seçili-durum yüzeyleri temiz kalır').toEqual([]);
   });
 
   /* ---- palet sözleşmeleri ---- */

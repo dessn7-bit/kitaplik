@@ -9,7 +9,11 @@
    SÖZLEŞMELER (bu dosyanın koruduğu):
    - Çok sözcüklü ad: adayın SON sözcüğü tam eşleşmeli + sorgunun ≥2 harfli tüm
      sözcükleri adayda geçmeli. Yalnız soyadı eşleşmesi YETMEZ (vaka c).
-   - Tek sözcüklü ad (mononim): adayın TAMAMI o sözcüğe eşit olmalı.
+   - Tek sözcüklü ad (mononim, v62): adayın İLK sözcüğü tam eşit olmalı ve
+     aday bağlaç ("ve/and/ile") içermemeli. Birebir-tam-eşitlik klasikleri
+     kaybettiriyordu ("Homeros Homer", "Konfüçyüs Confucius" biçimleri);
+     ilk-sözcük kuralı "Ali" → "Sabahattin Ali"yi yine eler (tek ad Türk
+     düzeninde SOYAD olur ve sonda durur), "Homeros ve Hesiodos"u bağlaç eler.
    - Anlamlı sözcüğü olmayan ad ("Yazar 0", "Anonim", "Kolektif") kaynağa HİÇ
      sorulmaz (vaka d).
    - Seride İKİ denetim: seri adı başlıkta geçmeli VE yazar eşleşmeli (vaka e).
@@ -142,15 +146,51 @@ test.describe('G45 Keşfet-B alaka denetimi', () => {
     expect(page.__agSayac.google, 'kota 3 gerçek yazara harcandı').toBe(3);
   });
 
-  test('mononim: TAM eşleşme şart, kapsayan ad elenir', async ({ page }) => {
+  test('mononim: kapsayan ad ve bağlaçlı derleme elenir', async ({ page }) => {
     await tohumla(page, sevilen('Homeros'));
     await kesfetAc(page);
     page.__agAyar.google = { items: [
-      gItem('Derleme', 'Homeros ve Hesiodos'),     // kapsıyor ama aynı kişi değil
+      gItem('Derleme', 'Homeros ve Hesiodos'),     // bağlaç = birden çok kişi → elenir
       gItem('Odysseia', 'Homeros'),
-      gItem('Başkası', 'Sabahattin Homeros')] };
+      gItem('Başkası', 'Sabahattin Homeros')] };   // tek ad sonda = soyad düzeni → elenir
     await getir(page);
     expect(await adlar(page)).toEqual(['Odysseia']);
+  });
+
+  /* v62 D2 — mononim yazarlar (Homeros, Aristoteles...) kaynak varyantlarında
+     KAYBOLUYORDU: eski kural adayın TAMAMININ tek sözcük olmasını istiyordu.
+     (Mutasyon D2: ilk-sözcük kuralı geri alınırsa bu vaka kırmızı.) */
+  test('mononim v62: parantezli ve çift-ad varyantları KABUL, soyad-biçimi RED', async ({ page }) => {
+    await tohumla(page, sevilen('Homeros'));
+    await kesfetAc(page);
+    page.__agAyar.google = { items: [
+      gItem('İlyada', 'Homeros (Homer)'),          // parantezli varyant → KABUL
+      gItem('Odysseia', 'Homeros Homer'),          // çift-ad varyantı → KABUL (v62 kazanımı)
+      gItem('Sahte', 'Homer Homeros'),             // ilk sözcük farklı → RED
+      gItem('Denemeler', 'Başka Yazar')] };        // alakasız → RED (görev d vakası)
+    await getir(page);
+    expect(await adlar(page)).toEqual(['İlyada', 'Odysseia']);
+  });
+
+  test('mononim v62: "Ali" sorgusu "Sabahattin Ali"yi HÂLÂ KABUL ETMEZ (koruma sürüyor)', async ({ page }) => {
+    await tohumla(page, sevilen('Ali'));
+    await kesfetAc(page);
+    page.__agAyar.google = { items: [
+      gItem('Kürk Mantolu Madonna', 'Sabahattin Ali'),   // tek ad sonda = soyad → RED
+      gItem('Ali Kitabı', 'Ali')] };                     // birebir mononim → KABUL
+    await getir(page);
+    expect(await adlar(page)).toEqual(['Ali Kitabı']);
+  });
+
+  test('mononim v62: birebir tek-ad eşleşmesi çalışmaya devam eder (Aristoteles)', async ({ page }) => {
+    await tohumla(page, sevilen('Aristoteles'));
+    await kesfetAc(page);
+    page.__agAyar.google = { items: [
+      gItem('Poetika', 'Aristoteles'),
+      gItem('Retorik', 'Aristoteles, Ari'),        // virgüllü alan: ilk parça eşit → KABUL
+      gItem('Sokrates Kitabı', 'Sokrates')] };     // farklı mononim → RED
+    await getir(page);
+    expect(await adlar(page)).toEqual(['Poetika', 'Retorik']);
   });
 
   test('çok yazarlı ve parantezli aday alanları doğru çözülür', async ({ page }) => {

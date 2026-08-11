@@ -27,8 +27,12 @@ function kitapAlinti(ek) {
 async function kontrastOrani(page, metinSec, zeminSec) {
   return page.evaluate(([ms, zs]) => {
     function coz(s) {
-      const m = String(s).match(/rgba?\(([\d.]+)[, ]+([\d.]+)[, ]+([\d.]+)(?:[,/ ]+([\d.]+))?\)/);
-      return m ? { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] } : null;
+      let m = String(s).match(/rgba?\(([\d.]+)[, ]+([\d.]+)[, ]+([\d.]+)(?:[,/ ]+([\d.]+))?\)/);
+      if (m) return { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] };
+      /* v62: color-mix'li renkler `color(srgb …)` serilenir (g36/g42 RENK_COZ
+         ile aynı dal — rozet metinleri artık %86 karışım). */
+      m = String(s).match(/color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\)/);
+      return m ? { r: 255 * +m[1], g: 255 * +m[2], b: 255 * +m[3], a: m[4] === undefined ? 1 : +m[4] } : null;
     }
     function zeminBul(el) { // ilk opak olmayan atadan zemin topla, alfa karışımı uygula
       let renk = { r: 255, g: 255, b: 255 };

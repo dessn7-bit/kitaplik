@@ -27,7 +27,7 @@
   }
   // süzgeç + liste durumu (cihaz-yerel, oturumluk — kalıcı tercih değil)
   const S = { sahiplik: 'sahip', tur: null, uzunluk: null, raf: null,
-    limit: SAYFA_ADIMI, erteliAcik: false };
+    limit: SAYFA_ADIMI, erteliAcik: false, gizliAcik: false };
 
   const CSS = [
     '#ksIcerik{padding:2px 16px 24px}',
@@ -62,7 +62,7 @@
     '.ks-rozet{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--brass)}',
     '.ks-not{font-size:.85rem;color:var(--muted);line-height:1.5;padding:14px 0}',
     '.ks-daha{margin-top:14px}',
-    '.ks-erteli{padding:14px 0}',
+    '.ks-erteli,.ks-gizli{padding:14px 0}',
     '.ks-erteli-item{display:flex;align-items:center;justify-content:space-between;gap:10px;' +
       'padding:10px 0;border-bottom:1px solid var(--cizgi);font-size:.85rem;color:var(--muted)}',
     '.ks-erteli-ad{flex:1;min-width:0;overflow-wrap:break-word}',
@@ -87,17 +87,18 @@
       (ipucu ? ' title="' + escAttr(ipucu) + '"' : '') + '>' + esc(etiket) + '</button>';
   }
 
-  function ustHtml(h, havuzN, filtreliN){
+  function ustHtml(h, havuzN, filtreliN, elemeNotu){
     const okunacakVar = typeof veri === 'object' && veri.kitaplar.some(k => k.durum === 'okunacak');
     const suzVar = S.tur || S.uzunluk || S.raf;
-    // açılış cümlesi DÜRÜST: kaç aday, süzgeç kaçını geçirdi (sayı uydurma yok)
-    const acilis = !havuzN
+    // açılış cümlesi DÜRÜST: kaç aday, süzgeç kaçını geçirdi (sayı uydurma yok);
+    // çeşitlilik kotası aday elediyse o da SÖYLENİR (v62 — "6 diyor, 5 var" bitti)
+    const acilis = (!havuzN
       ? 'Okunacak aday yok'
       : h.mod === 'az-veri'
         ? havuzN + ' okunacak aday — şimdilik bekleme sırasına göre'
         : suzVar
           ? havuzN + ' aday · süzgeçten geçen: ' + filtreliN
-          : havuzN + ' okunacak aday arasından, okuma geçmişine göre';
+          : havuzN + ' okunacak aday arasından, okuma geçmişine göre') + (elemeNotu || '');
     return '<div class="ks-ust"><div class="ks-ust-ic">' +
       '<span class="kicker">Rafından</span>' +
       '<h2 class="ks-baslik">Ne okusam?</h2>' +
@@ -275,7 +276,15 @@
       const a = adSozcukler(p);
       if(!a.length) continue;
       if(s.length === 1){
-        if(a.length === 1 && a[0] === s[0]) return true;
+        /* Mononim (tek adlı yazar, v62): birebir-eşitlik klasikleri KAYBETTİRİYORDU —
+           kaynaklar "Homeros Homer", "Konfüçyüs Confucius" gibi çift-ad biçimleri
+           dönüyor (parantezli "Homeros (Homer)" adSozcukler'de zaten soyulur).
+           Kural: adayın İLK sözcüğü eşitse kabul — mononim varyant ekleri SONA
+           gelir; Türk ad-soyad düzeninde tek ad SOYADDIR ve sonda durur
+           ("Ali" → "Sabahattin Ali" ilk sözcükten elenir). Bağlaçlı aday
+           ("Homeros ve Hesiodos") birden çok kişidir → yine elenir. */
+        if(a.length && a[0] === s[0]
+          && a.indexOf('ve') < 0 && a.indexOf('and') < 0 && a.indexOf('ile') < 0) return true;
         continue;
       }
       if(a[a.length - 1] !== soyad) continue;
@@ -373,7 +382,6 @@
       adSet.add(katla(k.ad) + '|' + katla(k.yazar || ''));
       if(k.isbn){ const t = isbnTemiz(k.isbn); if(t) isbnSet.add(t); }
     });
-    const gizli = veri.kesfetGizli || {};
     const gorulen = new Set();
     return (B.adaylar || []).filter(a => {
       if(!a || !a.ad) return false;
@@ -383,7 +391,7 @@
       if(adSet.has(katla(a.ad) + '|' + katla(a.yazar || ''))) return false;
       const t = a.isbn ? isbnTemiz(a.isbn) : '';
       if(t && isbnSet.has(t)) return false;
-      if(gizli[anah]) return false;
+      if(bGizliMi(anah)) return false;   // v62: geri alınan gizlemeler artık elemez
       return true;
     });
   }
@@ -526,7 +534,8 @@
       }
     }
     return '<div class="ks-b" id="ksB">' +
-      '<div class="ks-b-bas"><span class="kicker">Yeni kitaplar</span></div>' + ic + '</div>';
+      '<div class="ks-b-bas"><span class="kicker">Yeni kitaplar</span></div>' + ic +
+      bGizliHtml() + '</div>';
   }
   function bEkle(i){
     const a = B.gorunen[+i];
@@ -542,14 +551,61 @@
     if(typeof hepsiniCiz === 'function') hepsiniCiz();   // sarmalama Keşfet'i tazeler
     ciz();
   }
+  /* Gizleme GERİ ALINABİLİR (v62 — erteleme deseninin dengi). Senkron
+     semantiği KARARI: kesfetGizli öz-damgalı UNION'dur; union'dan kayıt
+     SİLMEK öbür cihazın kopyasından geri dirilir. Bu yüzden geri alma ayrı
+     bir öz-damgalı haritada yaşar: kesfetGizliGeri (silinenler mezar taşı
+     deseninin birebiri). Etkin gizlilik = gizli damgası > geri damgası;
+     yeniden gizlemek daha yeni damgayla geri almayı yener. */
+  const GIZLI_AD_ANAHTAR = 'kk_kesfet_gizli_ad_v1';   // cihaz-yerel ad defteri (senkrona girmez)
+  function gizliAdDefteri(){
+    try{ return JSON.parse(localStorage.getItem(GIZLI_AD_ANAHTAR)) || {}; }
+    catch(e){ return {}; }
+  }
+  function bGizliMi(anah){
+    const g = (veri.kesfetGizli || {})[anah];
+    const geri = (veri.kesfetGizliGeri || {})[anah];
+    return !!g && !(geri > g);
+  }
+  function bGizliListe(){
+    const defter = gizliAdDefteri();
+    return Object.keys(veri.kesfetGizli || {}).filter(bGizliMi).sort()
+      .map(anah => ({ anah,
+        /* başka cihazda gizlenmişse ad defterinde yoktur — anahtarın kendisi
+           (katlanmış "ad — yazar") gösterilir: çirkin ama dürüst */
+        ad: defter[anah] || anah.split('|').filter(Boolean).join(' — ') }));
+  }
   function bGizle(i){
     const a = B.gorunen[+i];
     if(!a) return;
     veri.kesfetGizli = veri.kesfetGizli || {};
     veri.kesfetGizli[bAnahtar(a)] = Date.now();   // kalıcı tercih; senkronda union
+    try{
+      const defter = gizliAdDefteri();
+      defter[bAnahtar(a)] = a.ad + (a.yazar ? ' — ' + a.yazar : '');
+      localStorage.setItem(GIZLI_AD_ANAHTAR, JSON.stringify(defter));
+    }catch(e){}
     depoKaydet();
-    if(typeof toast === 'function') toast('Bir daha önerilmeyecek');
+    if(typeof toast === 'function') toast('Bir daha önerilmeyecek — alttaki listeden geri alabilirsin');
     ciz();
+  }
+  function bGeriAl(anah){
+    if(!anah || !bGizliMi(anah)) return;
+    veri.kesfetGizliGeri = veri.kesfetGizliGeri || {};
+    veri.kesfetGizliGeri[anah] = Date.now();
+    depoKaydet();
+    if(typeof toast === 'function') toast('Öneri geri geldi');
+    ciz();
+  }
+  function bGizliHtml(){
+    const gizliler = bGizliListe();
+    if(!gizliler.length) return '';
+    return '<div class="ks-gizli"><button class="ks-sessiz" data-act="ks-gizli">' +
+      gizliler.length + ' öneri gizledin — ' + (S.gizliAcik ? 'gizle' : 'göster') + '</button>' +
+      (S.gizliAcik ? gizliler.map(g =>
+        '<div class="ks-erteli-item ks-gizli-item"><span class="ks-erteli-ad">' + esc(g.ad) + '</span>' +
+        '<span class="ks-erteli-sag"><button class="ks-basla" data-act="ks-gizli-geri" data-anah="' +
+        escAttr(g.anah) + '">Geri al</button></span></div>').join('') : '') + '</div>';
   }
 
   function ciz(){
@@ -594,7 +650,24 @@
     const erteliler = (typeof veri === 'object' ? veri.kitaplar : [])
       .filter(k => k.durum === 'okunacak' && M.ertelemeAktif(k));
 
-    let html = ustHtml(h, havuz.length, filtreli.length);
+    /* D5 (v62): çeşitlilik kotası aday elediyse sayım şeffaf — hangi kota
+       kestiği elenen adaylardan bakılarak söylenir, sayı uydurulmaz. */
+    let elemeNotu = '';
+    if(h.mod !== 'az-veri' && !dahaVar && filtreli.length > secilen.length){
+      const gosterilen = new Set(secilen.map(o => o.kitap.id));
+      const yazarSay = {};
+      secilen.forEach(o => { const y = katla(o.kitap.yazar || '');
+        if(y) yazarSay[y] = (yazarSay[y] || 0) + 1; });
+      let turKesti = false;
+      filtreli.forEach(o => {
+        if(gosterilen.has(o.kitap.id)) return;
+        const y = katla(o.kitap.yazar || '');
+        if(!(y && yazarSay[y] >= 2)) turKesti = true;
+      });
+      elemeNotu = ' · ' + (filtreli.length - secilen.length) + ' aday gösterilmiyor: aynı yazardan en fazla 2' +
+        (turKesti ? ', benzer türden sınırlı sayıda' : '') + ' öneri';
+    }
+    let html = ustHtml(h, havuz.length, filtreli.length, elemeNotu);
     html += suzgecHtml(turler, raflar);
     if(h.mod === 'az-veri')
       html += '<div class="ks-not">Henüz kişisel öneri için yeterli veri yok: puan verdiğin ' +
@@ -667,6 +740,8 @@
           ciz(); break; }
         case 'ks-daha': S.limit += SAYFA_ADIMI; ciz(); break;
         case 'ks-erteli': S.erteliAcik = !S.erteliAcik; ciz(); break;
+        case 'ks-gizli': S.gizliAcik = !S.gizliAcik; ciz(); break;
+        case 'ks-gizli-geri': bGeriAl(el.dataset.anah); break;
         case 'ks-basla':
           if(window.__oneri && window.__oneri.basla(el.dataset.id) &&
              typeof hepsiniCiz === 'function') hepsiniCiz();

@@ -281,6 +281,13 @@
     const kesfetGizli = { ...((uzak && uzak.kesfetGizli) || {}) };
     for(const [anah, t] of Object.entries((yerel && yerel.kesfetGizli) || {}))
       if(!kesfetGizli[anah] || t > kesfetGizli[anah]) kesfetGizli[anah] = t;
+    /* kesfetGizliGeri (v62): gizlemenin GERİ ALMA kayıtları — silinenler mezar
+       taşı deseninin birebiri, o da UNION. Union'dan kayıt SİLMEK öbür cihazın
+       kopyasından geri dirilirdi; geri alma bu ayrı haritada yaşar. Etkin
+       gizlilik = gizli damgası > geri damgası (kesfet.js bGizliMi). */
+    const kesfetGizliGeri = { ...((uzak && uzak.kesfetGizliGeri) || {}) };
+    for(const [anah, t] of Object.entries((yerel && yerel.kesfetGizliGeri) || {}))
+      if(!kesfetGizliGeri[anah] || t > kesfetGizliGeri[anah]) kesfetGizliGeri[anah] = t;
 
     const ciftler = new Map();   // id → { u: uzak kopya, y: yerel kopya }
     ((uzak && uzak.kitaplar) || []).forEach(k => { if(k && k.id) ciftler.set(k.id, { u: k }); });
@@ -317,7 +324,7 @@
       const yg = ((yerel && yerel.hedefSayfaG) || {})[yil] || 0;
       if(!(yil in hedefSayfa) || yg >= (hedefSayfaG[yil]||0)){ hedefSayfa[yil] = v; hedefSayfaG[yil] = yg; }
     }
-    return { kitaplar, hedef, hedefG, hedefSayfa, hedefSayfaG, silinenler, kesfetGizli };
+    return { kitaplar, hedef, hedefG, hedefSayfa, hedefSayfaG, silinenler, kesfetGizli, kesfetGizliGeri };
   }
 
   /* ---------- senkron ---------- */
@@ -399,6 +406,7 @@
         veri.hedefG = bir.hedefG; veri.silinenler = bir.silinenler;
         veri.hedefSayfa = bir.hedefSayfa; veri.hedefSayfaG = bir.hedefSayfaG;
         veri.kesfetGizli = bir.kesfetGizli || {};
+    veri.kesfetGizliGeri = bir.kesfetGizliGeri || {};
         /* M4b: önce depo, başarılıysa parmak izi — ters sıra kota hatasında
            taze iz + bayat depo uyumsuzluğu bırakıyordu */
         let depoTamam = true;

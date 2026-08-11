@@ -164,7 +164,7 @@
       const gecen = Date.now() - o.b;
       blok.innerHTML =
         '<div class="d-bolum-bas" style="margin-bottom:6px"><span class="kicker">Okuma oturumu</span></div>'
-        + '<div class="hiz-kutu" style="border-color:var(--brass)">Okuyorsun — <b id="oturumSayac">'
+        + '<div class="d-oturum-canli">Okuyorsun — <b id="oturumSayac">'
         + sureMetni(gecen) + '</b> (başlangıç sayfası: ' + (o.sa||0) + ')</div>'
         + '<div class="ilerleme-guncelle" style="margin-top:10px">'
         + '<input type="number" inputmode="numeric" min="0" ' + (k.sayfa ? 'max="'+k.sayfa+'"' : '')

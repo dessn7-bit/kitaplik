@@ -187,9 +187,12 @@
         +       aralikBuyut(aralikOf(n)) + ' gün sonra tekrar">' + ik('onay') + ' Devam etsin</button>'
         +     '<button class="tk-btn" data-act="tk-sik" data-nid="' + escAttr(n.id) + '" title="'
         +       aralikKucult(aralikOf(n)) + ' gün aralıkla">' + ik('geri') + ' Daha sık</button>'
-        /* "Yeter" ikonsuz: ✕/çarpı görsel dilde kapat/vazgeç düğmelerine özgü;
-           buradaki eylem vazgeçme değil döngüden çıkarma — sözcük tek başına yeter. */
-        +     '<button class="tk-btn" data-act="tk-yeter" data-nid="' + escAttr(n.id) + '">Yeter</button>'
+        /* İkonsuz: ✕/çarpı görsel dilde kapat/vazgeç düğmelerine özgü; buradaki
+           eylem vazgeçme değil döngüden çıkarma. Etiket DAVRANIŞI söyler (v62):
+           yalnız "Yeter" silme çağrışımı yapıyordu, oysa kayıt duraklatılıyor —
+           etiket ve title bunu açıkça söyler, geri alma yolu keşfedilebilir kalır. */
+        +     '<button class="tk-btn" data-act="tk-yeter" data-nid="' + escAttr(n.id) + '"'
+        +       ' title="Döngüden çıkarır — silinmez; listedeki kartından yeniden başlatabilirsin">Yeter, duraklat</button>'
         +     (bugunku.length > 1 ? '<button class="tk-btn tk-btn-atla" data-act="tk-atla">Sonraki ›</button>' : '')
         +   '</div>'
         + '</div>';

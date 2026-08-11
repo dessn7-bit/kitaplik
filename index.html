@@ -110,7 +110,7 @@
   --kamera-zemin:#000; --kamera-cerceve:rgba(255,253,247,.85);
   /* Yükselti dili TEK: kart = surface + 1px border + --yukselti-1.
      --yukselti-2 yüzer küçük yüzey (ızgara kapağı, seçim işareti),
-     --yukselti-3 kalıcı yüzerler (FAB). İç kutu (hiz-kutu vb.) gölgesizdir. */
+     --yukselti-3 kalıcı yüzerler (FAB). İç kutu (vm-seri-kutu vb.) gölgesizdir. */
   --yukselti-1:0 1px 3px var(--golge);
   --yukselti-2:0 2px 6px var(--golge-orta);
   --yukselti-3:0 4px 16px var(--golge-guclu);
@@ -181,7 +181,7 @@ img{display:block}
 /* v41: rakamlar TABULAR — sayfa sayısı, yüzde, istatistik/sayaç değerleri
    hizalı otursun (Lora oransal rakamlarla geliyor). */
 .ist-sayi,.bar-deger,.bar-ad,.ilerleme-txt,.puan-mini,.count-label,
-.tk-ist,.tk-rozet-sayi,.hiz-kutu,.d-tarih,.vm-okuma-satir,
+.tk-ist,.tk-rozet-sayi,.d-oturum-canli,.d-tarih,.vm-okuma-satir,
 input[type="number"],input[type="date"]{font-variant-numeric:tabular-nums}
 /* ---------- İkon dili: tek çizgi ağırlığında inline SVG ----------
    Dış dosya/font YOK (çevrimdışı şartı). stroke=currentColor, 24×24 viewBox;
@@ -228,11 +228,13 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
   mask-image:linear-gradient(90deg,transparent,#000 36px)}
 .chips.kayar-bas.kayar-son{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent);
   mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent)}
-/* Ciltli çip: hap değil KUTU (r-sm), dolgu yok; aktif = altın kontur + altın
-   metin + %7 tint (v41 AA ölçümü: brass/%7-tint 4.57). */
+/* Ciltli çip: hap değil KUTU (r-sm), dolgu yok. Seçili metin PAPER (v62,
+   ks-chip reçetesi): brass metin %7 tint üzerinde AÇIK temada 4.23'e
+   düşüyordu (AA altı — v41'deki "4.57" ölçümü tint zeminini hesaba
+   katmıyordu); seçililiği kontur + tint + ağırlık taşır. */
 .chip{flex:0 0 auto;padding:8px 12px;border-radius:var(--r-sm);border:1px solid var(--kontur);
   background:transparent;color:var(--muted);font-size:.8rem;letter-spacing:.02em}
-.chip.active{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
+.chip.active{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--paper);
   border-color:var(--brass);font-weight:600}
 /* Araç satırı (v43 D1): tek satır, kırılmaz — eksenler solda kendi kaydırıcısında,
    Seç + düzen anahtarları sabit sağda. Bindirme geometrisi g37 ile kilitli. */
@@ -274,14 +276,17 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 .kart-alt{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
 /* Rozet hiyerarşisi: DURUM = yumuşak dolgu hap (tint zemin, kenarlıksız —
    en güçlü işaret), PUAN = dolgu hap + yıldız, raf/etiket/not sayısı = sessiz
-   çıplak metin. Tint üstü metin kontrastları AA yeniden hesaplandı (≥4.6). */
+   çıplak metin. Rozet metni PAPER'a çekilemez — renk ANLAM taşıyor (durum
+   kodu); onun yerine %86 renk + %14 paper KARIŞIMI (v62): açık temada tint
+   zeminine karşı 4.23→4.97+ (ölçüldü), karanlıkta paper açık olduğundan
+   karışım kontrastı orada da YÜKSELTİR — tek formül iki temada AA. */
 .rozet{font-size:.75rem;padding:3px 10px;border-radius:var(--r-sm);letter-spacing:.03em}
-.r-okunuyor{color:var(--brass);background:color-mix(in srgb,var(--brass) 7%,transparent)}
-.r-bitti{color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,transparent)}
-.r-okunacak{color:var(--muted);background:color-mix(in srgb,var(--muted) 7%,transparent)}
-.r-yarim{color:var(--drop);background:color-mix(in srgb,var(--drop) 7%,transparent)}
-.puan-mini{font-size:.75rem;font-weight:600;color:var(--brass);padding:3px 10px;
-  border-radius:var(--r-sm);background:color-mix(in srgb,var(--brass) 7%,transparent)}
+.r-okunuyor{color:color-mix(in srgb,var(--brass) 86%,var(--paper));background:color-mix(in srgb,var(--brass) 7%,transparent)}
+.r-bitti{color:color-mix(in srgb,var(--ok) 86%,var(--paper));background:color-mix(in srgb,var(--ok) 7%,transparent)}
+.r-okunacak{color:color-mix(in srgb,var(--muted) 86%,var(--paper));background:color-mix(in srgb,var(--muted) 7%,transparent)}
+.r-yarim{color:color-mix(in srgb,var(--drop) 86%,var(--paper));background:color-mix(in srgb,var(--drop) 7%,transparent)}
+.puan-mini{font-size:.75rem;font-weight:600;color:color-mix(in srgb,var(--brass) 86%,var(--paper));
+  padding:3px 10px;border-radius:var(--r-sm);background:color-mix(in srgb,var(--brass) 7%,transparent)}
 .etiket-mini{font-size:.75rem;color:var(--muted2);letter-spacing:.02em}
 /* Ciltli ilerleme çizgisi: ray dolgusu yok — 1px altın konturlu boş kanal,
    dolum aynı altında iç katman (tasarımdaki tek kalıp). */
@@ -669,12 +674,12 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .durum-secim{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
 .durum-btn{padding:9px 4px;border-radius:var(--r-md);border:1px solid var(--kontur);font-size:.75rem;
   color:var(--muted);background:transparent}
-.durum-btn.secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
+.durum-btn.secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--paper);
   border-color:var(--brass);font-weight:600}
 .puan-secim{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .puan-btn{width:40px;height:40px;border-radius:var(--r-md);border:1px solid var(--kontur);
   background:transparent;color:var(--muted);font-size:.9rem}
-.puan-btn.secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
+.puan-btn.secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--paper);
   border-color:var(--brass);font-weight:600}
 /* Ciltli not dili (v45): kutu yerine ÇİZGİ — satırlar kıl payı ayraçla; alıntı
    sol altın hattıyla ayrılır (tasarımın alıntı bloğu kalıbı). */
@@ -688,17 +693,20 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .not-ekle-satir{display:flex;gap:8px;margin-top:10px;align-items:flex-start}
 .not-tip-sec{display:flex;gap:6px;margin-top:8px;align-items:center}
 .mini-chip{padding:6px 12px;border-radius:var(--r-sm);border:1px solid var(--kontur);font-size:.75rem;color:var(--muted)}
-.mini-chip.secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
+.mini-chip.secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--paper);
   border-color:var(--brass);font-weight:600}
 .sayfa-input{width:86px !important;font-size:.85rem;padding:6px 10px;margin-left:auto}
 .form-alt{display:flex;gap:10px;margin-top:24px}
 .ilerleme-guncelle{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}
 .ilerleme-guncelle input{width:90px}
 .ilerleme-guncelle span{font-size:.85rem;color:var(--muted)}
-/* İç bilgi kutusu dili: surface2 + kenarlık, GÖLGESİZ (kart değil, kuyu) */
-.hiz-kutu{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-ic);
-  padding:12px 14px;margin-top:12px;font-size:.85rem;color:var(--muted);line-height:1.6}
-.hiz-kutu b{color:var(--brass);font-weight:600}
+/* v62: .hiz-kutu emekli — tek kullanıcısı canlı oturum sayacıydı (oturum.js);
+   Ciltli'de kuyu kutu değil ALTIN SOL HATLI sessiz satır (alıntı bloğu dili,
+   d-hiz-not'un "kutu değil satır" göçüyle aynı karar). Vurguyu hat taşır,
+   sayaç paper + 600 (brass-metin-on-bg 4.61 sınırdaydı, paper 14+). */
+.d-oturum-canli{border-left:1px solid var(--brass);padding:2px 0 2px 10px;margin-top:12px;
+  font-size:.85rem;color:var(--muted);line-height:1.6}
+.d-oturum-canli b{color:var(--paper);font-weight:600}
 /* ödünç UI v40'ta kaldırıldı — veri modeli ve senkron kuralı yaşıyor */
 
 /* OL arama */
@@ -717,7 +725,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .tm-secim{display:flex;gap:8px;flex-wrap:wrap}
 .tm-dugme{flex:1 1 auto;padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--kontur);
   background:transparent;color:var(--muted);font-size:.85rem}
-.tm-dugme.tm-secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--brass);
+.tm-dugme.tm-secili{background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--paper);
   border-color:var(--brass);font-weight:600}
 
 /* veri modeli sprinti — kendi ad alanı (vm-) */
@@ -728,7 +736,10 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .vm-chip{flex:0 0 auto;padding:6px 12px;border-radius:var(--r-sm);border:1px dashed var(--cizgi);
   background:transparent;color:var(--muted2);font-size:.75rem}
 .vm-chip.vm-secili{border-style:solid;border-color:var(--brass);color:var(--brass);font-weight:600}
-.vm-rozet{font-size:.75rem;padding:3px 10px;border-radius:var(--r-sm);color:var(--mavi);
+/* v62: mavi/%7-tint açıkta 4.42 ölçüldü (AA altı — g49 süpürme fikstüründe
+   istek kitabı olmadığı için yakalanmamıştı); rozetle aynı %86 karışımı. */
+.vm-rozet{font-size:.75rem;padding:3px 10px;border-radius:var(--r-sm);
+  color:color-mix(in srgb,var(--mavi) 86%,var(--paper));
   background:color-mix(in srgb,var(--mavi) 7%,transparent)}
 .vm-seri-kutu{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-ic);
   padding:12px 14px;margin-top:8px;font-size:.85rem;color:var(--muted);line-height:1.6}
@@ -1488,7 +1499,7 @@ function depoYukle(){
   try{
     const raw = localStorage.getItem(DEPO);
     if(!raw) return { kitaplar:[], hedef:{}, hedefG:{}, hedefSayfa:{}, hedefSayfaG:{},
-      silinenler:{}, kesfetGizli:{} };
+      silinenler:{}, kesfetGizli:{}, kesfetGizliGeri:{} };
     const v = JSON.parse(raw);
     return {
       kitaplar: Array.isArray(v.kitaplar) ? v.kitaplar.map(kitapNormalize) : [],
@@ -1497,10 +1508,14 @@ function depoYukle(){
       hedefSayfa: damgaSuz(v.hedefSayfa),
       hedefSayfaG: damgaSuz(v.hedefSayfaG),
       silinenler: damgaSuz(v.silinenler),
-      kesfetGizli: damgaSuz(v.kesfetGizli)
+      kesfetGizli: damgaSuz(v.kesfetGizli),
+      /* kesfetGizliGeri (v62): gizlemenin GERİ ALMA kayıtları — silinenler
+         mezar taşı deseninin dengi (union'dan silme dirilir; geri alma ayrı
+         öz-damgalı haritada yaşar, etkin gizlilik = gizli > geri). */
+      kesfetGizliGeri: damgaSuz(v.kesfetGizliGeri)
     };
   }catch(e){ return { kitaplar:[], hedef:{}, hedefG:{}, hedefSayfa:{}, hedefSayfaG:{},
-    silinenler:{}, kesfetGizli:{} }; }
+    silinenler:{}, kesfetGizli:{}, kesfetGizliGeri:{} }; }
 }
 function depoKaydet(){
   /* dönüş: yazım başarılı mı — senkron sarmalayıcısı parmak izini yalnız
@@ -2815,6 +2830,8 @@ function iceAktar(dosya){
       if(y.hedef && typeof y.hedef === 'object') veri.hedef = { ...y.hedef, ...veri.hedef };
       if(y.kesfetGizli && typeof y.kesfetGizli === 'object')
         veri.kesfetGizli = { ...y.kesfetGizli, ...(veri.kesfetGizli || {}) };   // v51: gizleme tercihi yedekten döner
+      if(y.kesfetGizliGeri && typeof y.kesfetGizliGeri === 'object')
+        veri.kesfetGizliGeri = { ...y.kesfetGizliGeri, ...(veri.kesfetGizliGeri || {}) };   // v62: geri almalar da döner
       depoKaydet(); hepsiniCiz();
       toast(eklendi ? `${eklendi} kitap geri yüklendi` : 'Yeni kitap yok — hepsi zaten kayıtlı');
     }catch(e){ toast('Dosya okunamadı — geçerli bir Kitaplık yedeği değil'); }
@@ -3600,7 +3617,8 @@ document.addEventListener('click', e => {
         // Mezar taşları korunur; damgala silinen kitaplar için yenilerini üretir.
         veri = { kitaplar:[], hedef: veri.hedef || {}, hedefG: veri.hedefG || {},
           hedefSayfa: veri.hedefSayfa || {}, hedefSayfaG: veri.hedefSayfaG || {},
-          silinenler: veri.silinenler || {}, kesfetGizli: veri.kesfetGizli || {} };
+          silinenler: veri.silinenler || {}, kesfetGizli: veri.kesfetGizli || {},
+          kesfetGizliGeri: veri.kesfetGizliGeri || {} };
         if(window.__kapak) window.__kapak.hepsiniSil(true); // kapak fotoğrafları da yetim kalmasın
         depoKaydet(); hepsiniCiz(); toast('Kütüphane boşaltıldı — hedeflerin duruyor');
       }

@@ -167,7 +167,7 @@
       .fa-sira::-webkit-scrollbar{display:none}
       .fa-cip{flex:0 0 auto;padding:6px 12px;border-radius:var(--r-sm);border:1px solid var(--kontur);
         background:transparent;color:var(--muted);font-size:.75rem;white-space:nowrap}
-      .fa-cip.fa-secili{border-color:var(--brass);color:var(--brass);font-weight:600;
+      .fa-cip.fa-secili{border-color:var(--brass);color:var(--paper);font-weight:600;
         background:color-mix(in srgb,var(--brass) 7%,transparent)}
       .fa-komsu{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;
         text-align:left;padding:9px 0;margin-top:0;border:none;border-bottom:1px solid var(--cizgi);
