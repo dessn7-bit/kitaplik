@@ -6,9 +6,17 @@
    - Paket (~6 MB: motor + worker + wasm çekirdek + tur modeli) PEŞİN İNMEZ.
      ocr/ dosyaları repoda YEREL durur (çevrimdışı şartı, CDN yok) ama sw.js
      ASSETS'te DEĞİL — ilk kurulumda 6 MB indirtmek yanlış olurdu. İlk
-     kullanımda kullanıcı ONAYIYLA indirilir ve Cache Storage 'kk_ocr_paket_v1'
-     kovasına alınır; ikinci kullanım çevrimdışı da çalışır. sw.js bu kovayı
-     activate temizliğinde KORUR ve ocr/ isteklerini önce kovadan sunar.
+     kullanımda iner ve Cache Storage 'kk_ocr_paket_v1' kovasına alınır;
+     ikinci kullanım çevrimdışı da çalışır. sw.js bu kovayı activate
+     temizliğinde KORUR ve ocr/ isteklerini önce kovadan sunar.
+   - ONAY PENCERESİ YOK (Kaan kararı, v60): "Fotoğraftan" basılınca indirme
+     kendiliğinden başlar. Dürüstlük onay kapısıyla değil BİLGİ notuyla
+     sağlanır: ilerleme ekranında "~6 MB, bir kez" satırı her indirmede
+     görünür (ayrı bir "bir kezlik" not penceresi = kaldırdığımız kapının
+     kılık değiştirmişi olurdu; not ilerlemeyle aynı yüzeyde, adım eklemez).
+     İndirme İPTAL EDİLEBİLİR (Vazgeç / ✕): iptal yarım kova BIRAKMAZ —
+     kaldığı-yerden-devam avantajı bilerek feda edildi, yarım kova Ayarlar
+     sayacını ve "indirildi mi" sorusunu bulandırırdı.
    - Çekirdek seçimi: cihaz SIMD destekliyorsa simd-lstm, yoksa lstm. corePath
      dosyaya DOĞRUDAN işaret eder ('js' ile biter → worker kendi tespitini
      atlar); böylece "indirilen dosya = yüklenen dosya" garantisi kurulur.
@@ -45,10 +53,11 @@
   const GUVEN_ESIK = 70;   // altında "tanıma zayıf olabilir" uyarısı
   const EN_UZUN = 1600;    // önişleme hedef kenarı (ölçümle: hız + doğruluk dengesi)
 
-  let hedefTur = null;     // 'detay' | 'defter' — sonucun aktarılacağı yüzey
-  let indirmeSozu = null;  // tekil indirme
-  let motorSozu = null;    // tekil motor yüklemesi
-  let mesgul = false;      // aynı anda tek tanıma
+  let hedefTur = null;        // 'detay' | 'defter' — sonucun aktarılacağı yüzey
+  let indirmeSozu = null;     // tekil indirme
+  let indirmeDenetim = null;  // AbortController — Vazgeç indirmeyi keser
+  let motorSozu = null;       // tekil motor yüklemesi
+  let mesgul = false;         // aynı anda tek tanıma
 
   function bildir(m){ if(typeof toast === 'function') toast(m); }
   function mb(b){ return (b / 1048576).toFixed(1); }
@@ -94,6 +103,8 @@
 
   function paketIndir(ilerle){
     if(indirmeSozu) return indirmeSozu;
+    const denetim = (typeof AbortController === 'function') ? new AbortController() : null;
+    indirmeDenetim = denetim;
     indirmeSozu = (async () => {
       const c = await caches.open(KOVA);
       const liste = await gerekliler();
@@ -101,7 +112,7 @@
       let inen = 0;
       for(const yol of liste){
         if(await c.match(yol)){ inen += BOYUT[yol] || 0; if(ilerle) ilerle(inen, toplam); continue; }
-        const y = await fetch(yol);
+        const y = await fetch(yol, denetim ? { signal: denetim.signal } : {});
         if(!y.ok) throw new Error(yol + ' HTTP ' + y.status);
         /* Worker/importScripts katı MIME ister — kovaya doğru tiple yazılır. */
         const tip = yol.slice(-3) === '.js' ? 'text/javascript' : 'application/octet-stream';
@@ -122,13 +133,23 @@
           inen += govde.size;
           if(ilerle) ilerle(Math.min(inen, toplam), toplam);
         }
+        /* iptal ile put arasındaki dar yarış penceresi: abort'tan sonra kovaya
+           tek dosya bile yazılmasın (iptal "yarım kova bırakmaz" sözü) */
+        if(denetim && denetim.signal.aborted) throw new DOMException('iptal', 'AbortError');
         await c.put(yol, new Response(govde, { status: 200, headers: { 'Content-Type': tip } }));
       }
       if(ilerle) ilerle(toplam, toplam);
     })();
     /* hata → söz düşer, yeniden denenebilir; başarı → taze durum okunsun */
-    indirmeSozu.then(() => { indirmeSozu = null; }, () => { indirmeSozu = null; });
+    indirmeSozu.then(() => { indirmeSozu = null; indirmeDenetim = null; },
+      () => { indirmeSozu = null; indirmeDenetim = null; });
     return indirmeSozu;
+  }
+  /* Vazgeç: aktif indirmeyi keser ve kovayı komple siler — tamamlanmış
+     dosyalar da gider. Sonraki deneme sıfırdan başlar (bilinçli). */
+  function indirmeKes(){
+    if(indirmeDenetim) indirmeDenetim.abort();
+    caches.delete(KOVA).catch(() => {});
   }
 
   /* Motor sayfaya KOVADAN yüklenir (blob URL) — çevrimiçiyken bile yeniden
@@ -260,7 +281,7 @@
   /* ---------- pencere ---------- */
   function ortu(){ return document.getElementById('ortuOcr'); }
   function goster(bolum){
-    ['ocOnay', 'ocIlerleme', 'ocSec', 'ocHata'].forEach(id => {
+    ['ocIlerleme', 'ocSec', 'ocHata'].forEach(id => {
       const e = document.getElementById(id);
       if(e) e.hidden = (id !== bolum);
     });
@@ -296,23 +317,36 @@
         'İnternete bağlıyken bir kez indirmen yeterli — sonrası çevrimdışı çalışır.');
       return;
     }
-    ortuAc('ocOnay');   // ONAY KAPISI: onay gelmeden tek bayt inmez
+    indirBaslat();   // onay penceresi YOK (v60) — bilgi notu ilerleme ekranında
   }
   function secTiklat(){
     const g = document.getElementById('ocDosya');
     if(g) g.click();
   }
-  async function indirOnaylandi(){
+  /* İlerleme ekranının iki yüzü: indirme (bilgi notu + Vazgeç görünür) ve
+     tanıma (not tanıma sözünü söyler, Vazgeç satırı gizli). */
+  function indirmeGorunum(indiriliyor){
+    const n = document.getElementById('ocIlerlemeNot');
+    const s = document.getElementById('ocIptalSatir');
+    if(n) n.textContent = indiriliyor
+      ? 'Türkçe metin tanıma paketi (~6 MB) bir kez indiriliyor — sonrası çevrimdışı çalışır. ' +
+        'Paketi Ayarlar ▸ Depolama\'dan silebilirsin.'
+      : 'Tanınan metin kaydedilmeden önce sana gösterilecek — düzeltebilirsin.';
+    if(s) s.hidden = !indiriliyor;
+  }
+  async function indirBaslat(){
     ortuAc('ocIlerleme');
-    ilerlemeYaz('Paket indiriliyor…', 0);
+    indirmeGorunum(true);
+    ilerlemeYaz('Dil paketi indiriliyor…', 0);
     try{
       await paketIndir((inen, toplam) =>
-        ilerlemeYaz('Paket indiriliyor… ' + mb(inen) + ' / ' + mb(toplam) + ' MB', toplam ? inen / toplam : 0));
+        ilerlemeYaz('Dil paketi indiriliyor… ' + mb(inen) + ' / ' + mb(toplam) + ' MB', toplam ? inen / toplam : 0));
       durumTazele();
       /* Dosya seçici kullanıcı jesti ister — uzun indirmenin ardından
          kendiliğinden açılmaz, düğmeyle açılır. */
       goster('ocSec');
     }catch(e){
+      if(e && e.name === 'AbortError') return;   // kullanıcı vazgeçti — sessizce biter
       hataGoster('İndirme tamamlanamadı — bağlantını kontrol edip yeniden dene.');
     }
   }
@@ -321,6 +355,7 @@
     if(mesgul) return;
     mesgul = true;
     ortuAc('ocIlerleme');
+    indirmeGorunum(false);
     ilerlemeYaz('Fotoğraf hazırlanıyor…', 0);
     try{
       const tuval = await onisle(dosya);
@@ -415,7 +450,7 @@
       el.textContent = 'İndirildi · ' + mb(d.bayt) + ' MB — çevrimdışı çalışır';
       if(sil) sil.hidden = false;
     }else{
-      el.textContent = 'İndirilmedi — ilk "Fotoğraftan" kullanımında sorulur (~6 MB, bir kez)';
+      el.textContent = 'İndirilmedi — ilk "Fotoğraftan" kullanımında kendiliğinden iner (~6 MB, bir kez)';
       if(sil) sil.hidden = true;
     }
   }
@@ -442,8 +477,9 @@
       switch(el.dataset.act){
         case 'oc-baslat': baslatIstegi('detay'); break;
         case 'oc-al': baslatIstegi('defter'); break;
-        case 'oc-indir': indirOnaylandi(); break;
-        case 'oc-vazgec': ortuKapat(); break;
+        case 'oc-vazgec':
+          if(indirmeSozu) indirmeKes();   // indirme sürüyorsa: kes + kovayı temizle
+          ortuKapat(); break;
         case 'oc-sec': secTiklat(); break;
         case 'oc-sayfa-kullan': sayfaKullan(el); break;
         case 'oc-paket-sil': paketSil(); break;

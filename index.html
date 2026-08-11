@@ -820,9 +820,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   align-items:flex-start}
 .oc-uyari{color:var(--drop)}
 #ortuOcr .ilerleme{margin-top:2px}
-/* .btn display ataması UA'nın [hidden]{display:none} kuralını eziyor (v42'de
-   .kt-sayfa-satir'da yaşanan tuzağın aynısı) — istisna açıkça geri verilir. */
+/* .btn ve .form-alt display atamaları UA'nın [hidden]{display:none} kuralını
+   eziyor (v42'de .kt-sayfa-satir'da yaşanan tuzağın aynısı) — istisnalar
+   açıkça geri verilir. */
 .btn[hidden]{display:none}
+.form-alt[hidden]{display:none}
 /* Ampul düğmesi (v50: pencere değil KEŞFET sekmesine götürür; on- panel CSS'i
    emekli — liste/eylem stilleri artık kesfet.js'in ks- ad alanında) */
 .on-ac-btn{flex:0 0 40px;background:transparent;border:1px solid var(--kontur);border-radius:var(--r-md);
@@ -1070,7 +1072,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
         </div>
         <h3 class="ay-baslik">Metin tanıma paketi</h3>
         <p class="ay-not">"Fotoğraftan alıntı" özelliğinin Türkçe metin tanıma paketi (tesseract.js).
-      İlk kullanımda onayınla <b>bir kez</b> indirilir ve bu cihazda saklanır — sonrası çevrimdışı
+      İlk kullanımda kendiliğinden <b>bir kez</b> indirilir ve bu cihazda saklanır — sonrası çevrimdışı
       çalışır. Silersen yer açılır; gerektiğinde yeniden indirilir.</p>
         <div class="oc-depo-satir" id="ocDepoBilgi">Hesaplanıyor…</div>
         <div class="ay-eylem">
@@ -1304,26 +1306,21 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   </div>
 </div>
 <!-- ===== FOTOĞRAFTAN ALINTI (oc-) — mantık ocr.js'te. Paket peşin İNMEZ:
-     ocr/ dosyaları sw ASSETS'te yok; ilk kullanımda onayla indirilip
-     kk_ocr_paket_v1 kovasına alınır (ikinci kullanım çevrimdışı çalışır). -->
+     ocr/ dosyaları sw ASSETS'te yok; İLK KULLANIMDA onay sorulmadan indirilip
+     kk_ocr_paket_v1 kovasına alınır (Kaan kararı, v60 — dürüstlük ilerleme
+     ekranındaki bilgi notuyla; indirme Vazgeç ile kesilebilir). -->
 <div class="ortu" id="ortuOcr">
   <div class="sheet">
     <div class="tutamac"></div>
     <button class="sheet-kapat" data-act="oc-vazgec" aria-label="Kapat">✕</button>
     <div class="sheet-baslik" id="ortuOcrBaslik">Fotoğraftan alıntı</div>
-    <div id="ocOnay" hidden>
-      <p class="oc-not">Alıntıyı fotoğraftan tanımak için bu cihaza <b>bir kez ~6 MB</b>'lik
-        Türkçe metin tanıma paketi indirilecek. Sonrasında çevrimdışı da çalışır;
-        paketi Ayarlar &gt; Depolama'dan silebilirsin.</p>
-      <div class="form-alt">
-        <button class="btn btn-cerceve" data-act="oc-vazgec" style="flex:1">Vazgeç</button>
-        <button class="btn btn-brass" data-act="oc-indir" style="flex:2">İndir ve devam et</button>
-      </div>
-    </div>
     <div id="ocIlerleme" hidden>
       <div class="oc-durum" id="ocDurumMetin">Hazırlanıyor…</div>
       <div class="ilerleme"><div id="ocIlerlemeBar" style="width:0%"></div></div>
-      <p class="oc-not">Tanınan metin kaydedilmeden önce sana gösterilecek — düzeltebilirsin.</p>
+      <p class="oc-not" id="ocIlerlemeNot">Tanınan metin kaydedilmeden önce sana gösterilecek — düzeltebilirsin.</p>
+      <div class="form-alt" id="ocIptalSatir" hidden>
+        <button class="btn btn-cerceve" data-act="oc-vazgec" style="flex:1">Vazgeç</button>
+      </div>
     </div>
     <div id="ocSec" hidden>
       <p class="oc-not">Paket indirildi. Şimdi alıntının fotoğrafını çek ya da galeriden seç.

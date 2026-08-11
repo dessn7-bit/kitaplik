@@ -2,7 +2,9 @@
 /* G50 — Fotoğraftan alıntı (OCR, ocr.js + ocr/ paketi).
    Sözleşmeler:
    - Paket (~6 MB) PEŞİN İNMEZ: sw ASSETS'te ocr/ yok; uygulama açılışı ocr/
-     dosyasına istek atmaz. İlk kullanımda ONAY kapısı; onay gelmeden 0 bayt.
+     dosyasına istek atmaz. İLK KULLANIMDA onay SORULMADAN iner (Kaan kararı,
+     v60): dürüstlük ilerleme ekranındaki bilgi notuyla ("~6 MB, bir kez"),
+     indirme Vazgeç ile kesilebilir ve iptal YARIM KOVA BIRAKMAZ.
    - İnen paket kk_ocr_paket_v1 kovasına yazılır; ikinci kullanımda istek 0.
      sw activate temizliği kovayı KORUR; /ocr/ istekleri önce kovadan döner.
    - OCR çıktısı HİÇBİR ZAMAN doğrudan kaydedilmez: sonuç düzenlenebilir alana
@@ -14,9 +16,9 @@
    Gerçek tesseract testte KOŞMAZ (yavaş): ocr/ rotası sahte motor sunar;
    indirme akışı sahteyi kovaya yazar, motor kovadan blob olarak yüklenir —
    yani önbellek yolu birebir üretimdeki yoldur.
-   (Mutasyon 1: onay adımı kaldırılır [baslatIstegi doğrudan indirir] →
-    "onay gelmeden tek bayt inmez" vakası kırmızı. Mutasyon 2: OCR bitince
-    metin notlara doğrudan push edilir → "doğrudan kaydedilmez" vakası kırmızı.) */
+   (Mutasyon 1 [v60]: ocr/ paket dosyaları sw ASSETS'e eklenir → "paket PEŞİN
+    inmez" vakası kırmızı. Mutasyon 2: OCR bitince metin notlara doğrudan
+    push edilir → "doğrudan kaydedilmez" vakası kırmızı.) */
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -36,15 +38,18 @@ const SAHTE_MOTOR = [
 ].join('\n');
 
 /* ocr/ paket dosyalarını sahte gövdeyle sunar + istekleri sayar.
-   agTaklit'ten SONRA kaydedildiği için bu adresler için bu yönlendirici kazanır. */
-async function ocrTaklit(page, sayac) {
-  await page.route('**/ocr/**', route => {
+   agTaklit'ten SONRA kaydedildiği için bu adresler için bu yönlendirici kazanır.
+   gecikmeMs: indirme-anı arayüzünü (ilerleme, bilgi notu, Vazgeç) yakalamak
+   ve iptali indirme sürerken tetiklemek için her dosyayı yapay geciktirir. */
+async function ocrTaklit(page, sayac, gecikmeMs) {
+  await page.route('**/ocr/**', async route => {
     const url = route.request().url();
     sayac.push(url.slice(url.lastIndexOf('/ocr/') + 1));
+    if (gecikmeMs) await new Promise(r => setTimeout(r, gecikmeMs));
     if (url.includes('tesseract.min.js')) {
-      route.fulfill({ status: 200, contentType: 'text/javascript', body: SAHTE_MOTOR });
+      route.fulfill({ status: 200, contentType: 'text/javascript', body: SAHTE_MOTOR }).catch(() => {});
     } else {
-      route.fulfill({ status: 200, contentType: url.endsWith('.js') ? 'text/javascript' : 'application/octet-stream', body: 'sahte-paket-govdesi' });
+      route.fulfill({ status: 200, contentType: url.endsWith('.js') ? 'text/javascript' : 'application/octet-stream', body: 'sahte-paket-govdesi' }).catch(() => {});
     }
   });
 }
@@ -68,13 +73,11 @@ async function detayAc(page) {
   await page.click('#liste .kart');
   await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
 }
-/* onay akışıyla paketi indirir (detay açık olmalı) */
+/* indirme akışını koşturur (detay açık olmalı) — onay YOK: basınca kendiliğinden iner */
 async function paketIndirUI(page) {
   await page.click('#detayIcerik [data-act="oc-baslat"]');
-  await expect(page.locator('#ocOnay')).toBeVisible();
-  await page.click('#ortuOcr [data-act="oc-indir"]');
-  await expect(page.locator('#ocSec')).toBeVisible();
-  await page.click('#ortuOcr [data-act="oc-vazgec"]');
+  await expect(page.locator('#ocSec')).toBeVisible();   // indirme bitti, seçim adımı
+  await page.click('#ocSec [data-act="oc-vazgec"]');
   await expect(page.locator('#ortuOcr')).not.toHaveClass(/acik/);
 }
 async function kitaplar(page) {
@@ -179,23 +182,48 @@ test.describe('G50 Fotoğraftan alıntı', () => {
     expect(sayac).toEqual([]);
   });
 
-  test('ilk kullanımda ONAY istenir; onay gelmeden tek bayt inmez; Vazgeç iz bırakmaz', async ({ page }) => {
+  test('"Fotoğraftan"a basınca onay SORULMADAN indirme başlar; ilerleme + bilgi notu görünür', async ({ page }) => {
     const sayac = [];
-    await ocrTaklit(page, sayac);
+    await ocrTaklit(page, sayac, 250);   // yavaşlatılmış indirme: indirme-anı arayüzü yakalanır
     await tohumla(page, [sahteKitap({ ad: 'Sessiz Ev' })]);
     await rafAc(page);
     await detayAc(page);
     await page.click('#detayIcerik [data-act="oc-baslat"]');
-    await expect(page.locator('#ocOnay')).toBeVisible();
-    await expect(page.locator('#ocOnay')).toContainText('MB');   // boyut dürüstçe söylenir
-    expect(sayac).toEqual([]);
-    await page.click('#ocOnay [data-act="oc-vazgec"]');
-    await expect(page.locator('#ortuOcr')).not.toHaveClass(/acik/);
-    expect(sayac).toEqual([]);
-    expect(await page.evaluate(() => caches.has('kk_ocr_paket_v1').then(v => v))).toBe(false);
+    // onay penceresi YOK: doğrudan indirme ekranı
+    await expect(page.locator('#ocIlerleme')).toBeVisible();
+    await expect(page.locator('#ocDurumMetin')).toContainText('indiriliyor');
+    await expect(page.locator('#ocIlerleme .ilerleme')).toBeVisible();          // ilerleme kanalı
+    await expect(page.locator('#ocIlerlemeNot')).toContainText('~6 MB');        // BİLGİ notu (onay değil)
+    await expect(page.locator('#ocIlerlemeNot')).toContainText('bir kez');
+    await expect(page.locator('#ocIptalSatir [data-act="oc-vazgec"]')).toBeVisible();  // kesilebilir
+    await expect.poll(() => sayac.length).toBeGreaterThan(0);   // onay beklemeden istekler başladı
+    await expect(page.locator('#ocSec')).toBeVisible({ timeout: 10000 });   // bitti → seçim adımı
+    expect(sayac.length).toBe(4);
   });
 
-  test('onay → paket iner (4 dosya) ve kovaya yazılır', async ({ page }) => {
+  test('indirme Vazgeç ile KESİLİR; iptal yarım kova bırakmaz; yeniden deneme sıfırdan tamamlanır', async ({ page }) => {
+    const sayac = [];
+    await ocrTaklit(page, sayac, 350);
+    await tohumla(page, [sahteKitap({ ad: 'Sessiz Ev' })]);
+    await rafAc(page);
+    await detayAc(page);
+    await page.click('#detayIcerik [data-act="oc-baslat"]');
+    await expect(page.locator('#ocIptalSatir [data-act="oc-vazgec"]')).toBeVisible();
+    await page.click('#ocIptalSatir [data-act="oc-vazgec"]');   // ilk dosya inerken kes
+    await expect(page.locator('#ortuOcr')).not.toHaveClass(/acik/);
+    // yarım kova YOK (tamamlanan dosyalar da silinir)
+    await expect.poll(() => page.evaluate(() => caches.has('kk_ocr_paket_v1').then(v => v))).toBe(false);
+    // kesilen indirme arkada sürmez: 4 dosyanın tamamı asla istenmedi
+    await page.waitForTimeout(900);
+    expect(sayac.length).toBeLessThan(4);
+    // yeniden deneme: temiz durumdan başlar ve tamamlanır
+    await page.click('#detayIcerik [data-act="oc-baslat"]');
+    await expect(page.locator('#ocSec')).toBeVisible({ timeout: 10000 });
+    const kovaTam = await page.evaluate(() => window.__ocr.paketDurum().then(d => d.tam));
+    expect(kovaTam).toBe(true);
+  });
+
+  test('basınca paket iner (4 dosya) ve kovaya yazılır', async ({ page }) => {
     const sayac = [];
     await ocrTaklit(page, sayac);
     await tohumla(page, [sahteKitap({ ad: 'Sessiz Ev' })]);
@@ -214,7 +242,7 @@ test.describe('G50 Fotoğraftan alıntı', () => {
     expect(kovada).toEqual([true, true, true, true]);
   });
 
-  test('ikinci kullanımda paket YENİDEN İNMEZ (istek sayacı 0), onay da sorulmaz', async ({ page }) => {
+  test('ikinci kullanımda paket YENİDEN İNMEZ (istek sayacı 0)', async ({ page }) => {
     const sayac = [];
     await ocrTaklit(page, sayac);
     await tohumla(page, [sahteKitap({ ad: 'Sessiz Ev' })]);
@@ -225,7 +253,7 @@ test.describe('G50 Fotoğraftan alıntı', () => {
     await detayAc(page);
     sayac.length = 0;
     await page.evaluate(() => { window.__ocrSahte = { metin: 'İkinci kullanım cümlesi.' }; });
-    await fotoSec(page, '#detayIcerik [data-act="oc-baslat"]');   // onay penceresi YOK, seçici direkt açılır
+    await fotoSec(page, '#detayIcerik [data-act="oc-baslat"]');   // indirme ekranı bile yok, seçici direkt açılır
     await expect(page.locator('#d-not')).toHaveValue('İkinci kullanım cümlesi.');
     expect(sayac).toEqual([]);   // motor bile kovadan (blob) geldi
     // üretim yolu kanıtı: motor gerçekten bizim ayarlarla kuruldu
@@ -410,7 +438,7 @@ test.describe('G50 Fotoğraftan alıntı', () => {
     await page.click('#detayIcerik [data-act="oc-baslat"]');
     await expect(page.locator('#ocHata')).toBeVisible();
     await expect(page.locator('#ocHataMetin')).toContainText('çevrimdışı');
-    await expect(page.locator('#ocOnay')).toBeHidden();
+    await expect(page.locator('#ocIlerleme')).toBeHidden();   // indirme hiç başlamadı
     expect(sayac).toEqual([]);
     await context.setOffline(false);
   });
@@ -440,10 +468,10 @@ test.describe('G50 Fotoğraftan alıntı', () => {
     const giris = page.locator('#detayIcerik .d-bolum-bas:has(.kicker) [data-act="oc-baslat"]');
     await expect(giris).toBeVisible();
     await giris.click();
-    await expect(page.locator('#ocOnay')).toBeVisible();
+    await expect(page.locator('#ocSec')).toBeVisible();   // indirme (sahte) anında bitti
     const ihlaller = await page.evaluate(() => {
       const sonuc = [];
-      ['ocOnay', 'ocIlerleme', 'ocSec', 'ocHata'].forEach(id => {
+      ['ocIlerleme', 'ocSec', 'ocHata'].forEach(id => {
         const kok = document.getElementById(id);
         [kok, ...kok.querySelectorAll('*')].forEach(el => {
           const s = getComputedStyle(el);
@@ -463,7 +491,7 @@ test.describe('G50 Fotoğraftan alıntı', () => {
     const YASAK_IKON = /[\u{1F000}-\u{1FAFF}]|\u{FE0F}|[⚙☀☾⚠✓☰▦▤▶⏸↩❝]/u;
     expect(YASAK_IKON.test(await page.locator('#ortuOcr').innerText())).toBe(false);
     // Defterin girişi de yerinde (liste bölümü, kicker'lı başlığın hemen altında)
-    await page.click('#ocOnay [data-act="oc-vazgec"]');
+    await page.click('#ocSec [data-act="oc-vazgec"]');
     await page.click('#detayIcerik [data-act="detay-kapat"]');
     await page.click('nav [data-act="sekme"][data-v="alinti"]');
     await expect(page.locator('#alBolumListe [data-act="oc-al"]')).toBeVisible();
