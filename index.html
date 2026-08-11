@@ -804,6 +804,25 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .kp-bilgi{text-align:center;font-size:.8rem;color:var(--muted);margin-top:8px}
 .kp-not{font-size:.8rem;color:var(--muted);margin-top:10px;line-height:1.5}
 .kp-depo-satir{font-size:.85rem;color:var(--muted);margin:10px 0}
+/* ---- FOTOĞRAFTAN ALINTI (oc-) — mantık ocr.js'te. kp- kalıplarının oc-
+   karşılıkları: yeni UI mevcut sınıfı yeniden KULLANMAZ (test seçici kuralı),
+   ölçüler aynı kalır. .oc-ghost = kicker satırı ince metin eylemi (d-ghost
+   dili, kendi ad alanında). ---- */
+.oc-not{font-size:.8rem;color:var(--muted);margin-top:10px;line-height:1.5}
+.oc-durum{font-size:.85rem;color:var(--muted);margin:14px 0 8px}
+.oc-depo-satir{font-size:.85rem;color:var(--muted);margin:10px 0}
+.oc-ghost{font-family:var(--serif);font-weight:600;font-size:.8rem;color:var(--brass);
+  padding:2px 4px;position:relative;background:transparent;border:none}
+.oc-ghost::after{content:'';position:absolute;inset:-8px}
+.oc-ghost .ikon{width:15px;height:15px;vertical-align:-2px;stroke-width:2}
+.oc-al-satir{margin:2px 0 6px}
+.oc-notu{font-size:.8rem;margin-top:8px;display:flex;flex-direction:column;gap:4px;
+  align-items:flex-start}
+.oc-uyari{color:var(--drop)}
+#ortuOcr .ilerleme{margin-top:2px}
+/* .btn display ataması UA'nın [hidden]{display:none} kuralını eziyor (v42'de
+   .kt-sayfa-satir'da yaşanan tuzağın aynısı) — istisna açıkça geri verilir. */
+.btn[hidden]{display:none}
 /* Ampul düğmesi (v50: pencere değil KEŞFET sekmesine götürür; on- panel CSS'i
    emekli — liste/eylem stilleri artık kesfet.js'in ks- ad alanında) */
 .on-ac-btn{flex:0 0 40px;background:transparent;border:1px solid var(--kontur);border-radius:var(--r-md);
@@ -1049,6 +1068,17 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
         <div class="ay-eylem">
           <button class="btn btn-tehlike" data-act="kp-tum-sil">Tüm fotoğrafları sil</button>
         </div>
+        <h3 class="ay-baslik">Metin tanıma paketi</h3>
+        <p class="ay-not">"Fotoğraftan alıntı" özelliğinin Türkçe metin tanıma paketi (tesseract.js).
+      İlk kullanımda onayınla <b>bir kez</b> indirilir ve bu cihazda saklanır — sonrası çevrimdışı
+      çalışır. Silersen yer açılır; gerektiğinde yeniden indirilir.</p>
+        <div class="oc-depo-satir" id="ocDepoBilgi">Hesaplanıyor…</div>
+        <div class="ay-eylem">
+          <!-- Silme yıkıcı değil (yeniden indirilebilir veri) → tehlike dili hak
+               etmiyor, kontur düğme yeter; kapak silmesi tehlike renginde çünkü
+               fotoğraf geri gelmez. Düğme paket yokken gizli (ocr.js yönetir). -->
+          <button class="btn btn-cerceve" data-act="oc-paket-sil" hidden>Paketi sil</button>
+        </div>
       </section>
 
       <!-- Kapak fotoğrafı silme BİLEREK tehlikeli bölgede DEĞİL: cihaz-yereli,
@@ -1273,12 +1303,52 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     </div>
   </div>
 </div>
+<!-- ===== FOTOĞRAFTAN ALINTI (oc-) — mantık ocr.js'te. Paket peşin İNMEZ:
+     ocr/ dosyaları sw ASSETS'te yok; ilk kullanımda onayla indirilip
+     kk_ocr_paket_v1 kovasına alınır (ikinci kullanım çevrimdışı çalışır). -->
+<div class="ortu" id="ortuOcr">
+  <div class="sheet">
+    <div class="tutamac"></div>
+    <button class="sheet-kapat" data-act="oc-vazgec" aria-label="Kapat">✕</button>
+    <div class="sheet-baslik" id="ortuOcrBaslik">Fotoğraftan alıntı</div>
+    <div id="ocOnay" hidden>
+      <p class="oc-not">Alıntıyı fotoğraftan tanımak için bu cihaza <b>bir kez ~6 MB</b>'lik
+        Türkçe metin tanıma paketi indirilecek. Sonrasında çevrimdışı da çalışır;
+        paketi Ayarlar &gt; Depolama'dan silebilirsin.</p>
+      <div class="form-alt">
+        <button class="btn btn-cerceve" data-act="oc-vazgec" style="flex:1">Vazgeç</button>
+        <button class="btn btn-brass" data-act="oc-indir" style="flex:2">İndir ve devam et</button>
+      </div>
+    </div>
+    <div id="ocIlerleme" hidden>
+      <div class="oc-durum" id="ocDurumMetin">Hazırlanıyor…</div>
+      <div class="ilerleme"><div id="ocIlerlemeBar" style="width:0%"></div></div>
+      <p class="oc-not">Tanınan metin kaydedilmeden önce sana gösterilecek — düzeltebilirsin.</p>
+    </div>
+    <div id="ocSec" hidden>
+      <p class="oc-not">Paket indirildi. Şimdi alıntının fotoğrafını çek ya da galeriden seç.
+        Düz tutulmuş, iyi ışıkta ve yakından çekilmiş sayfa en iyi sonucu verir.</p>
+      <div class="form-alt">
+        <button class="btn btn-cerceve" data-act="oc-vazgec" style="flex:1">Vazgeç</button>
+        <button class="btn btn-brass" data-act="oc-sec" style="flex:2">Fotoğraf seç</button>
+      </div>
+    </div>
+    <div id="ocHata" hidden>
+      <p class="oc-not" id="ocHataMetin"></p>
+      <div class="form-alt">
+        <button class="btn btn-cerceve" data-act="oc-vazgec" style="flex:1">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- Girdi bilinçli olarak örtülerin DIŞINDA: pencere katmanı açıkken arka plan
      inert oluyor; girdi inert bir kapsayıcıda kalırsa click() sessizce yutulur.
      KARAR: capture özniteliği YOK — capture=environment iOS/Android'de doğrudan
      kamerayı açıp galeriden seçimi imkânsız kılıyor; özniteliksiz girdi yerel
-     seçim sayfasını gösterir (Fotoğraf Çek / Galeri) → "çek/seç" sözü tutulur. -->
+     seçim sayfasını gösterir (Fotoğraf Çek / Galeri) → "çek/seç" sözü tutulur.
+     ocDosya da aynı iki gerekçeyle burada ve capture'sız (OCR, ocr.js). -->
 <input type="file" id="kpDosya" accept="image/*" hidden>
+<input type="file" id="ocDosya" accept="image/*" hidden>
 <!-- Aynı gerekçe: bu iki girdi eskiden Yedek panelindeydi, artık Ayarlar
      PENCERESİNDEN tetikleniyor. Pencere içinde bırakılsalardı üstlerine ikinci
      bir pencere açıldığı anda inert kapsayıcıya düşer ve .click() sessizce
@@ -2303,7 +2373,7 @@ function detayAc(id){
     ${kunyeHtml}
     ${etiketHtml}
     <div class="detay-satir">
-      <div class="d-bolum-bas"><span class="kicker">Notlar &amp; alıntılar</span></div>
+      <div class="d-bolum-bas"><span class="kicker">Notlar &amp; alıntılar</span><button class="oc-ghost" data-act="oc-baslat">${ikon('kamera')} Fotoğraftan</button></div>
       <div class="not-tip-sec">
         <button class="mini-chip ${durum.notTip === 'not' ? 'secili' : ''}" data-act="not-tip" data-v="not">Not</button>
         <button class="mini-chip ${durum.notTip === 'alinti' ? 'secili' : ''}" data-act="not-tip" data-v="alinti">Alıntı</button>
@@ -2412,6 +2482,7 @@ function alintiCiz(){
        <div class="al-bolum-bas"><span class="kicker">Alıntılar ve notlar</span>` +
        (tumu.length ? `<span class="al-sayi">${filtreli.length} / ${tumu.length}</span>` : '') +
      `</div>` +
+     `<div class="oc-al-satir"><button class="oc-ghost" data-act="oc-al">${ikon('kamera')} Fotoğraftan al</button></div>` +
      `<input type="search" id="alintiArama" placeholder="Alıntı ve notlarda ara…" value="${escAttr(durum.alintiArama)}" autocomplete="off">` +
      `<div id="alintiListe">${listeHtml}</div></section>`;
   alBolumTemizle();
@@ -3612,6 +3683,7 @@ cipKaydirmaKur();
 <script src="./kapak.js"></script>
 <script src="./oneri.js"></script>
 <script src="./kesfet.js"></script>
+<script src="./ocr.js"></script>
 <!-- Ana Sayfa'nın ikinci çizimi. İlk çizim (hepsiniCiz) eklentilerden ÖNCE
      koşuyor: o anda window.__tekrar / __oneri / __oturum henüz yok, bu yüzden
      "Bugün" ve "Sıradaki" bölümleri eksik kalırdı. Betikler eşzamanlı

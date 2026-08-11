@@ -17,7 +17,7 @@ test.describe('G18 D1 — kaynak dosyalarında kontrol karakteri yok', () => {
      dosyalarını tara. İzinliler: TAB(09), LF(0A), CR(0D). */
   const DOSYALAR = ['index.html', 'sw.js', 'senkron.js', 'barkod.js', 'oturum.js',
     'fikir.js', 'katalog.js', 'gorunum.js', 'kart.js', 'zeka.js', 'fikirag.js',
-    'kapak.js', 'oneri.js', 'kesfet.js', 'tekrar.js', 'manifest.json', path.join('worker', 'worker.js')];
+    'kapak.js', 'oneri.js', 'kesfet.js', 'tekrar.js', 'ocr.js', 'manifest.json', path.join('worker', 'worker.js')];
 
   for (const dosya of DOSYALAR) {
     test(`${dosya}: kontrol karakteri (0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F) yok`, async () => {
