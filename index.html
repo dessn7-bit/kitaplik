@@ -821,7 +821,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
    dili, kendi ad alanında). ---- */
 .oc-not{font-size:.8rem;color:var(--muted);margin-top:10px;line-height:1.5}
 .oc-durum{font-size:.85rem;color:var(--muted);margin:14px 0 8px}
-.oc-depo-satir{font-size:.85rem;color:var(--muted);margin:10px 0}
+.oc-depo-satir,.zg-depo-satir{font-size:.85rem;color:var(--muted);margin:10px 0}
 .oc-ghost{font-family:var(--serif);font-weight:600;font-size:.8rem;color:var(--brass);
   padding:2px 4px;position:relative;background:transparent;border:none}
 .oc-ghost::after{content:'';position:absolute;inset:-8px}
@@ -1090,6 +1090,21 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
         <p class="ay-not">JSON yedeğini seç. Mevcut kayıtlarla birleştirilir; aynı kitap (ad + yazar) iki kez eklenmez.</p>
         <div class="ay-eylem">
           <button class="btn btn-cerceve" data-act="ice-aktar">Dosya seç</button>
+        </div>
+      </section>
+
+      <!-- ZENGİNLEŞTİR (zg-) — mantık zengin.js'te. Eksik alan sayımı + toplu
+           tarama; hiçbir şey önizleme onayı olmadan yazılmaz, dolu alana
+           dokunulmaz (v63). -->
+      <section class="ay-bolum" id="ayBolumZengin">
+        <div class="ay-bolum-bas"><span class="kicker">Zenginleştir</span></div>
+        <h3 class="ay-baslik">Kütüphaneyi zenginleştir</h3>
+        <p class="ay-not">Eksik tür, ISBN, sayfa, yayınevi, yıl ve kapakları kaynaklardan
+      (Google Books) tamamlar. Yalnız <b>boş</b> alanlar doldurulur; sonuçlar yazılmadan önce
+      önizlemede onayına sunulur. Tür, 1000Kitap'ın 78 türlük düzenine eşlenir — eşleşmeyen boş kalır.</p>
+        <div class="zg-depo-satir" id="zgDurum">Hesaplanıyor…</div>
+        <div class="ay-eylem">
+          <button class="btn btn-cerceve" data-act="zg-tara">Taramayı başlat</button>
         </div>
       </section>
 
@@ -2612,7 +2627,8 @@ function istCiz(){
     </div>`;
   if(puansizBitmis){
     html += `<div class="mini-not" id="istPuansiz">${puansizBitmis} bitmiş kitap henüz puansız —
-      <button class="d-link" data-act="puansiz-git">rafta göster, puanla</button></div>`;
+      <button class="d-link" data-act="puansiz-git">rafta göster, puanla</button> ·
+      <button class="d-link" data-act="zg-puanla">hızlı puanla</button></div>`;
   }
   html += `</section>`;
 
@@ -2695,6 +2711,14 @@ function istCiz(){
     const maxY = Math.max(...Object.values(yilSay));
     html += `<div class="ist-bolum-baslik" id="istYillar">Yıllara göre kitap</div>` +
       yillar.map(y => istBar(y, yilSay[y], Math.round(yilSay[y]/maxY*100))).join('');
+  }
+  /* Tarihsiz bitmişler bu histograma ve yıl raporuna SESSİZCE girmiyordu —
+     dürüst not + yıl atama akışı (zengin.js, v63). Otomatik tarih YAZILMAZ. */
+  const tarihsizBitmis = bittiler.filter(k => !k.bitisTarihi).length;
+  if(tarihsizBitmis){
+    html += `<div class="mini-not" id="istTarihsiz">${tarihsizBitmis} bitmiş kitapta bitiş tarihi yok —
+      yıl istatistiklerine ve yıl raporuna girmiyorlar.
+      <button class="d-link" data-act="zg-tarih">yıl ata</button></div>`;
   }
   const aylikSayfa = {};
   const aylar = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
@@ -3738,6 +3762,7 @@ cipKaydirmaKur();
 <script src="./kesfet.js"></script>
 <script src="./ocr.js"></script>
 <script src="./bildirim.js"></script>
+<script src="./zengin.js"></script>
 <!-- Ana Sayfa'nın ikinci çizimi. İlk çizim (hepsiniCiz) eklentilerden ÖNCE
      koşuyor: o anda window.__tekrar / __oneri / __oturum henüz yok, bu yüzden
      "Bugün" ve "Sıradaki" bölümleri eksik kalırdı. Betikler eşzamanlı
