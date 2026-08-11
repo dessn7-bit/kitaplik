@@ -5,9 +5,9 @@
    sırası hangisinin sonra koştuğuna bağlıydı. ÖLÇÜM: içerik yüksekliği
    1966px → 1757px (−209px, %10,6).
 
-   SONRA: 6 kicker'lı bölüm, kıl payı ayraçlarla, sabit sırada:
-   Senkron → Görünüm → İçe/dışa aktarım → Katalog araçları → Depolama →
-   TEHLİKELİ BÖLGE.
+   SONRA: 7 kicker'lı bölüm (v61: Hatırlatma), kıl payı ayraçlarla, sabit sırada:
+   Senkron → Görünüm → Hatırlatma → İçe/dışa aktarım → Katalog araçları →
+   Depolama → TEHLİKELİ BÖLGE.
 
    TEHLİKELİ BÖLGE ayrımı ÜÇ eksende (dolgu kullanmadan): KONUM (en altta,
    ekstra boşlukla kopuk), RENK (kicker + üst ayraç --drop), DURUM (katlı gelir).
@@ -111,7 +111,7 @@ test.describe('G48 Ayarlar penceresi — Ciltli', () => {
           altin: c.color === altin, uyari: c.color === uyari };
       });
     });
-    expect(k.length, '6 bölüm kicker\'ı').toBe(6);
+    expect(k.length, '7 bölüm kicker\'ı').toBe(7);   // v61: Hatırlatma eklendi
     for (const x of k) {
       expect(x.versal, x.metin).toBe('uppercase');
       expect(x.aralik, x.metin + ' harf aralığı').toBeGreaterThan(0.5);
@@ -128,8 +128,8 @@ test.describe('G48 Ayarlar penceresi — Ciltli', () => {
     await ayarAc(page);
     const sira = await page.evaluate(() =>
       [...document.querySelectorAll('#ortuAyar .ay-bolum')].map(b => b.id));
-    expect(sira).toEqual(['ayBolumSenkron', 'ayBolumGorunum', 'ayBolumAktarim',
-      'ayBolumKatalog', 'ayBolumDepolama', 'ayBolumTehlike']);
+    expect(sira).toEqual(['ayBolumSenkron', 'ayBolumGorunum', 'ayBolumHatirlatma',
+      'ayBolumAktarim', 'ayBolumKatalog', 'ayBolumDepolama', 'ayBolumTehlike']);
     await expect(page.locator('#ayYuvaSenkron #senkronKart')).toHaveCount(1);
     await expect(page.locator('#ayYuvaKatalog #katalogKart')).toHaveCount(1);
   });
@@ -186,6 +186,8 @@ test.describe('G48 Ayarlar penceresi — Ciltli', () => {
       'seri tarama': '#ortuAyar [data-act="seri-ac"]',
       'kapak depo bilgisi': '#ortuAyar #kpDepoBilgi',
       'tüm fotoğrafları sil': '#ortuAyar [data-act="kp-tum-sil"]',
+      'hatırlatma durum satırı': '#ortuAyar #htDurum',
+      'hatırlatma saat seçici': '#ortuAyar #htSaat',
       'kütüphaneyi boşalt': '#ortuAyar [data-act="tumunu-sil"]'
     };
     const eksik = [];

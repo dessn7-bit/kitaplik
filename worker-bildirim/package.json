@@ -1,0 +1,6 @@
+{
+  "name": "kitaplik-bildirim-worker",
+  "private": true,
+  "type": "module",
+  "description": "Push bildirim worker'i kaynak arsivi - canli deploy C:/Users/Kaan/_kitaplik_worker_bildirim klasorunden yapilir. type:module, testlerin worker.js'i ESM olarak import edebilmesi icin. VAPID ozel anahtari REPODA DEGIL: wrangler secret put VAPID_OZEL_JWK."
+}

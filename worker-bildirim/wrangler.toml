@@ -1,0 +1,17 @@
+# kitaplik-bildirim — alıntı tekrarı push hatırlatması (kitaplik-ara'dan AYRI worker)
+name = "kitaplik-bildirim"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+
+[triggers]
+crons = ["0 * * * *"]
+
+# KV id'si "wrangler kv namespace create" çıktısıyla doldurulacak
+[[kv_namespaces]]
+binding = "KV"
+id = "34745c0204f64b259f0750c323768515"
+
+[vars]
+# VAPID GENEL anahtarı — kamuya açık, uygulamada da duruyor.
+# ÖZEL anahtar ASLA burada değil: `wrangler secret put VAPID_OZEL_JWK`
+VAPID_ACIK = "BN3pQt_NZg4Gzpxf4VbZzoYihofRB76_nOPQY7JPJq5gM5TqF5yiekR2tOHGONUlrawESTiqBNtwd2feDJ90nPE"

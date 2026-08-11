@@ -99,7 +99,7 @@ async function tehlikeAc(page) {
      { google, worker, turler, tur, olArama, olKitap, firebase, sonGoogleUrl, sonTurUrl } */
 async function agTaklit(page, ayar) {
   const sayac = { google: 0, worker: 0, turler: 0, tur: 0, olArama: 0, olKitap: 0,
-    firebase: 0, sonGoogleUrl: '', sonTurUrl: '' };
+    firebase: 0, bildirim: 0, sonGoogleUrl: '', sonTurUrl: '' };
   const beklenmeyen = [];
   page.__agSayac = sayac;
   page.__agBeklenmeyen = beklenmeyen;
@@ -134,6 +134,11 @@ async function agTaklit(page, ayar) {
       sayac.worker++;
       if (a.worker === 'hata') return route.abort('failed');
       return json(route, a.worker || { sonuclar: [] });
+    }
+    if (url.includes('kitaplik-bildirim.dessn7.workers.dev')) {
+      sayac.bildirim++;
+      if (a.bildirim === 'hata') return route.abort('failed');
+      return json(route, a.bildirim || { tamam: true });
     }
     if (url.includes('openlibrary.org/search.json')) {
       sayac.olArama++;
