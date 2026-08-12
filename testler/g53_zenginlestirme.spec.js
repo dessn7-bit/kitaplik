@@ -14,7 +14,12 @@ const TURLER = [
   { seo: 'Roman', ad: 'Roman', kitapSayisi: 25393 },
   { seo: 'Tarih', ad: 'Tarih', kitapSayisi: 11576 },
   { seo: 'Cocuk', ad: 'Çocuk', kitapSayisi: 8223 },
-  { seo: 'Bilim-Kurgu', ad: 'Bilim-Kurgu', kitapSayisi: 2470 }
+  { seo: 'Bilim-Kurgu', ad: 'Bilim-Kurgu', kitapSayisi: 2470 },
+  { seo: 'Felsefe-Dusunce', ad: 'Felsefe-Düşünce', kitapSayisi: 4114 },
+  { seo: 'Tiyatro', ad: 'Tiyatro', kitapSayisi: 1000 },
+  { seo: 'Biyografi', ad: 'Biyografi', kitapSayisi: 3047 },
+  { seo: 'Dunya-Klasikleri', ad: 'Dünya Klasikleri', kitapSayisi: 862 }
+  /* Şiir BİLEREK YOK: "sözlükte var, taksonomide yok → boş" vakası bunu kullanır */
 ];
 function gbYanit(kitaplar) {
   return { totalItems: kitaplar.length, items: kitaplar.map(k => ({ volumeInfo: {
@@ -118,6 +123,72 @@ test.describe('G53 M1 — sayım, tarama, önizleme, uygulama', () => {
     expect(t.cop3).toBe('');
     expect(t.sozlukteVarTaksonomideYok).toBe('');
     expect(t.bos).toBe('');
+  });
+
+  /* v64: sözlük gerçek kütüphane ölçümüyle genişletildi (v63 canlıda 0/12,
+     taban ölçümü 4/30 → 14/30). Vakalar görevden: (a) Philosophy, (b) Drama,
+     (c) TR katlama, (d) konu etiketleri BOŞ, (e) çoklu kategoride ilk güvenli,
+     (f) taksonomi kapısı (üstteki Poetry vakası) + kapı-çıkmazı düzeltmesi. */
+  test('tür eşlemesi v64: genişletilmiş sözlük — güvenli eşleme, TR katlama, çoklu kategori, kelime sınırı', async ({ page }) => {
+    await zenginAc(page);
+    const t = await page.evaluate((TURLER) => {
+      window.__zengin.taksonomiKur(TURLER);
+      const c = window.__zengin.turCevir;
+      return {
+        felsefe: c(['Philosophy']),                                // (a)
+        tiyatro: c(['Drama']),                                     // (b)
+        tragedya: c(['Tragedy']),                                  // (b) canlı Persler vakası
+        trKatla: c(['Fransız romanı']),                            // (c) TR kategori, katlamalı
+        trKlasik: c(['Dünya klasikleri']),                         // (c) canlı Ölüler Evinden Anılar vakası
+        ref: c(['Reference']),                                     // (d)
+        anatomi: c(['Human anatomy']),                             // (d)
+        bira: c(['Beer']),                                         // (d)
+        sahne: c(['Performing Arts']),                             // (d) kelime sınırı: 'art' anahtarı kalktı
+        dilSanat: c(['Language Arts & Disciplines']),              // (d)
+        sanat: c(['Art']),                                         // (d) konu etiketi
+        kisi: c(['Scientists']),                                   // (d) kişi kategorisi
+        coklu1: c(['Human anatomy', 'Philosophy']),                // (e) ilk GÜVENLİ kazanır
+        coklu2: c(['Philosophy', 'Language Arts & Disciplines']),  // (e) ilk kategori kazanır
+        kapiDuzelt: c(['Biography & Autobiography']),              // kapı-çıkmazı: v63 hedefi taksonomide yoktu
+        romanTam: c(['Roman']),                                    // 'tam' mod: yalın kategori eşlenir
+        romanTuzak: c(['Roman Empire'])                            // 'tam' mod: parça eşlenMEZ
+      };
+    }, TURLER);
+    expect(t.felsefe).toBe('Felsefe-Düşünce');
+    expect(t.tiyatro).toBe('Tiyatro');
+    expect(t.tragedya).toBe('Tiyatro');
+    expect(t.trKatla).toBe('Roman');
+    expect(t.trKlasik).toBe('Dünya Klasikleri');
+    expect(t.ref).toBe('');
+    expect(t.anatomi).toBe('');
+    expect(t.bira).toBe('');
+    expect(t.sahne).toBe('');
+    expect(t.dilSanat).toBe('');
+    expect(t.sanat).toBe('');
+    expect(t.kisi).toBe('');
+    expect(t.coklu1).toBe('Felsefe-Düşünce');
+    expect(t.coklu2).toBe('Felsefe-Düşünce');
+    expect(t.kapiDuzelt).toBe('Biyografi');
+    expect(t.romanTam).toBe('Roman');
+    expect(t.romanTuzak).toBe('');
+  });
+
+  test('tür v64: ilk uyan adayda kategori yokken BAŞLIĞI UYAN diğer adaydan bulunur', async ({ page }) => {
+    await zenginAc(page);
+    page.__agAyar.turler = TURLER;
+    /* 1. aday: başlık uyar, kategorisiz (v63 burada pes ediyordu);
+       2. aday: başlık uymaz, kategorili (kullanılmaMAlı);
+       3. aday: başlık uyar, kategorili → tür buradan gelmeli */
+    page.__agAyar.google = gbYanit([
+      { ad: 'Dolu Kitap', yazar: 'Yazar Bir' },
+      { ad: 'Bambaşka Bir Eser', yazar: 'Başkası', kategoriler: ['Drama'] },
+      { ad: 'Dolu Kitap', yazar: 'Yazar Bir', kategoriler: ['Biography & Autobiography'] }
+    ]);
+    const b = await page.evaluate(async (TURLER) => {
+      window.__zengin.taksonomiKur(TURLER);
+      return await window.__zengin.kitapSorgula(veri.kitaplar.find(k => k.ad === 'Dolu Kitap'));
+    }, TURLER);
+    expect(b.tur).toBe('Biyografi');   // uymayan adayın Drama'sı DEĞİL, uyan adayın türü
   });
 
   test('kota: istekler aralıklı — ardışık Google istekleri arası ölçülen boşluk', async ({ page }) => {

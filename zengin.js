@@ -11,11 +11,22 @@
      Tek pratik tür kaynağı GOOGLE BOOKS categories. İki aşamalı sorgu:
      dar (intitle+inauthor) → boşsa gevşek ("ad" yazar). Ölçüm: dar 11/20,
      +gevşek ISBN 20/20, kategori 19/20 (taksonomiye güvenle eşlenen ~%60).
-   - TÜR EŞLEME: Google kategorileri İngilizce ve kirli ("Antiques &
-     Collectibles" bile dönüyor). DAR-GÜVENLİ sözlük + canlı taksonomi
-     (worker /turler, 78 tür) doğrulaması: eşlenen ad taksonomide yoksa BOŞ.
-     Uydurma tür yazılmaz; "Education"→Eğitim gibi güven vermeyen jenerikler
-     sözlüğe bilerek ALINMADI (ölçümde roman kitabına Education dönmüştü).
+   - TÜR EŞLEME (v64'te ÖLÇÜMLE yeniden kuruldu — gerçek yedeğin ilk 30
+     kitabında v63 4/30 buluyordu, canlı kullanımda 0/12 çıkmıştı):
+     GÜVENLİ-GENİŞ sözlük + canlı taksonomi (worker /turler, 78 tür)
+     doğrulaması: eşlenen ad taksonomide yoksa BOŞ, uydurma tür imkânsız.
+     Eşleşme KELİME SINIRI ister ('art' "Performing Arts"i yakalayamaz) ve
+     kategori BAŞINA denenir: taksonomiye eşlenen İLK güvenli kategori
+     kazanır, kapıdan geçemeyen eşleşme aramayı KESMEZ (v63 kesiyordu —
+     "Biography"→'Biyografi-Otobiyografi' gibi taksonomide olmayan hedefler
+     kitabı boş bırakıyordu). Konu etiketleri (Reference, Education, Art,
+     Performing Arts, Turkey, Nature, kişi kategorileri: Novelists/Poets/
+     Dramatists/Scientists...) bilerek YOK. TR kategoriler ("Fransız
+     romanı", "Dünya klasikleri") katla üzerinden eşlenir. Tür artık tek
+     adayın değil BAŞLIĞI UYAN TÜM adayların kategorilerinden aranır;
+     bulunamazsa ve 2. istek hakkı duruyorsa tür için gevşek sorgu atılır
+     (kitap başına ≤2 istek bütçesi KORUNUR). Ölçüm v64: 14/30 — kalan
+     boşların tamamı kategorisiz kaynak ya da bilinçli eleme.
    - KOTA: istekler arası en az ARALIK_MS bekleme; kitap başına en çok 2 istek
      (242×2=484 < günlük 1000). Kuyruk DURDURULABİLİR; durum kk_zengin_v1'de,
      yarım kalırsa kaldığı yerden sürer.
@@ -39,34 +50,142 @@
   const ALAN_AD = { tur: 'Tür', isbn: 'ISBN', sayfa: 'Sayfa', yayinevi: 'Yayınevi', yil: 'Yıl', kapak: 'Kapak' };
   const YIL_SAYISI = 15;          // M3 yıl ızgarası: bu yıldan geriye
 
-  /* Google kategori → 1000Kitap taksonomi adı. SIRA ÖNEMLİ: spesifik önce,
-     jenerik 'fiction' kuralı EN SONDA. Eşlenen ad canlı taksonomide yoksa boş. */
+  /* Google kategori → 1000Kitap taksonomi adı. Kurallar:
+     (1) anahtarlar katla-katlanmış küçük harf yazılır;
+     (2) eşleşme KELİME SINIRI ister ('art' "Performing Arts"i yakalayamaz);
+     (3) 3. eleman 'tam' ise anahtar kategorinin TAMAMI olmalı
+         ('roman' ↔ "Roman Empire" karışmasın);
+     (4) SIRA ÖNEMLİ: spesifik önce, jenerikler (literature/novel/fiction)
+         EN SONDA; sıra yalnız AYNI kategori metni içinde hüküm sürer,
+         kategoriler arasında geliş sırası kazanır;
+     (5) konu etiketleri (Reference, Education, Art, Turkey, Nature, Beer,
+         Human anatomy, kişi kategorileri) BİLEREK YOK — tür değildir;
+     (6) her satır "bu kategori GERÇEKTEN bu türü mü işaret ediyor"
+         süzgecinden geçti; şüphelide eleme tarafında kalındı
+         (ör. Atheism→Felsefe reddedildi: 1000Kitap rafı doğrulamadı).
+     Eşlenen ad canlı taksonomide yoksa yine boş (ikinci kapı). */
   const TUR_ESLEME = [
+    /* kurgu alt-türleri (spesifik) */
     ['science fiction', 'Bilim-Kurgu'],
     ['juvenile fiction', 'Çocuk'],
+    ['juvenile nonfiction', 'Çocuk'],
     ['juvenile', 'Çocuk'],
     ['young adult', 'Gençlik'],
     ['fantasy', 'Fantastik'],
     ['horror', 'Korku-Gerilim'],
+    ['ghost stories', 'Korku-Gerilim'],
+    ['thrillers', 'Polisiye'],
     ['thriller', 'Polisiye'],
     ['mystery', 'Polisiye'],
     ['detective', 'Polisiye'],
+    ['crime fiction', 'Polisiye'],
+    ['adventure stories', 'Macera-Aksiyon'],
+    ['adventure fiction', 'Macera-Aksiyon'],
+    ['romance', 'Aşk'],
+    ['love stories', 'Aşk'],
+    ['graphic novels', 'Çizgi-Roman'],
+    ['graphic novel', 'Çizgi-Roman'],
+    ['comics', 'Çizgi-Roman'],
+    ['manga', 'Manga'],
+    ['fairy tales', 'Masal'],
+    ['short stories', 'Hikaye (Öykü)'],
+    /* sahne / şiir */
     ['poetry', 'Şiir'],
     ['drama', 'Tiyatro'],
+    ['tragedies', 'Tiyatro'],
+    ['tragedy', 'Tiyatro'],
+    ['theater', 'Tiyatro'],
+    ['theatre', 'Tiyatro'],
+    ['plays', 'Tiyatro'],
+    /* kurgu-dışı — spesifik bileşikler jeneriklerden ÖNCE */
+    ['literary criticism', 'Eleştiri-Kuram'],
+    ['history and criticism', 'Eleştiri-Kuram'],
+    ['natural history', 'Bilim-Teknoloji-Mühendislik'],
+    ['political science', 'Siyaset-Politika'],
+    ['social sciences', 'Sosyoloji'],
+    ['social science', 'Sosyoloji'],
+    ['self-help', 'Kişisel Gelişim'],
+    ['self-improvement', 'Kişisel Gelişim'],
     ['philosophy', 'Felsefe-Düşünce'],
     ['psychology', 'Psikoloji'],
+    ['psychoanalysis', 'Psikoloji'],
+    ['sociology', 'Sosyoloji'],
+    ['politics', 'Siyaset-Politika'],
     ['history', 'Tarih'],
-    ['biography', 'Biyografi-Otobiyografi'],
-    ['autobiography', 'Biyografi-Otobiyografi'],
-    ['self-help', 'Kişisel Gelişim'],
-    ['political science', 'Siyaset-Politika'],
-    ['social science', 'Sosyoloji'],
+    ['biography', 'Biyografi'],
+    ['autobiography', 'Biyografi'],
+    ['memoirs', 'Anı-Mektup-Günlük'],
+    ['memoir', 'Anı-Mektup-Günlük'],
+    ['diaries', 'Anı-Mektup-Günlük'],
+    ['correspondence', 'Anı-Mektup-Günlük'],
+    ['essays', 'Deneme-İnceleme'],
     ['travel', 'Gezi'],
-    ['art', 'Sanat'],
     ['music', 'Müzik'],
-    ['short stories', 'Hikaye (Öykü)'],
-    ['comics', 'Çizgi Roman'],
-    ['fiction', 'Roman']            // jenerik kural en sonda
+    ['mythology', 'Mitolojiler'],
+    ['legends', 'Efsaneler-Destanlar'],
+    ['folklore', 'Halk Edebiyatı'],
+    ['islam', 'Din (İslam)'],
+    ['sufism', 'Tasavvuf-Mezhepler-Tarikatlar'],
+    ['christianity', 'Diğer İnançlar'],
+    ['judaism', 'Diğer İnançlar'],
+    ['buddhism', 'Diğer İnançlar'],
+    ['economics', 'Ekonomi-Emek-İş Dünyası'],
+    ['business', 'Ekonomi-Emek-İş Dünyası'],
+    ['law', 'Hukuk'],
+    ['medical', 'Sağlık-Tıp'],
+    ['medicine', 'Sağlık-Tıp'],
+    ['health', 'Sağlık-Tıp'],
+    ['humor', 'Eğlence-Mizah'],
+    ['humour', 'Eğlence-Mizah'],
+    ['anthropology', 'Antropoloji-Etnoloji'],
+    ['ethnology', 'Antropoloji-Etnoloji'],
+    ['archaeology', 'Arkeoloji'],
+    ['archeology', 'Arkeoloji'],
+    ['astronomy', 'Astronomi'],
+    ['astrophysics', 'Astronomi'],
+    ['geography', 'Coğrafya'],
+    ['linguistics', 'Dilbilimi-Etimoloji'],
+    ['etymology', 'Dilbilimi-Etimoloji'],
+    ['cooking', 'Yemek'],
+    ['cookery', 'Yemek'],
+    ['sports', 'Spor'],
+    ['computers', 'Bilgisayar-İnternet'],
+    ['ecology', 'Ekoloji'],
+    ['interviews', 'Söyleşi-Röportaj'],
+    ['aphorisms', 'Özlü Sözler-Duvar Yazıları'],
+    ['encyclopedias', 'Sözlük-Kılavuz Kitap-Ansiklopedi'],
+    ['dictionaries', 'Sözlük-Kılavuz Kitap-Ansiklopedi'],
+    ['evolution', 'Bilim-Teknoloji-Mühendislik'],
+    ['physics', 'Bilim-Teknoloji-Mühendislik'],
+    ['biology', 'Bilim-Teknoloji-Mühendislik'],
+    ['chemistry', 'Bilim-Teknoloji-Mühendislik'],
+    ['technology', 'Bilim-Teknoloji-Mühendislik'],
+    ['engineering', 'Bilim-Teknoloji-Mühendislik'],
+    ['sciences', 'Bilim-Teknoloji-Mühendislik'],
+    ['science', 'Bilim-Teknoloji-Mühendislik'],
+    /* Türkçe kategoriler (Google TR kayıtları; katla katlanmış gelir) */
+    ['dunya klasikleri', 'Dünya Klasikleri'],
+    ['turk klasikleri', 'Türk Klasikleri'],
+    ['romani', 'Roman'],            // "Fransız romanı", "Türk romanı"
+    ['siiri', 'Şiir'],              // "Türk şiiri"
+    ['siir', 'Şiir'],
+    ['felsefe', 'Felsefe-Düşünce'],
+    ['tiyatro', 'Tiyatro'],
+    ['oykusu', 'Hikaye (Öykü)'],
+    ['oyku', 'Hikaye (Öykü)'],
+    ['hikaye', 'Hikaye (Öykü)'],
+    ['tarihi', 'Tarih'],
+    ['tarih', 'Tarih'],
+    ['edebiyati', 'Edebiyat'],
+    ['edebiyat', 'Edebiyat'],
+    ['cocuk', 'Çocuk'],
+    ['psikoloji', 'Psikoloji'],
+    ['roman', 'Roman', 'tam'],      // TAM eşleşme: "Roman Empire" tuzağı
+    /* jenerikler EN SONDA */
+    ['literature', 'Edebiyat'],
+    ['novels', 'Roman'],
+    ['novel', 'Roman'],
+    ['fiction', 'Roman']
   ];
 
   const GB_ANAHTAR = (function(){
@@ -114,7 +233,7 @@
      categories okumadığı için burada kendi ayrıştırıcımız var) ---------- */
   async function gbSor(q, sinyal){
     const y = await fetch('https://www.googleapis.com/books/v1/volumes?key=' + GB_ANAHTAR +
-      '&country=TR&maxResults=3&printType=books&q=' + encodeURIComponent(q),
+      '&country=TR&maxResults=10&printType=books&q=' + encodeURIComponent(q),
       sinyal ? { signal: sinyal } : undefined);
     const j = await y.json();
     if(j.error) throw new Error('google-' + j.error.code);
@@ -125,40 +244,78 @@
     if(!a || !b) return false;
     return a.indexOf(b) >= 0 || b.indexOf(a) >= 0;
   }
+  function rxKac(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  /* Kategori listesi (geliş SIRASI korunur) → taksonomiye eşlenen İLK güvenli
+     tür. Kategori başına sözlük sırayla denenir; kelime sınırı zorunlu; 'tam'
+     işaretli anahtar kategorinin tamamını ister. Taksonomi kapısından
+     geçemeyen eşleşme aramayı KESMEZ — UYDURMA yine imkânsız (iki kapı). */
   function turCevir(kategoriler){
     if(!Array.isArray(kategoriler) || !taksonomi) return '';
-    const metin = kategoriler.join(' / ').toLowerCase();
-    for(const [ing, tr] of TUR_ESLEME){
-      if(metin.indexOf(ing) >= 0){
+    for(const kat of kategoriler){
+      const metin = katla(kat);
+      if(!metin) continue;
+      for(const es of TUR_ESLEME){
+        const uydu = es[2] === 'tam' ? metin === es[0]
+          : new RegExp('\\b' + rxKac(es[0]) + '\\b').test(metin);
+        if(!uydu) continue;
         /* canlı taksonomi doğrulaması: ad ya da seo katlaması eşleşmeli */
-        const hedef = katla(tr);
+        const hedef = katla(es[1]);
         const t = taksonomi.find(x => katla(x.ad) === hedef || katla(x.seo) === hedef);
-        if(t) return t.ad;
-        return '';   // sözlük taksonomiyle uyuşmuyorsa da UYDURMA YOK
+        if(t) return t.ad;   // İLK güvenli eşleşme kazanır
       }
     }
     return '';
   }
-  /* Tek kitap için bulunanlar: yalnız EKSİK alanlar sorgulanır/derlenir. */
+  /* Başlığı uyan adayların kategorileri — aday sırası korunur, tekrarsız. */
+  function kategoriTopla(adaylar, kitapAd){
+    const gorulen = {}, sonuc = [];
+    for(const v of adaylar){
+      if(!baslikUyar(kitapAd, v.title)) continue;
+      for(const kat of (v.categories || [])){
+        const anah = katla(kat);
+        if(gorulen[anah]) continue;
+        gorulen[anah] = 1;
+        sonuc.push(kat);
+      }
+    }
+    return sonuc;
+  }
+  /* Tek kitap için bulunanlar: yalnız EKSİK alanlar sorgulanır/derlenir.
+     İstek bütçesi kitap başına ≤2 KORUNUR: dar + en çok BİR gevşek sorgu.
+     Gevşek, v63'te yalnız dar SIFIR sonuç verince atılıyordu; artık uyan
+     aday bulunamayınca da (aynı düşüş, daha erken yakalanır) ya da tür
+     hâlâ boşken (kategori kaynağını genişletmek için) atılır. */
   async function kitapSorgula(k){
     const eksikler = ALANLAR.filter(a => alanBos(k, a));
     if(!eksikler.length) return null;
     const dar = 'intitle:"' + k.ad + '"' + (k.yazar ? ' inauthor:"' + k.yazar + '"' : '');
-    let adaylar = await gbSor(dar);
-    if(!adaylar.length){
+    const adaylar1 = await gbSor(dar);
+    let aday = adaylar1.find(v => baslikUyar(k.ad, v.title));
+    let adaylar2 = null;
+    if(!aday){
       await bekle(ARALIK_MS);
-      adaylar = await gbSor('"' + k.ad + '" ' + (k.yazar || ''));
+      adaylar2 = await gbSor('"' + k.ad + '" ' + (k.yazar || ''));
+      aday = adaylar2.find(v => baslikUyar(k.ad, v.title));
     }
-    const aday = adaylar.find(v => baslikUyar(k.ad, v.title));
+    /* TÜR: tek adayın değil, başlığı uyan TÜM adayların kategorileri
+       (geliş sırası korunur); hâlâ boşsa ve gevşek daha atılmadıysa
+       tür için gevşek de denenir — istek sınırı yine ≤2. */
+    let tur = '';
+    if(eksikler.indexOf('tur') >= 0){
+      tur = turCevir(kategoriTopla(adaylar1, k.ad)
+        .concat(adaylar2 ? kategoriTopla(adaylar2, k.ad) : []));
+      if(!tur && adaylar2 === null){
+        await bekle(ARALIK_MS);
+        adaylar2 = await gbSor('"' + k.ad + '" ' + (k.yazar || ''));
+        tur = turCevir(kategoriTopla(adaylar2, k.ad));
+      }
+    }
     if(!aday) return null;
     const kimlik = aday.industryIdentifiers || [];
     const i13 = kimlik.find(x => x && x.type === 'ISBN_13');
     const i10 = kimlik.find(x => x && x.type === 'ISBN_10');
     const bulunan = {};
-    if(eksikler.indexOf('tur') >= 0){
-      const t = turCevir(aday.categories);
-      if(t) bulunan.tur = t;
-    }
+    if(tur) bulunan.tur = tur;
     if(eksikler.indexOf('isbn') >= 0){
       const ham = (i13 && i13.identifier) || (i10 && i10.identifier) || '';
       const B = window.__barkod;
