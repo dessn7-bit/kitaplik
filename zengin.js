@@ -373,38 +373,249 @@
       }
     }finally{ otoCalisiyor = false; }
   }
+  /* otoIsle dönüşü (v66): 'yazildi' | 'bulunamadi' | 'dolu' | 'red' |
+     'taksonomi-yok'. Ağ/kota hatasını FIRLATIR — çağıran ayırt etsin: açılış
+     taraması hata fırlayan kitaba "denendi" DAMGASI BASMAZ (hiç sorulamamış
+     kitabı 90 gün bloklamak yanlış olurdu), tamamlanan sorguya (bulunan YA DA
+     bulunamayan) basar. */
   async function otoIsle(is){
     const k = (veri.kitaplar || []).find(x => x.id === is.id);
-    if(!k || !alanBos(k, 'tur')) return false;
+    if(!k || !alanBos(k, 'tur')) return 'dolu';
+    /* turRed: kullanıcı bu kitapta otomatik türü GERİ ALDI — kalıcı red
+       (senkronlu union, kesfetGizli deseni). Otomatik yazım bir daha denemez. */
+    if((veri.turRed || {})[is.id]) return 'red';
     if(!taksonomi){
       try{ taksonomi = await window.__ara.turler(); }
-      catch(e){ return false; }   // taksonomi yoksa eşleme imkânsız — boş kalır
+      catch(e){ return 'taksonomi-yok'; }   // eşleme imkânsız — boş kalır, damga YOK
     }
     let tur = is.kategoriler ? turCevir(is.kategoriler) : '';
     if(!tur){
       /* Aralık kuyruk döngüsüne değil SON İSTEĞE bağlı: kuyruk boşalıp yeni
          kitapla yeniden başlasa da iki Google isteği arasında en az ARALIK_MS
-         geçer (seri taramada arka arkaya okutma kotayı sıkıştıramaz). */
-      const kalan = otoSonIstek + ARALIK_MS - Date.now();
-      if(kalan > 0) await bekle(kalan);
+         geçer. while: iki bekleyen aynı bayat damgadan uyanıp çifte istek
+         atmasın (açılış taraması + ekleme kuyruğu eşzamanlı koşabilir). */
+      let kalan;
+      while((kalan = otoSonIstek + ARALIK_MS - Date.now()) > 0) await bekle(kalan);
       otoSonIstek = Date.now();
       // kitap başına TEK istek — gevşek 2. sorgu bilerek YOK (kota bütçesi)
       const adaylar = await gbSor('intitle:"' + k.ad + '"'
         + (k.yazar ? ' inauthor:"' + k.yazar + '"' : ''));
       tur = turCevir(kategoriTopla(adaylar, k.ad));
     }
+    /* Sorgu TAMAMLANDI (ağ hatası fırlamadı) → "denendi" damgası: bulunamayan
+       kitap her açılışta yeniden sorulup kotayı yakmasın (90 günlük defter). */
+    denemeDamgala(is.id);
     /* await SONRASI taze arama (kapak.js dersi: senkron veri.kitaplar'ı yeni
        diziyle değiştirebilir, eski referansa yazmak ölü nesneye yazar). Yazım
-       anında alanBos YENİDEN denetlenir: yanıt beklenirken kullanıcı türü elle
-       doldurduysa arka plan onu EZMEZ. */
+       anında alanBos + turRed YENİDEN denetlenir: yanıt beklenirken kullanıcı
+       türü elle doldurduysa ya da geri aldıysa arka plan onu EZMEZ. */
     const canli = (veri.kitaplar || []).find(x => x.id === is.id);
-    if(tur && canli && alanBos(canli, 'tur')){
+    if(tur && canli && alanBos(canli, 'tur') && !(veri.turRed || {})[is.id]){
       canli.tur = tur;
       canli.g = Date.now();   // kullanıcı-görünür alan değişti — damga (senkron taşır)
+      /* Geri alma defteri: OTOMATİK yazılan her tür kaydedilir (hangi kitap,
+         hangi tür, ne zaman) — elle girilen tür buraya asla girmez, çünkü
+         elle dolu alan yukarıdaki alanBos kapısından zaten geçemez. */
+      const atanan = atananOku();
+      atanan[is.id] = { tur, t: Date.now() };
+      atananYaz(atanan);
       if(typeof depoKaydet === 'function') depoKaydet();
       if(typeof hepsiniCiz === 'function') hepsiniCiz();
-      durumTazele();
+      durumTazele(); otoDurumTazele();
+      return 'yazildi';
     }
+    return tur ? 'dolu' : 'bulunamadi';
+  }
+
+  /* ---------- AÇILIŞ TARAMASI (v66): tür ARKA PLANDA kendiliğinden ----------
+     Kullanıcı kararı: türü eksik kitap için elle "zenginleştir" koşturmak
+     istemiyor — uygulama açılınca türü boş kitaplar sessizce, önizlemesiz
+     doldurulur (yanlışın telafisi geri alma yüzeyi, aşağıda). SÖZLEŞME:
+     · TETİK: açılıştan OTO_BASLANGIC_MS sonra kendiliğinden — açılışı
+       geciktirmez (ilk boyama/etkileşim ağ işinden önce biter), ilerleme
+       çubuğu dayatmaz; durum Ayarlar ▸ Katalog araçları kartında.
+     · KOTA: oturum başına en çok OTO_OTURUM_SINIR kitap (60×≤1 istek =
+       günlük 1000 kotasının ≤%6'sı; 650ms aralıkla ≈40 sn arka plan işi;
+       242'lik kütüphane ~4 açılışta biter) — kalan sonraki açılışa.
+     · DENENDİ DEFTERİ (cihaz-yerel kk_zg_oto_deneme_v1, SENKRONA GİRMEZ —
+       karar): bulunamayan kitap da damgalanır, OTO_YENIDEN_MS (90 gün)
+       geçmeden yeniden sorulmaz. Neden kitap alanı değil: sessiz arka plan
+       işi kitap damgası (k.g) basamaz — 60 kitaba damga basmak çevrimdışı
+       cihazın gerçek düzenlemelerini senkron birleşiminde ezebilirdi; salt
+       "denedim" notu için ANLIK_SURUM artışı + tüm kütüphane yeniden
+       damgalama göçü orantısız. Maliyeti: ikinci cihaz kendi defterini
+       sıfırdan doldurur — ama bulunan türler senkronla yayıldığından onun
+       gerçek yükü yalnız BULUNAMAYANLARDIR (kategorisiz kaynak, ~%40-50).
+     · 90 GÜN gerekçesi: GB kayıtları zamanla zenginleşiyor (v64 ölçümü:
+       kategoriler koşumdan koşuma değişken); çeyrek dönemde ~100 bulunamayan
+       × ≤1 istek önemsiz, daha sık denemek kota israfı.
+     · AĞ HATASI: art arda 3 hata → sessizce dur; hata fırlayan kitaba damga
+       basılmadığı için sonraki açılış kaldığı yerden sürer.
+     · turRed'li (geri alınmış) kitap HİÇ aday olmaz. */
+  const OTO_DENEME_ANAHTAR = 'kk_zg_oto_deneme_v1';
+  const OTO_ATANAN_ANAHTAR = 'kk_zg_oto_atanan_v1';
+  const OTO_YENIDEN_MS = 90 * 24 * 3600 * 1000;
+  const OTO_OTURUM_SINIR = 60;
+  const OTO_BASLANGIC_MS = 1500;
+  function defterOku(anahtar){
+    try{ return JSON.parse(localStorage.getItem(anahtar)) || {}; }
+    catch(e){ return {}; }
+  }
+  function defterYaz(anahtar, d){
+    try{ localStorage.setItem(anahtar, JSON.stringify(d)); }catch(e){}
+  }
+  function denemeDamgala(id){
+    const d = defterOku(OTO_DENEME_ANAHTAR);
+    d[id] = Date.now();
+    defterYaz(OTO_DENEME_ANAHTAR, d);
+  }
+  function atananOku(){ return defterOku(OTO_ATANAN_ANAHTAR); }
+  function atananYaz(d){ defterYaz(OTO_ATANAN_ANAHTAR, d); }
+  /* Geçerli "otomatik atanan" kayıtları: kitap duruyor VE tür hâlâ otomatik
+     yazılanla aynı. Kullanıcı türü elle DEĞİŞTİRDİYSE kayıt düşer — geri alma
+     listesi kullanıcının düzeltmesini asla geri çeviremez. */
+  function atananGecerli(){
+    const atanan = atananOku();
+    const sonuc = [];
+    let temizlendi = false;
+    for(const [id, kayit] of Object.entries(atanan)){
+      const k = (veri.kitaplar || []).find(x => x.id === id);
+      if(k && kayit && k.tur === kayit.tur) sonuc.push({ id, kitap: k, kayit });
+      else { delete atanan[id]; temizlendi = true; }
+    }
+    if(temizlendi) atananYaz(atanan);
+    return sonuc;
+  }
+  let otoOturum = { durum: 'bekliyor', bakilan: 0, bulunan: 0 };
+  let otoTaraKostu = false;
+  function otoAdaylar(){
+    const deneme = defterOku(OTO_DENEME_ANAHTAR);
+    const simdi = Date.now();
+    return (veri.kitaplar || []).filter(k => alanBos(k, 'tur')
+      && !(veri.turRed || {})[k.id]
+      && !(deneme[k.id] && (simdi - deneme[k.id]) < OTO_YENIDEN_MS));
+  }
+  async function otoTara(){
+    if(otoTaraKostu || calisiyor) return;   // oturumda bir kez; elle tarama açıksa ona bırak
+    otoTaraKostu = true;
+    /* window.__KK_OTO_SINIR: test kancası (oturum sınırını 60 kitap tohumlamadan
+       sınayabilmek için) — üründe tanımsız, varsayılan sabit geçerli. */
+    const sinir = (typeof window.__KK_OTO_SINIR === 'number')
+      ? window.__KK_OTO_SINIR : OTO_OTURUM_SINIR;
+    const adaylar = otoAdaylar().slice(0, sinir);
+    if(!adaylar.length){ otoOturum.durum = 'bitti'; otoDurumTazele(); return; }
+    otoOturum.durum = 'araniyor';
+    otoDurumTazele();
+    let ardArdaHata = 0;
+    for(const k of adaylar){
+      if(calisiyor) break;   // kullanıcı elle taramayı açtı — arka plan çekilir
+      let sonuc;
+      try{ sonuc = await otoIsle({ id: k.id, kategoriler: null }); }
+      catch(e){
+        /* ağ/kota hatası: damga BASILMADI (otoIsle sözleşmesi) — bu kitap
+           sonraki açılışta yeniden denenir; art arda 3 hata = kaynak düşmüş,
+           sessizce dur. */
+        if(++ardArdaHata >= 3){ otoOturum.durum = 'ag-yok'; otoDurumTazele(); return; }
+        continue;
+      }
+      ardArdaHata = 0;
+      if(sonuc === 'taksonomi-yok'){ otoOturum.durum = 'ag-yok'; otoDurumTazele(); return; }
+      otoOturum.bakilan++;
+      if(sonuc === 'yazildi') otoOturum.bulunan++;
+      otoDurumTazele();
+    }
+    otoOturum.durum = 'bitti';
+    otoDurumTazele();
+  }
+  /* Geri alma: tür temizlenir (kullanıcı eylemi — damga meşru) + kalıcı red.
+     Red SENKRONLU (veri.turRed union, kesfetGizli emsali) — cihaz-yerel kalsa
+     öbür cihazın açılış taraması aynı yanlış türü yeniden yazar, senkron da
+     bu cihaza geri taşırdı. Union kitap damgasına dokunmaz, ANLIK_SURUM
+     artışı istemez (hedefSayfa/kesfetGizli emsali, aynı kabul edilen risk). */
+  function otoGeriAl(id){
+    const atanan = atananOku();
+    const kayit = atanan[id];
+    if(!kayit) return false;
+    veri.turRed = veri.turRed || {};
+    veri.turRed[id] = Date.now();
+    const k = (veri.kitaplar || []).find(x => x.id === id);
+    if(k && k.tur === kayit.tur){ k.tur = ''; k.g = Date.now(); }
+    delete atanan[id];
+    atananYaz(atanan);
+    return true;
+  }
+  function otoGeriAlTek(id){
+    if(!otoGeriAl(id)) return;
+    if(typeof depoKaydet === 'function') depoKaydet();
+    if(typeof hepsiniCiz === 'function') hepsiniCiz();
+    durumTazele(); otoDurumTazele(); otoListeCiz();
+    bildir('Tür geri alındı — bu kitaba bir daha otomatik tür yazılmaz');
+  }
+  function otoGeriAlTum(){
+    const ids = atananGecerli().map(g => g.id);
+    if(!ids.length) return;
+    ids.forEach(otoGeriAl);
+    if(typeof depoKaydet === 'function') depoKaydet();
+    if(typeof hepsiniCiz === 'function') hepsiniCiz();
+    durumTazele(); otoDurumTazele(); otoListeCiz();
+    bildir(ids.length + ' kitabın türü geri alındı');
+  }
+
+  /* ---------- Otomatik tür kartı (Ayarlar ▸ Katalog araçları) ---------- */
+  function otoKartEkle(){
+    const yuva = document.getElementById('ayYuvaKatalog');
+    if(!yuva || document.getElementById('zgOtoKart')) return;
+    const kart = document.createElement('div');
+    kart.className = 'ay-blok'; kart.id = 'zgOtoKart';
+    kart.innerHTML = '<h3 class="ay-baslik">Otomatik tür</h3>'
+      + '<p class="ay-not">Türü boş kitapların türü, uygulama açıkken arka planda sessizce aranır '
+      + 've bulunursa doğrudan yazılır (1000Kitap düzenine eşlenemeyen boş kalır). '
+      + 'Yanlış bulunanı aşağıdan geri alabilirsin — geri aldığın kitaba bir daha otomatik tür yazılmaz.</p>'
+      + '<div class="zg-depo-satir" id="zgOtoDurum">—</div>'
+      + '<div class="ay-eylem"><button class="btn btn-cerceve" data-act="zg-oto-liste">'
+      + 'Otomatik atanan türler (<span id="zgOtoSayi">0</span>)</button></div>';
+    yuva.appendChild(kart);
+    otoDurumTazele();
+  }
+  function otoDurumTazele(){
+    const sayi = document.getElementById('zgOtoSayi');
+    if(sayi) sayi.textContent = String(atananGecerli().length);
+    const el = document.getElementById('zgOtoDurum');
+    if(!el) return;
+    const kalanN = otoAdaylar().length;
+    el.textContent = otoOturum.durum === 'araniyor'
+      ? kalanN + ' kitapta tür aranıyor… (bu oturumda ' + otoOturum.bakilan + ' bakıldı, '
+        + otoOturum.bulunan + ' bulundu)'
+      : otoOturum.durum === 'ag-yok'
+        ? 'Kaynağa ulaşılamadı — sonraki açılışta kaldığı yerden sürer.'
+        : otoOturum.durum === 'bitti'
+          ? (otoOturum.bakilan
+            ? 'Bu oturumda ' + otoOturum.bakilan + ' kitaba bakıldı, ' + otoOturum.bulunan
+              + ' tür bulundu.' + (kalanN ? ' Sırada ' + kalanN + ' kitap — sonraki açılışta.' : '')
+            : (kalanN ? kalanN + ' kitap sırada — sonraki açılışta.' : 'Türü boş kitap kalmadı.'))
+          : (kalanN ? kalanN + ' kitapta tür aranacak.' : 'Türü boş kitap yok.');
+  }
+  function otoListeCiz(){
+    const g = document.getElementById('zgOtoOrtuGovde');
+    if(!g) return;
+    const liste = atananGecerli().sort((a, b) => (b.kayit.t || 0) - (a.kayit.t || 0));
+    if(!liste.length){
+      g.innerHTML = '<div class="zg-satir">Otomatik atanmış tür yok.</div>' +
+        '<div class="form-alt"><button class="btn btn-cerceve" data-act="zg-kapat" data-ortu="zgOtoOrtu" style="flex:1">Kapat</button></div>';
+      return;
+    }
+    g.innerHTML =
+      '<p class="zg-not">Bu türleri uygulama kendisi yazdı. Geri aldığın kitabın türü boşalır ve '
+      + 'o kitaba bir daha otomatik tür yazılmaz; elle her zaman girebilirsin.</p>'
+      + '<div class="zg-onizle-liste">' + liste.map(({ id, kitap, kayit }) =>
+        '<div class="zg-onizle-satir"><div class="zg-onizle-ic">'
+        + '<span class="zg-onizle-ad">' + esc(kitap.ad) + '</span>'
+        + '<span class="zg-onizle-alan">Tür: ' + esc(kayit.tur) + '</span></div>'
+        + '<button class="zg-cikar" data-act="zg-oto-geri" data-kid="' + escAttr(id) + '" '
+        + 'aria-label="Bu kitabın türünü geri al">✕</button></div>').join('') + '</div>'
+      + '<div class="form-alt">'
+      + '<button class="btn btn-cerceve" data-act="zg-oto-geri-tum" style="flex:1">Tümünü geri al</button>'
+      + '<button class="btn btn-cerceve" data-act="zg-kapat" data-ortu="zgOtoOrtu" style="flex:1">Kapat</button></div>';
   }
 
   /* ---------- tarama döngüsü ---------- */
@@ -775,22 +986,36 @@
           }
           break; }
         case 'zg-kapat': kapat(el.dataset.ortu); break;
+        case 'zg-oto-liste':
+          ortuKur('zgOtoOrtu', 'Otomatik atanan türler');
+          otoListeCiz(); ac('zgOtoOrtu');
+          break;
+        case 'zg-oto-geri': otoGeriAlTek(el.dataset.kid); break;
+        case 'zg-oto-geri-tum': otoGeriAlTum(); break;
         case 'zg-puanla': puanBaslat(); break;
         case 'zg-puan': puanVer(parseInt(el.dataset.v)); break;
         case 'zg-atla': puanSira++; puanCiz_(); break;
         case 'zg-tarih': tarihBaslat(); break;
         case 'zg-yil': yilVer(parseInt(el.dataset.v)); break;
         case 'zg-atla-tarih': tarihSira++; tarihCiz_(); break;
-        case 'ayar-ac': durumTazele(); break;   // kapak/ocr/bildirim ile aynı kalıp
+        case 'ayar-ac':   // kapak/ocr/bildirim ile aynı kalıp
+          durumTazele(); otoKartEkle(); otoDurumTazele();
+          break;
       }
     });
     durumTazele();
+    otoKartEkle();
+    /* Açılış taraması: KENDİLİĞİNDEN, gecikmeli — açılış çizimi ve ilk
+       etkileşim ağ işinden önce biter (g55 açılış-süresi vakası). */
+    setTimeout(otoTara, OTO_BASLANGIC_MS);
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', baslat);
   else baslat();
 
-  /* test kancaları + otoTur (v65: ekleme akışlarının kayıt-anı tür motoru) */
+  /* test kancaları + otoTur (v65: ekleme akışlarının kayıt-anı tür motoru)
+     + v66: açılış taraması / geri alma yüzeyi */
   window.__zengin = { eksikSayim, alanBos, turCevir, baslikUyar, kitapSorgula, uygula,
     kuyrukYukle, kuyrukKaydet, kuyrukTemizle, puanlanacaklar, tarihsizler, durumTazele,
-    otoTur, taksonomiKur: t => { taksonomi = t; }, ARALIK_MS, ALANLAR, KUYRUK_ANAHTAR };
+    otoTur, otoAdaylar, atananGecerli, taksonomiKur: t => { taksonomi = t; },
+    ARALIK_MS, ALANLAR, KUYRUK_ANAHTAR, OTO_DENEME_ANAHTAR, OTO_ATANAN_ANAHTAR };
 })();

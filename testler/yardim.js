@@ -44,6 +44,18 @@ async function tohumla(page, kitaplar, ekstra) {
      ezilmez. */
   const gorunumVarsayilan = ('kk_gorunum_v1' in (ekstra || {}))
     ? null : '{"izgara":false,"rafGrupla":false}';
+  /* v66 GÖÇ (davranış-koruyucu): uygulama artık açılışta türü boş kitaplar
+     için ARKA PLAN tür taraması koşuyor. Eski vakaların hiçbirinin niyeti bu
+     tarama değil — sayaç iddiaları taramanın ek istekleriyle anlamını
+     yitirirdi. tohumla, tohumlanan her kitabı "az önce denendi" defteriyle
+     işaretler (tarama onları atlar). İstisna: ekstra'da kk_zg_oto_deneme_v1
+     anahtarı VARSA (null sentineli dahil — hiç tohumlama) buradaki varsayılan
+     basılmaz; g55 taramayı böyle gerçekten koşturur (gorunum deseninin eşi). */
+  if (!('kk_zg_oto_deneme_v1' in (ekstra || {}))) {
+    const defter = {};
+    (v.kitaplar || []).forEach(k => { if (k && k.id) defter[k.id] = Date.now(); });
+    ek['kk_zg_oto_deneme_v1'] = JSON.stringify(defter);
+  }
   await page.addInitScript(([veriJson, ekObj, gorunumV]) => {
     if (localStorage.getItem('__kk_tohumlandi')) return;
     localStorage.setItem('__kk_tohumlandi', '1');

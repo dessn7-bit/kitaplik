@@ -1099,9 +1099,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
       <section class="ay-bolum" id="ayBolumZengin">
         <div class="ay-bolum-bas"><span class="kicker">Zenginleştir</span></div>
         <h3 class="ay-baslik">Kütüphaneyi zenginleştir</h3>
-        <p class="ay-not">Eksik tür, ISBN, sayfa, yayınevi, yıl ve kapakları kaynaklardan
+        <p class="ay-not">Eksik ISBN, sayfa, yayınevi, yıl ve kapakları kaynaklardan
       (Google Books) tamamlar. Yalnız <b>boş</b> alanlar doldurulur; sonuçlar yazılmadan önce
-      önizlemede onayına sunulur. Tür, 1000Kitap'ın 78 türlük düzenine eşlenir — eşleşmeyen boş kalır.</p>
+      önizlemede onayına sunulur. <b>Tür artık kendiliğinden dolar</b> (uygulama açıkken arka planda —
+      durum ve geri alma aşağıda, Katalog araçları ▸ Otomatik tür); bu tarama türü de
+      daha derin arar (ikinci gevşek sorgu) ve yine önizlemeyle yazar.</p>
         <div class="zg-depo-satir" id="zgDurum">Hesaplanıyor…</div>
         <div class="ay-eylem">
           <button class="btn btn-cerceve" data-act="zg-tara">Taramayı başlat</button>
@@ -1514,7 +1516,7 @@ function depoYukle(){
   try{
     const raw = localStorage.getItem(DEPO);
     if(!raw) return { kitaplar:[], hedef:{}, hedefG:{}, hedefSayfa:{}, hedefSayfaG:{},
-      silinenler:{}, kesfetGizli:{}, kesfetGizliGeri:{} };
+      silinenler:{}, kesfetGizli:{}, kesfetGizliGeri:{}, turRed:{} };
     const v = JSON.parse(raw);
     return {
       kitaplar: Array.isArray(v.kitaplar) ? v.kitaplar.map(kitapNormalize) : [],
@@ -1527,10 +1529,14 @@ function depoYukle(){
       /* kesfetGizliGeri (v62): gizlemenin GERİ ALMA kayıtları — silinenler
          mezar taşı deseninin dengi (union'dan silme dirilir; geri alma ayrı
          öz-damgalı haritada yaşar, etkin gizlilik = gizli > geri). */
-      kesfetGizliGeri: damgaSuz(v.kesfetGizliGeri)
+      kesfetGizliGeri: damgaSuz(v.kesfetGizliGeri),
+      /* turRed (v66): otomatik türü GERİ ALINAN kitaplar {kitapId: zaman} —
+         kalıcı red, kesfetGizli ile aynı öz-damgalı union deseni. Düşerse
+         öbür cihazın açılış taraması reddedilen türü yeniden yazardı. */
+      turRed: damgaSuz(v.turRed)
     };
   }catch(e){ return { kitaplar:[], hedef:{}, hedefG:{}, hedefSayfa:{}, hedefSayfaG:{},
-    silinenler:{}, kesfetGizli:{}, kesfetGizliGeri:{} }; }
+    silinenler:{}, kesfetGizli:{}, kesfetGizliGeri:{}, turRed:{} }; }
 }
 function depoKaydet(){
   /* dönüş: yazım başarılı mı — senkron sarmalayıcısı parmak izini yalnız
@@ -2882,6 +2888,8 @@ function iceAktar(dosya){
         veri.kesfetGizli = { ...y.kesfetGizli, ...(veri.kesfetGizli || {}) };   // v51: gizleme tercihi yedekten döner
       if(y.kesfetGizliGeri && typeof y.kesfetGizliGeri === 'object')
         veri.kesfetGizliGeri = { ...y.kesfetGizliGeri, ...(veri.kesfetGizliGeri || {}) };   // v62: geri almalar da döner
+      if(y.turRed && typeof y.turRed === 'object')
+        veri.turRed = { ...y.turRed, ...(veri.turRed || {}) };   // v66: tür redleri yedekten döner
       depoKaydet(); hepsiniCiz();
       toast(eklendi ? `${eklendi} kitap geri yüklendi` : 'Yeni kitap yok — hepsi zaten kayıtlı');
     }catch(e){ toast('Dosya okunamadı — geçerli bir Kitaplık yedeği değil'); }
@@ -3668,7 +3676,8 @@ document.addEventListener('click', e => {
         veri = { kitaplar:[], hedef: veri.hedef || {}, hedefG: veri.hedefG || {},
           hedefSayfa: veri.hedefSayfa || {}, hedefSayfaG: veri.hedefSayfaG || {},
           silinenler: veri.silinenler || {}, kesfetGizli: veri.kesfetGizli || {},
-          kesfetGizliGeri: veri.kesfetGizliGeri || {} };
+          kesfetGizliGeri: veri.kesfetGizliGeri || {},
+          turRed: veri.turRed || {} };   // v66: tür redleri de kişisel tercihtir, korunur
         if(window.__kapak) window.__kapak.hepsiniSil(true); // kapak fotoğrafları da yetim kalmasın
         depoKaydet(); hepsiniCiz(); toast('Kütüphane boşaltıldı — hedeflerin duruyor');
       }
