@@ -1091,6 +1091,17 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
         <div class="ay-eylem">
           <button class="btn btn-cerceve" data-act="ice-aktar">Dosya seç</button>
         </div>
+        <!-- Tür listesi (v67) — mantık zengin.js'te. Yedekten geri yüklemenin
+             tersine YALNIZ tür alanına dokunur: son değişiklikleri (puan,
+             eklenen kitap, otomatik dolan tür) ezmeden elle hazırlanmış tür
+             listesini işler. Önizleme + onay olmadan tek bayt yazılmaz. -->
+        <h3 class="ay-baslik">Tür listesi yükle</h3>
+        <p class="ay-not">Yalnız <b>tür</b> alanına dokunan içe aktarım: kayıtlar ad + yazar ile eşlenir,
+      türler 1000Kitap düzenine göre doğrulanır, yazmadan önce önizleme onayı alınır. Puan, sayfa,
+      durum, not — başka hiçbir alan değişmez. Dolu tür dosyadaki değerle değişir (önizlemede ayrıca gösterilir).</p>
+        <div class="ay-eylem">
+          <button class="btn btn-cerceve" data-act="zg-tur-ice">Tür dosyası seç</button>
+        </div>
       </section>
 
       <!-- ZENGİNLEŞTİR (zg-) — mantık zengin.js'te. Eksik alan sayımı + toplu
