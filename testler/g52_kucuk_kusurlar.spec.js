@@ -31,7 +31,8 @@ function bTaban() {
   return [bitmis({ ad: 'S1', yazar: 'Ahmet Ümit' }), bitmis({ ad: 'S2', yazar: 'Ahmet Ümit', puan: 10 })];
 }
 function gItem(ad, yazar) {
-  return { volumeInfo: { title: ad, authors: [yazar] } };
+  // language:'tr' (v65): bu grubun konusu gizleme/mononim — dil süzgeci elemesin
+  return { volumeInfo: { title: ad, authors: [yazar], language: 'tr' } };
 }
 async function bGetir(page) {
   await page.click('#ksB [data-act="ks-b-getir"]');

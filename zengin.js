@@ -333,6 +333,80 @@
     return Object.keys(bulunan).length ? bulunan : null;
   }
 
+  /* ---------- OTOMATİK TÜR (v65): yeni eklenen kitaba kayıt anında ----------
+     Zenginleştirme MEVCUT kitapları dolduruyordu; yeni eklenen kitapta tür yine
+     boş kalıyor, kullanıcı elle seçmek zorunda kalıyordu. AYNI motor (turCevir +
+     kategoriTopla + gbSor + canlı taksonomi) kayıt anında da çalışır — kod
+     kopyası yok. SÖZLEŞME:
+     · Kayıt GECİKMEZ: çağıran push+depoKaydet'ini yapar, kuyruk arkadan koşar;
+       tür bulununca alan + k.g damgası güncellenir (senkron taşır).
+     · Kitap başına EN FAZLA 1 Google isteği; ekleme akışının kendi yanıtındaki
+       kategoriler eşlenirse 0 istek. Taksonomi (/turler) oturumda bir kez,
+       tarama döngüsüyle ORTAK önbellek.
+     · Kuyruk ARALIK_MS ile serileştirir (seri taramada kota nezaketi).
+     · Tür bulunamazsa BOŞ kalır — uydurma yok; kullanıcı formdan girebilir.
+     · Yazım anında alanBos YENİDEN denetlenir: arka plan yanıtı gelene kadar
+       kullanıcı türü elle doldurduysa EZİLMEZ (v63 çift-katman dersinin dengi).
+     · Kuyruk cihaz-belleğinde, kalıcı DEĞİL (karar): sayfa kapanırsa kalan
+       işler düşer; kurtarma yolu zaten var — Ayarlar ▸ Zenginleştir aynı
+       motorla boşları tarar. İkinci bir kalıcı kuyruk onun işini kopyalardı. */
+  const otoKuyruk = [];
+  const otoKuyrukta = new Set();
+  let otoCalisiyor = false;
+  let otoSonIstek = 0;   // son Google isteğinin zamanı — aralık KUYRUKTAN BAĞIMSIZ tutulur
+  function otoTur(id, kategoriler){
+    if(!id || otoKuyrukta.has(id)) return;
+    otoKuyrukta.add(id);
+    otoKuyruk.push({ id, kategoriler: (Array.isArray(kategoriler) && kategoriler.length)
+      ? kategoriler : null });
+    otoSur();
+  }
+  async function otoSur(){
+    if(otoCalisiyor) return;
+    otoCalisiyor = true;
+    try{
+      while(otoKuyruk.length){
+        const is = otoKuyruk.shift();
+        try{ await otoIsle(is); }
+        catch(e){ /* ağ/kota hatası: tür boş kalır — sessiz, kayıt zaten tamam */ }
+        otoKuyrukta.delete(is.id);
+      }
+    }finally{ otoCalisiyor = false; }
+  }
+  async function otoIsle(is){
+    const k = (veri.kitaplar || []).find(x => x.id === is.id);
+    if(!k || !alanBos(k, 'tur')) return false;
+    if(!taksonomi){
+      try{ taksonomi = await window.__ara.turler(); }
+      catch(e){ return false; }   // taksonomi yoksa eşleme imkânsız — boş kalır
+    }
+    let tur = is.kategoriler ? turCevir(is.kategoriler) : '';
+    if(!tur){
+      /* Aralık kuyruk döngüsüne değil SON İSTEĞE bağlı: kuyruk boşalıp yeni
+         kitapla yeniden başlasa da iki Google isteği arasında en az ARALIK_MS
+         geçer (seri taramada arka arkaya okutma kotayı sıkıştıramaz). */
+      const kalan = otoSonIstek + ARALIK_MS - Date.now();
+      if(kalan > 0) await bekle(kalan);
+      otoSonIstek = Date.now();
+      // kitap başına TEK istek — gevşek 2. sorgu bilerek YOK (kota bütçesi)
+      const adaylar = await gbSor('intitle:"' + k.ad + '"'
+        + (k.yazar ? ' inauthor:"' + k.yazar + '"' : ''));
+      tur = turCevir(kategoriTopla(adaylar, k.ad));
+    }
+    /* await SONRASI taze arama (kapak.js dersi: senkron veri.kitaplar'ı yeni
+       diziyle değiştirebilir, eski referansa yazmak ölü nesneye yazar). Yazım
+       anında alanBos YENİDEN denetlenir: yanıt beklenirken kullanıcı türü elle
+       doldurduysa arka plan onu EZMEZ. */
+    const canli = (veri.kitaplar || []).find(x => x.id === is.id);
+    if(tur && canli && alanBos(canli, 'tur')){
+      canli.tur = tur;
+      canli.g = Date.now();   // kullanıcı-görünür alan değişti — damga (senkron taşır)
+      if(typeof depoKaydet === 'function') depoKaydet();
+      if(typeof hepsiniCiz === 'function') hepsiniCiz();
+      durumTazele();
+    }
+  }
+
   /* ---------- tarama döngüsü ---------- */
   async function taramaBaslat(){
     if(calisiyor) return;
@@ -715,8 +789,8 @@
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', baslat);
   else baslat();
 
-  /* test kancaları */
+  /* test kancaları + otoTur (v65: ekleme akışlarının kayıt-anı tür motoru) */
   window.__zengin = { eksikSayim, alanBos, turCevir, baslikUyar, kitapSorgula, uygula,
     kuyrukYukle, kuyrukKaydet, kuyrukTemizle, puanlanacaklar, tarihsizler, durumTazele,
-    taksonomiKur: t => { taksonomi = t; }, ARALIK_MS, ALANLAR, KUYRUK_ANAHTAR };
+    otoTur, taksonomiKur: t => { taksonomi = t; }, ARALIK_MS, ALANLAR, KUYRUK_ANAHTAR };
 })();

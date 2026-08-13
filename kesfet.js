@@ -331,6 +331,27 @@
     return parcalar.join(' · ');
   }
 
+  /* ---- DİL SÜZGECİ (v65): Keşfet YALNIZ TÜRKÇE önerir ----
+     Canlı kanıt: YENİ KİTAPLAR "L'enfance d'un chef", "Pale Blue Dot",
+     "Madonna In a Fur Coat" öneriyordu — sevilen yazarın İNGİLİZCE ÇEVİRİSİ
+     yazar denetiminden geçer (gerçekten o yazarın kitabı), dili tutmaz.
+     ÖLÇÜM (2026-08-13, canlı GB): langRestrict=tr TEK BAŞINA GÜVENİLMEZ —
+     Carl Sagan langRestrict=tr'ye rağmen 6/6 İngilizce, Sabahattin Ali'ye bile
+     1 İngilizce sızdı. Bu yüzden savunma İKİ katman: sorguya langRestrict=tr
+     (ucuz ön eleme) + DÖNEN adayın volumeInfo.language alanı burada denetlenir.
+     Dil alanı OLMAYAN aday ELENİR — ölçülen karar: 114 canlı adayın 0'ı
+     dilsizdi (%0), yani eleme pratikte hiçbir gerçek Türkçe kitabı kaybettirmez;
+     dili bilinmeyeni "muhtemelen Türkçedir" diye geçirmek uydurma olurdu.
+     1000Kitap tür adayları MUAF: kaynak zaten Türkçe, dil alanı taşımaz.
+     Eleme sonrası bir yazar/seri boş kalırsa o kaynak sessizce atlanır —
+     doldurma yok (v53 ilkesinin dil ayağı). Süzgeç TEK fonksiyon ve hem
+     sorgu sonunda (kota dilimi Türkçelere kalsın) hem her çizimde (bElenmis —
+     24 saatlik bayat önbellekte kalmış yabancı adaylar da düşsün) uygulanır. */
+  function bDilUygun(a){
+    if(a && a.kaynakTip === 'tur') return true;   // 1000Kitap: dokunulmaz (görev sözleşmesi)
+    return String((a && a.dil) || '').toUpperCase() === 'TR';
+  }
+
   function isbnTemiz(s){
     // barkod.js ihraçlı temizleyici; eklenti yüklenmemişse aynı kural (emniyet)
     return (window.__barkod && window.__barkod.isbnTemizle)
@@ -385,6 +406,7 @@
     const gorulen = new Set();
     return (B.adaylar || []).filter(a => {
       if(!a || !a.ad) return false;
+      if(!bDilUygun(a)) return false;    // v65: bayat önbellekteki yabancı aday da düşer
       const anah = bAnahtar(a);
       if(gorulen.has(anah)) return false;
       gorulen.add(anah);
@@ -423,18 +445,20 @@
     // EN GÜÇLÜ sinyal önce: eksik seri sorguları liste başında
     for(const s of seriler){
       const q = s.yazar ? '"' + s.seri + '" inauthor:"' + s.yazar + '"' : '"' + s.seri + '"';
-      // Seride İKİ denetim: kitap gerçekten o seriden mi, gerçekten o yazarın mı.
+      // Seride ÜÇ denetim: kitap gerçekten o seriden mi, gerçekten o yazarın mı,
+      // TÜRKÇE mi (v65 — dil süzgeci kota diliminden ÖNCE: yabancı baskılar
+      // B_SERI_ADAY yuvalarını işgal edip Türkçeleri dışarıda bırakmasın).
       // Yazar denetlenemiyorsa (ad yok ya da "Anonim") yalnız seri adı bağlar.
       const yazarDenetli = !!s.yazar && sorulabilirYazar(s.yazar);
-      (await dene(A.google(q, null, ctl.signal)))
-        .filter(a => seriEslesir(s.seri, a.ad) &&
+      (await dene(A.google(q, null, ctl.signal, 'tr')))
+        .filter(a => bDilUygun(a) && seriEslesir(s.seri, a.ad) &&
           (!yazarDenetli || yazarEslesir(s.yazar, a.yazar)))
         .slice(0, B_SERI_ADAY)
         .forEach(a => adaylar.push({ ...a, kaynakTip: 'seri', neden: s.cumle }));
     }
     for(const y of yazarlar){
-      (await dene(A.google(y.ad, 'yazar', ctl.signal)))
-        .filter(a => yazarEslesir(y.ad, a.yazar))
+      (await dene(A.google(y.ad, 'yazar', ctl.signal, 'tr')))
+        .filter(a => bDilUygun(a) && yazarEslesir(y.ad, a.yazar))
         .slice(0, B_YAZAR_ADAY)
         .forEach(a => adaylar.push({ ...a, kaynakTip: 'yazar', neden: y.cumle }));
     }
@@ -547,6 +571,12 @@
       sahiplik: 'istek', eklenme: Date.now(), g: Date.now() });
     veri.kitaplar.push(yeni);
     depoKaydet();
+    /* Otomatik tür (v65): istek listesine eklenen kitap da yeni kitaptır —
+       aday Google'dan geldiyse kategorileri bedava taşınır, yoksa kuyruk
+       tek sorguyla dener; bulunamazsa boş kalır (formKaydet ile aynı motor). */
+    if(!yeni.tur && window.__zengin && window.__zengin.otoTur)
+      window.__zengin.otoTur(yeni.id,
+        (Array.isArray(a.kategoriler) && a.kategoriler.length) ? a.kategoriler : null);
     if(typeof toast === 'function') toast('İstek listene eklendi');
     if(typeof hepsiniCiz === 'function') hepsiniCiz();   // sarmalama Keşfet'i tazeler
     ciz();

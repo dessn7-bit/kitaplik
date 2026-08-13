@@ -33,7 +33,9 @@ function sevilen(yazar) {
           bitmis({ ad: 'S2 ' + yazar, yazar, puan: 10 })];
 }
 function gItem(ad, yazarlar, ek) {
-  return { volumeInfo: Object.assign({ title: ad,
+  // language:'tr' varsayılan (v65): bu grubun konusu YAZAR alaka denetimi —
+  // dil süzgeci (g54) adayları ayrıca elemesin diye sahte kayıtlar Türkçe gelir.
+  return { volumeInfo: Object.assign({ title: ad, language: 'tr',
     authors: Array.isArray(yazarlar) ? yazarlar : [yazarlar] }, ek || {}) };
 }
 async function kesfetAc(page) {

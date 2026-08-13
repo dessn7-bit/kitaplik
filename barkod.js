@@ -55,7 +55,14 @@
           sayfa: v.pageCount || null,
           kapak: (v.imageLinks && v.imageLinks.thumbnail)
             ? v.imageLinks.thumbnail.replace('http://','https://') : null,
-          tur: (v.categories||[])[0] || ''
+          /* tur artık HAM yazılmaz (v65): eski `tur: categories[0]` Google'ın
+             İngilizce konu etiketini ("Literature, Turkish", "Fiction") olduğu
+             gibi tür alanına sokuyordu — taksonomi kapısı yok, uydurma tür
+             mümkündü. Kategoriler ayrı alanda taşınır; tür eşlemesini kayıt
+             anında zengin.js otoTur motoru (sözlük + canlı taksonomi, iki
+             kapı) yapar. Eşlenemezse tür DÜRÜSTÇE boş kalır. */
+          tur: '',
+          kategoriler: Array.isArray(v.categories) ? v.categories : []
         };
       }
     }catch(e){ gbHata = true; }
@@ -89,6 +96,12 @@
     yaz('f-isbn', isbn);   // okunan ISBN kayda geçsin (kopya tespitinin en sağlam anahtarı)
     const tur = document.getElementById('f-tur');
     if(tur && !tur.value && k.tur) tur.value = k.tur;
+    /* Otomatik tür (v65): ISBN yanıtındaki kategoriler kayıt anındaki tür
+       çıkarımına taşınır (formKaydet → zengin.js otoTur) — ek istek atılmaz.
+       AD ile bağlı: kullanıcı formu başka kitaba çevirirse taşınmaz. */
+    if(typeof durum === 'object')
+      durum.formKategoriler = (Array.isArray(k.kategoriler) && k.kategoriler.length)
+        ? { ad: k.ad, liste: k.kategoriler } : null;
     if(k.kapak && typeof durum === 'object'){
       durum.formKapak = k.kapak;
       if(typeof kapakOnizleCiz === 'function') kapakOnizleCiz();

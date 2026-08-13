@@ -103,9 +103,13 @@ test.describe('G4 seri tarama', () => {
     // (2) aynı koda 4 sn içinde İKİNCİ kaynak sorgusu atılMAması — mutantı bu öldürür.
     await kameraTaklit(page);
     await rafAc(page);
-    // Google yanıtını ~1.2 sn geciktir: tarama tikleri sorgu sürerken de akmaya devam eder
+    // Google yanıtını ~1.2 sn geciktir: tarama tikleri sorgu sürerken de akmaya devam eder.
+    // Sayaç YALNIZ isbn: KAYNAK sorgularını sayar (v65): otomatik tür motoru
+    // (zengin.js otoTur) ekleme SONRASI ayrı bir intitle sorgusu atar — o,
+    // debounce sözleşmesinin ("aynı koda ikinci kaynak sorgusu yok") konusu değil.
+    let isbnSorgu = 0;
     await page.route(url => url.href.includes('googleapis.com/books'), async route => {
-      page.__agSayac.google++;
+      if(route.request().url().includes('isbn')) isbnSorgu++;
       await new Promise(coz => setTimeout(coz, 1200));
       await route.fulfill({ status: 200, contentType: 'application/json',
         body: JSON.stringify(gbIsbnYanit({ ad: 'Yavaş Gelen Kitap', yazar: 'Y' })) });
@@ -118,7 +122,7 @@ test.describe('G4 seri tarama', () => {
     await page.waitForTimeout(1500);
     await page.evaluate(() => { window.__sahteKod = null; });
     expect(await page.evaluate(() => veri.kitaplar.length)).toBe(1); // tek kayıt
-    expect(page.__agSayac.google).toBe(1); // 4 sn penceresinde TEK kaynak sorgusu
+    expect(isbnSorgu).toBe(1); // 4 sn penceresinde TEK isbn kaynak sorgusu
   });
 
   test('bilinmeyen ISBN eklenmez', async ({ page }) => {

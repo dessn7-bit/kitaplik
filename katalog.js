@@ -207,6 +207,13 @@
     kayit.sahiplik = 'sahip';   // fiziksel kitabı okutuyorsun: istek listesi değil
     veri.kitaplar.push(kayit);
     if(typeof depoKaydet === 'function') depoKaydet();
+    /* Otomatik tür (v65): seri taramada her kitap zengin.js otoTur KUYRUĞUNA
+       girer — kuyruk istekleri ARALIK_MS ile serileştirir, arka arkaya okutulan
+       raf kota patlatmaz. ISBN yanıtının kendi kategorileri varsa ek istek
+       hiç atılmaz; tarama akışı BEKLEMEZ (tür arkadan gelir). */
+    if(!kayit.tur && window.__zengin && window.__zengin.otoTur)
+      window.__zengin.otoTur(kayit.id,
+        (Array.isArray(k.kategoriler) && k.kategoriler.length) ? k.kategoriler : null);
     if(typeof hepsiniCiz === 'function') hepsiniCiz();
     oturumKayitlari.push({ id: kayit.id, ad: kayit.ad, yazar: kayit.yazar });
     listeCizSeri(); rafListesiDoldur(); bip();

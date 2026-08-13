@@ -243,7 +243,8 @@ test.describe('G44 Keşfet-B tür kaynağı', () => {
       okunacak({ ad: 'Rafta Duran', yazar: 'RD' })]));
     await kesfetAc(page);
     page.__agAyar.turler = 'hata';
-    page.__agAyar.google = { items: [{ volumeInfo: { title: 'Ustanın Kitabı', authors: ['Usta'] } }] };
+    page.__agAyar.google = { items: [{ volumeInfo: { title: 'Ustanın Kitabı',
+      authors: ['Usta'], language: 'tr' } }] };   // dil süzgeci (v65) konu dışı — Türkçe sahte
     await getir(page);
     // yazar dalı yaşıyor
     await expect(satir(page, 'Ustanın Kitabı')).toBeVisible();

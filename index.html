@@ -1937,11 +1937,18 @@ function canliAraTetikle(){
 /* Arama söz kurucuları (v51): canliAra VE Keşfet-B AYNI kaynak yolunu kullanır —
    kopya istemci yok. Çıplak reject ederler; çağıran kendi catch'ini kurar.
    Aday şekli canliAra ile aynı + isbn (Google industryIdentifiers'tan; olSec
-   isbn'i okumadığı için form davranışı değişmez). */
-function aramaGoogle(q, tip, sinyal){
+   isbn'i okumadığı için form davranışı değişmez).
+   dilKisit (v65): yalnız Keşfet-B 'tr' geçer — langRestrict UCUZ ilk savunma
+   ama tek başına GÜVENİLMEZ (ölçüm: Carl Sagan langRestrict=tr'ye rağmen 6/6
+   İngilizce döndü); asıl süzme dönen adayın dil alanında yapılır (kesfet.js).
+   Canlı arama dilKisit GEÇMEZ: kullanıcı kendi rafındaki yabancı kitabı da
+   arayabilmeli. kategoriler (v65): otomatik tür çıkarımı (zengin.js otoTur)
+   seçilen adayın kendi kategorilerini ek istek atmadan kullanabilsin diye. */
+function aramaGoogle(q, tip, sinyal, dilKisit){
   const gbSorgu = tip === 'yazar' ? 'inauthor:' + q
     : tip === 'yayinevi' ? 'inpublisher:' + q : q;
-  return fetch('https://www.googleapis.com/books/v1/volumes?key=AIzaSyCjjwU2NcpAgTVVSop0YNhIaQPmWWpHc04&country=TR&maxResults=6&printType=books&q='
+  return fetch('https://www.googleapis.com/books/v1/volumes?key=AIzaSyCjjwU2NcpAgTVVSop0YNhIaQPmWWpHc04&country=TR&maxResults=6&printType=books'
+      + (dilKisit ? '&langRestrict=' + encodeURIComponent(dilKisit) : '') + '&q='
       + encodeURIComponent(gbSorgu), sinyal ? { signal: sinyal } : undefined)
     .then(r => r.json())
     .then(j => (j.items || []).map(it => {
@@ -1954,6 +1961,7 @@ function aramaGoogle(q, tip, sinyal){
         yil: v.publishedDate ? parseInt(v.publishedDate.slice(0,4)) || null : null,
         sayfa: v.pageCount || null, dil: (v.language||'').toUpperCase(), kaynak: 'Google',
         isbn: (i13 && i13.identifier) || (i10 && i10.identifier) || '',
+        kategoriler: Array.isArray(v.categories) ? v.categories : [],
         kapak: (v.imageLinks && v.imageLinks.thumbnail)
           ? v.imageLinks.thumbnail.replace('http://','https://') : null };
     }).filter(a => a.ad));
@@ -2062,6 +2070,12 @@ function olSec(i){
   // Google Books dil kodunu getiriyor (v.language) — forma yaz. Çevirmen bilgisi
   // API'de güvenilir değil: UYDURMA, boş bırak.
   if(a.dil) document.getElementById('f-dil').value = String(a.dil).toLowerCase();
+  /* Otomatik tür (v65): seçilen adayın kendi kategorileri kayıt anındaki tür
+     çıkarımına taşınır — ek istek atılmaz. AD ile birlikte saklanır: kullanıcı
+     seçimden sonra formu başka bir kitaba çevirirse eski adayın kategorileri
+     yeni kitaba yapıştırılmaz (kaydet anında ad eşitliği aranır). */
+  durum.formKategoriler = (Array.isArray(a.kategoriler) && a.kategoriler.length)
+    ? { ad: a.ad, liste: a.kategoriler } : null;
   durum.formKapak = a.kapak;
   kapakOnizleCiz();
   sonucTemizle();
@@ -2116,6 +2130,7 @@ function formAc(id){
   durum.formDurum = k ? k.durum : 'okunacak';
   durum.formPuan = k ? (k.puan||null) : null;
   durum.formKapak = k ? (k.kapak||null) : null;
+  durum.formKategoriler = null;   // önceki açılıştan kategori sızmasın (v65)
   /* D2: yeni kitapta ayrıntılar KAPALI (birincil yüzey: ad+durum+kaydet),
      düzenlemede AÇIK — kullanıcı belli bir alanı değiştirmeye gelir. */
   const fAyr = document.getElementById('fAyrintilar');
@@ -2216,7 +2231,18 @@ function formKaydet(){
     veri.kitaplar.push(yeni);
     kayitId = yeni.id;
     toast('Kitap rafa eklendi' + ikizUyari);
+    /* Otomatik tür (v65): YENİ kitapta tür boşsa zengin.js motoru arkadan
+       doldurur (aynı motor — kod kopyası yok). Kayıt BEKLEMEZ: kuyruk asenkron,
+       tür gelince alan + damga güncellenir; bulunamazsa boş kalır (uydurma yok).
+       Düzenlemede çağrılmaz: kullanıcının türü bilerek boşaltması bir karardır,
+       arkadan yeniden doldurmak onunla kavga etmek olurdu. Aday kategorileri
+       yalnız AD hâlâ o adaya aitse taşınır. */
+    if(!yeni.tur && window.__zengin && window.__zengin.otoTur)
+      window.__zengin.otoTur(yeni.id,
+        (durum.formKategoriler && durum.formKategoriler.ad === ad)
+          ? durum.formKategoriler.liste : null);
   }
+  durum.formKategoriler = null;
   depoKaydet();
   document.getElementById('ortuForm').classList.remove('acik');
   hepsiniCiz();
