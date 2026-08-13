@@ -111,6 +111,31 @@
         background:transparent;font-size:.8rem;color:var(--muted)}
       .gorunum-dugme.aktif{border-color:var(--brass);color:var(--brass);
         background:color-mix(in srgb,var(--brass) 7%,transparent);font-weight:600}
+      /* ---- Geniş ekran ızgarası (v68) ----
+         96px kova mobil 3 sütun içindi; 1100px konteynerde 10 sütun × 96px
+         minicik kapak üretiyordu (ölçüm). Hedef kapak ~150-170px (raf hissi):
+         ≥700 → 132px kova (820'de 5 sütun ≈148px, 1000'de 6 ≈151px),
+         ≥1100 → 150px kova (1100 konteynerde 6 sütun ≈168px kapak).
+         Levha yüksekliği sabit 150px'ti; genişleyen sütunda oran bozulmasın
+         diye mobil oranı (96:150) aspect-ratio ile korunur. Mobil kural
+         DEĞİŞMEDİ. Bu blok gorunum.js stilinde YAŞAMALI: enjekte stil statik
+         <style>'dan sonra gelir, medya kuralı ancak burada mobil kuralını
+         ezebilir (cascade). */
+      @media (min-width:700px){
+        #liste.izgara{grid-template-columns:repeat(auto-fill,minmax(132px,1fr))}
+        #liste.izgara .iz-plate{height:auto;aspect-ratio:96/150}
+      }
+      @media (min-width:1100px){
+        #liste.izgara{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+        /* toplu çubuk ve FAB masaüstünde: altta nav yok — çubuk sol kenar
+           çubuğunu boşlayıp tabana iner, FAB tabana yaklaşır. safe-area dolgusu:
+           ≥1100 CSS genişliğindeki DOKUNMATİK cihazda (yatay iPad) çubuğun
+           düğmeleri home-indicator bölgesine yapışmasın (taze-göz bulgusu;
+           masaüstünde env()=0, etkisiz). */
+        .toplu-cubuk{left:var(--nav-w);bottom:0;
+          padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+        .fab{bottom:24px}
+      }
       /* Üç düzen anahtarı (v42): görsel 32×30, dokunma alanı ::after ile ~40px */
       .duzen-anahtar{display:flex;gap:4px}
       .duzen-dugme{width:32px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;

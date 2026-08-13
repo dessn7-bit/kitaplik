@@ -203,14 +203,19 @@ test.describe('G21 M3 — geniş ekran düzeni', () => {
   const besKitap = () => Array.from({ length: 5 }, (_, i) =>
     sahteKitap({ ad: 'Kitap ' + (i + 1) }));
 
-  test('1200px: içerik maksimum genişliği aşmıyor ve ortalanmış', async ({ page }) => {
+  test('1200px: içerik maksimum genişliği aşmıyor ve İÇERİK ALANINDA ortalanmış', async ({ page }) => {
     await page.setViewportSize({ width: 1200, height: 900 });
     await tohumla(page, besKitap());
     await rafAc(page);
     const k = await page.locator('#liste').boundingBox();
     expect(k.width).toBeLessThanOrEqual(1100);
-    const bosluk = { sol: k.x, sag: 1200 - (k.x + k.width) };
-    expect(Math.abs(bosluk.sol - bosluk.sag)).toBeLessThan(20);   // ortalanmış
+    /* v68: ≥1100'de solda dikey gezinme çubuğu var — ortalama artık çubuk
+       DIŞINDA kalan içerik alanına göre (davranış bilinçli değişti; simetri
+       iddiasının niyeti korunur, referans alan güncellendi). */
+    const nav = await page.locator('nav').boundingBox();
+    const alanSol = nav.x + nav.width;   // çubuğun sağ kenarı
+    const bosluk = { sol: k.x - alanSol, sag: 1200 - (k.x + k.width) };
+    expect(Math.abs(bosluk.sol - bosluk.sag)).toBeLessThan(20);   // içerik alanında ortalı
   });
 
   test('800px: liste iki sütun', async ({ page }) => {

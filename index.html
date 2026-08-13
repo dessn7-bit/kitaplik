@@ -771,14 +771,38 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .alinti-git::after{content:'';position:absolute;inset:-10px}
 
 /* ---------- Geniş ekran ----------
-   Mobil (varsayılan) düzen HİÇ değişmez; kırılımlar yalnız üstüne ekler. */
+   Mobil (varsayılan) düzen HİÇ değişmez; kırılımlar yalnız üstüne ekler.
+   v68 ÖLÇÜM (1440×900): Ana Sayfa/Keşfet/eksen satırı sınır listesinde YOKTU →
+   tam viewport'a yayılıyordu (eksen boşluğu 1077px, kt-arac 1440px). Liste
+   tamamlandı; 1100px SABİT KORUNDU (v25 kararı, görevin 1100-1200 bandında —
+   2-3 sütunlu listede satır ~350-530px, okunur). kt-arac-sira mobilde
+   display:contents: akıştan silinir, mobil piksel-birebir. */
+.kt-arac-sira{display:contents}
 @media (min-width:700px){
-  header > *, .chips, .sort-row, #liste, .kt-ust, .ist-wrap, .alinti-wrap, .yedek-wrap{
+  header > *, .chips, .kt-arac-sira, .grup-bos-not, #liste, .kt-ust,
+  .as-wrap, #ksIcerik, .ist-wrap, .alinti-wrap, .yedek-wrap{
     max-width:1100px;margin-left:auto;margin-right:auto}
+  /* Eksen satırı TEK PARÇA: space-between geniş konteynerde grupları koparıyordu
+     (ölçüm: 820'de 457px, 1440'ta 1077px boşluk). Sol grup + 28px + Seç/düzen
+     bitişik; sıralama menüsü aynı satırın SAĞ ucuna biner (ayrı satır emekli). */
+  .kt-arac-sira{display:flex;align-items:center;gap:10px}
+  .kt-arac{flex:1 1 auto;min-width:0;justify-content:flex-start;gap:28px;padding-right:0}
+  /* Dolgu eksene eşitlenir (8/4): mobil 2/8 dolgusu birleşik satırda içerik
+     merkezlerini 5px kaydırıyordu (taze-göz ölçümü). */
+  .sort-row{flex:0 0 auto;padding:8px 16px 4px 0}
+  .sort-row .count-label{margin-right:0}
+  /* max-width:46% mobil TAM-GENİŞLİK satır içindi; içerik-boyutlu flex öğesinde
+     yüzde kendi doğal genişliğine uygulanıp menüyü 55px'e çökertiyordu
+     (etiketsiz kütüphanede "Son eklenen" → "Soı" — taze-göz ekran kanıtı).
+     Geniş ekranda tavan piksel olur. */
+  .sort-row select{max-width:200px}
   #liste{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
   .ortu{align-items:center}
   .sheet{border-radius:var(--r-sheet);border-bottom:1px solid var(--border);max-height:86vh}
-  nav{max-width:560px;left:50%;transform:translateX(-50%);border-radius:var(--r-sheet) var(--r-sheet) 0 0;
+  /* right:auto ŞARTTI (kusur onarımı): right:0 kalınca genişlik %50'ye
+     düşüyordu (ölçüm: 820px'te nav 410px) — niyet 560px sabitti. */
+  nav{max-width:560px;width:100%;left:50%;right:auto;transform:translateX(-50%);
+    border-radius:var(--r-sheet) var(--r-sheet) 0 0;
     border-left:1px solid var(--border);border-right:1px solid var(--border)}
   .fab{right:max(18px, calc(50% - 550px + 18px))}
   .toast{max-width:520px}
@@ -791,6 +815,25 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     padding-left:12px;border-left:1px solid var(--cizgi)}
   .is-toplam .is-hucre:first-child,.rp-sayilar .rp-kutu:first-child{
     padding-left:0;border-left:none}
+}
+/* ---------- Masaüstü (≥1100): alt bar → SOL DİKEY KENAR ÇUBUĞU ----------
+   KARAR gerekçesi: masaüstünde başparmak ergonomisi yok — fare için sol kenar
+   sabit, kolay hedef; içerik 1100'de ortalanınca kenar boşluğu zaten doğuyor,
+   çubuk o ölü boşluğu kullanır. Üst şerit header'ın Ciltli tipografisiyle
+   yarışırdı; tam-genişlik alt bar 1440'ta beş sekmeyi aşırı yayar ve "büyütülmüş
+   telefon" hissi verirdi. Tablet (700-1100) DOKUNMATİK: alt bar kalır.
+   --nav-w: içerik kaydırma payı (body padding) ve FAB hizası bundan türer. */
+@media (min-width:1100px){
+  :root{--nav-w:92px}
+  body{padding-left:var(--nav-w)}
+  nav{top:0;bottom:0;left:0;right:auto;width:var(--nav-w);max-width:none;transform:none;
+    flex-direction:column;justify-content:center;gap:16px;
+    border-top:none;border-left:none;border-right:1px solid var(--cizgi);border-radius:0;
+    padding-bottom:0}
+  .nav-btn{flex:0 0 auto;padding:10px 0}
+  /* FAB içerik sağ-alt köşesine hizalı kalır: hesap içerik ALANININ
+     (viewport − çubuk) merkezine göre — eski %50 formülünün çubuklu hali. */
+  .fab{right:max(18px, calc((100% - var(--nav-w) - 1100px)/2 + 18px))}
 }
 /* Ciltli toast (v42): koyu dolgu yerine zemin + altın kontur (tasarım kalıbı) */
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);
@@ -945,20 +988,25 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   <!-- Ciltli araç satırı (v43, tasarım deseni): SOLDA gruplama eksenleri
        (Durum · Tür · Yazar · Raf — gorunum.js doldurur), SAĞDA Seç + üç düzen
        anahtarı. TEK satır; eksenler dar ekranda kendi içinde kayar. -->
-  <div class="kt-arac" id="ktArac">
-    <div class="grup-eksen" id="grupEksen" role="group" aria-label="Gruplama"></div>
-    <div class="kt-arac-sag" id="ktAracSag"></div>
-  </div>
-  <div class="sort-row">
-    <span class="count-label" id="sayac"></span>
-    <select id="etiketFiltre" aria-label="Etiket filtresi"><option value="">Tüm etiketler</option></select>
-    <select id="sirala" aria-label="Sıralama">
-      <option value="eklenme">Son eklenen</option>
-      <option value="baslik">Ada göre</option>
-      <option value="yazar">Yazara göre</option>
-      <option value="puan">Puana göre</option>
-      <option value="sayfa">Sayfaya göre</option>
-    </select>
+  <!-- kt-arac-sira (v68): mobilde display:contents — düzen HİÇ değişmez;
+       ≥700'de tek satır: eksenler + Seç/düzen solda, sıralama sağda (sıralama
+       menüsü kendi başına satırda asılı kalmasın — geniş ekran ölçümü). -->
+  <div class="kt-arac-sira">
+    <div class="kt-arac" id="ktArac">
+      <div class="grup-eksen" id="grupEksen" role="group" aria-label="Gruplama"></div>
+      <div class="kt-arac-sag" id="ktAracSag"></div>
+    </div>
+    <div class="sort-row">
+      <span class="count-label" id="sayac"></span>
+      <select id="etiketFiltre" aria-label="Etiket filtresi"><option value="">Tüm etiketler</option></select>
+      <select id="sirala" aria-label="Sıralama">
+        <option value="eklenme">Son eklenen</option>
+        <option value="baslik">Ada göre</option>
+        <option value="yazar">Yazara göre</option>
+        <option value="puan">Puana göre</option>
+        <option value="sayfa">Sayfaya göre</option>
+      </select>
+    </div>
   </div>
   <!-- Gruplama boyutu seçili ama hiçbir kitapta o veri yoksa dürüst mesaj (D2d) -->
   <div class="grup-bos-not" id="grupBosNot" hidden></div>
