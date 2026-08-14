@@ -640,6 +640,8 @@
        üzerine yazılan eski otomatik kayıt atananGecerli'de kendiliğinden düşer,
        "geri al" elle yükleneni asla silemez. */
   let turIcePlan = null;
+  /* dosya: File YA DA fetch Response — yalnız .text() kullanılır (v70: yerleşik
+     liste aynı borudan Response ile girer; boru tek, kopya mantık yok). */
   async function turIceOku(dosya){
     let govde;
     try{ govde = JSON.parse(await dosya.text()); }
@@ -749,6 +751,23 @@
     turIcePlan = null;
     kapat('zgTurIceOrtu');
     bildir('Vazgeçildi — hiçbir şey yazılmadı');
+  }
+  /* YERLEŞİK liste (v70): Kaan'ın 242 kayıtlık tür listesi uygulamayla gelir
+     (veri/turler-yerlesik.json, sw ASSETS'te — çevrimdışı da okunur). Dosya
+     seçiciyle AYNI boru: turIceOku yalnız .text() çağırır, Response da taşır —
+     önizleme, taksonomi kapısı, yalnız-tür yazımı, damga, rapor birebir aynı.
+     KARAR: düğme tekrar uygulanabilir kalır — iş idempotent, "uygulandı"
+     durumunu önizleme özeti zaten taşır (ikinci basışta "zaten aynı" görünür);
+     kütüphane değiştikçe (yeni kitap) yeniden uygulamak değerli, ayrı durum
+     rozeti kopya bilgi + yeni LS anahtarı olurdu (v67 "iş tekrarlanabilir"). */
+  async function turHazirYukle(){
+    let y = null;
+    try{ y = await fetch('veri/turler-yerlesik.json'); }catch(e){}
+    if(!y || !y.ok){
+      bildir('Hazır liste okunamadı — uygulamanın güncel sürümü ve bir kez internet gerekli');
+      return;
+    }
+    turIceOku(y);
   }
   function turDosyaKur(){
     let g = document.getElementById('zgTurDosya');
@@ -1138,6 +1157,7 @@
           break; }
         case 'zg-kapat': kapat(el.dataset.ortu); break;
         case 'zg-tur-ice': turDosyaKur(); document.getElementById('zgTurDosya').click(); break;
+        case 'zg-tur-hazir': turHazirYukle(); break;
         case 'zg-tur-uygula': turIceUygula(); break;
         case 'zg-tur-vazgec': turIceVazgec(); break;
         case 'zg-oto-liste':
