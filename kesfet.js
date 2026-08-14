@@ -19,6 +19,13 @@
    Az-veri modunda skor yok → çizgi hiç çizilmez. */
 (function(){
   const SAYFA_ADIMI = 10;
+  /* M3 (v69): aday havuzu bu eşiğin ALTINDAysa (ve kütüphanede kayda değer
+     sayıda 'bitti' varsa) dürüst yönlendirme notu çıkar — Goodreads aktarımı
+     çoğu kitabı 'bitti' işaretler, okunmamışlar da öyle kalmış olabilir.
+     Eşik = ANA_SAYI (5): varsayılan öneri listesini bile dolduramayan havuz
+     "az" sayılır. Aday yeterliyse not HİÇ görünmez. */
+  const AZ_ADAY_ESIK = 5;
+  const AZ_ADAY_BITTI_TABAN = 10;   // bu kadar 'bitti' yoksa yönlendirme anlamsız
   const UZUNLUK_AD = { kisa: 'Kısa', orta: 'Orta', uzun: 'Uzun' };
   const UZUNLUK_IPUCU = { kisa: '200 sayfadan az', orta: '200–400 sayfa', uzun: '400 sayfadan çok' };
   function uzunlukKova(sayfa){
@@ -87,18 +94,25 @@
       (ipucu ? ' title="' + escAttr(ipucu) + '"' : '') + '>' + esc(etiket) + '</button>';
   }
 
-  function ustHtml(h, havuzN, filtreliN, elemeNotu){
+  function ustHtml(h, havuz, filtreliN, elemeNotu){
     const okunacakVar = typeof veri === 'object' && veri.kitaplar.some(k => k.durum === 'okunacak');
     const suzVar = S.tur || S.uzunluk || S.raf;
+    const havuzN = havuz.length;
+    // M3 (v69): havuzda yarım kalan varsa açılış cümlesi bileşimi SAYIYLA söyler;
+    // yarım yoksa cümleler eskisiyle BİREBİR aynı (mevcut vakalar değişmez).
+    const yarimN = havuz.filter(o => o.kitap.durum === 'yarim').length;
+    const havuzAdi = yarimN
+      ? havuzN + ' aday (' + (havuzN - yarimN) + ' okunacak · ' + yarimN + ' yarım kalan)'
+      : havuzN + ' okunacak aday';
     // açılış cümlesi DÜRÜST: kaç aday, süzgeç kaçını geçirdi (sayı uydurma yok);
     // çeşitlilik kotası aday elediyse o da SÖYLENİR (v62 — "6 diyor, 5 var" bitti)
     const acilis = (!havuzN
       ? 'Okunacak aday yok'
       : h.mod === 'az-veri'
-        ? havuzN + ' okunacak aday — şimdilik bekleme sırasına göre'
+        ? havuzAdi + ' — şimdilik bekleme sırasına göre'
         : suzVar
           ? havuzN + ' aday · süzgeçten geçen: ' + filtreliN
-          : havuzN + ' okunacak aday arasından, okuma geçmişine göre') + (elemeNotu || '');
+          : havuzAdi + ' arasından, okuma geçmişine göre') + (elemeNotu || '');
     return '<div class="ks-ust"><div class="ks-ust-ic">' +
       '<span class="kicker">Rafından</span>' +
       '<h2 class="ks-baslik">Ne okusam?</h2>' +
@@ -135,9 +149,14 @@
         cizgi = '<span class="ilerleme ks-skor" role="img" aria-label="uygunluk göstergesi">' +
           '<span style="display:block;height:100%;background:var(--brass);width:' + yuzde + '%"></span></span>';
     }
+    // M3 (v69): yarım kalan aday ROZETLE ayrılır, eylemi "Devam et"
+    // (ilerleme korunur — basla guncelSayfa'ya dokunmaz)
+    const yarimRozet = k.durum === 'yarim'
+      ? '<span class="ks-rozet ks-yarim">Yarım bıraktığın</span>' : '';
     const eylem = (k.sahiplik === 'istek')
-      ? '<span class="ks-rozet">İstek listende</span>'
-      : '<button class="ks-basla" data-act="ks-basla" data-id="' + escAttr(k.id) + '">Okumaya başla</button>';
+      ? yarimRozet + '<span class="ks-rozet">İstek listende</span>'
+      : yarimRozet + '<button class="ks-basla" data-act="ks-basla" data-id="' + escAttr(k.id) + '">' +
+        (k.durum === 'yarim' ? 'Devam et' : 'Okumaya başla') + '</button>';
     return '<div class="ks-item">' +
       (typeof ktPlate === 'function' ? ktPlate(k, 'p-mini') : '') +
       '<div class="ks-ic">' +
@@ -235,9 +254,10 @@
   /* Parantezli ekler SÖKÜLÜR: Google Books hem ayırt edici not ("Erhan Bener
      (Türk yazar)") hem alternatif yazım ("Halil Cibran (Kahlil Gibran)") için
      kullanıyor; ikisi de soyadı denetimini yanlış yerden kırardı. */
-  function adSozcukler(s){
-    return String(s || '')
-      .replace(/\([^)]*\)/g, ' ')
+  function adSozcukler(s, parantezKalsin){
+    // parantezKalsin (M2): cilt-işareti denetimi "(Cilt 2)" gibi parantezli
+    // işaretleri görmek zorunda — yazar ekleri için varsayılan söküm sürer.
+    return (parantezKalsin ? String(s || '') : String(s || '').replace(/\([^)]*\)/g, ' '))
       .split(/[^A-Za-zÇĞİÖŞÜçğıöşüÂÎÛâîû0-9]+/)
       .map(w => katla(w).replace(/[^a-z0-9]+/g, ''))
       .filter(Boolean);
@@ -304,6 +324,56 @@
     if(!s.length) return true;
     const b = adSozcukler(adayBaslik);
     return s.every(w => b.indexOf(w) >= 0);
+  }
+  /* Başlık BENZERLİĞİ (M2, v69): kütüphanedeki kitabın başka dilde ya da alt
+     başlıklı VARYANTI önerilmesin. Canlı kanıt: "Romeo and Juliet — William
+     Shakespeare" raftayken YENİ KİTAPLAR "Romeo ve Juliet — William Shakespeare"
+     önerdi (birebir ad+yazar elemesi vardı, varyant elemesi yoktu).
+     Kural: yazar eşleşiyorsa (yazarEslesir — TEK yardımcı) iki başlıktan
+     bağlaç/edat atılır; KISA başlığın sözcüklerinin uzun başlıkta bulunma oranı
+     >= 0.8 ise aynı kitap sayılır.
+     Eşik gerekçesi (0.8): çeviri/alt başlık varyantında kısa taraf uzunun içinde
+     TAMAMEN yaşar (oran 1.0); aynı yazarın kardeş eserleri düşük kalır ("Kral
+     Lear"/"Kral Oidipus" 0.5, "Ateşi Çalmak 1"/"Ateşi Çalmak 2" 0.67, Harry
+     Potter ciltleri 0.5). 0.8 yalnız >=5 sözcüklü başlıklarda tek sözcük
+     farkına tolerans bırakır (uzun alt başlığın yeniden yazımı).
+     TEK anlamlı sözcük kala kalan kısa başlıkta oran kuralı çöker ("Dune",
+     "Dune Mesihi"nin içinde yaşar; seri cildi yanlış elenirdi) → iki taraf da
+     tek sözcükse tam eşitlik istenir, değilse benzer sayılmaz.
+     BİLİNÇLİ SINIR: iki dildeki başlıklar HİÇ ortak sözcük taşımıyorsa
+     ("Suç ve Ceza" / "Crime and Punishment") sözcük örtüşmesi bunu göremez —
+     çeviri sözlüğü uydurulmaz, vaka sınır olarak raporlanır. */
+  const AD_BAGLAC = ['ve', 'ile', 'ya', 'veya', 'and', 'the', 'of', 'a', 'an', 'or'];
+  const AD_BENZERLIK_ESIK = 0.8;
+  function adAnlamli(ad, parantezKalsin){
+    return adSozcukler(ad, parantezKalsin).filter(w => AD_BAGLAC.indexOf(w) < 0);
+  }
+  /* CİLT İŞARETİ (taze-göz kusuru): numarasız ilk cilt raftayken numaralı devam
+     cildi alt-küme sayılıp eleniyordu ("İnce Memed"/"İnce Memed 2" oran 1.0) —
+     eksik-seri önerisinin TAM HEDEFİ sessizce bastırılırdı. İki başlığın FARKI
+     rakam / romen rakamı / "cilt" taşıyorsa bu varyant değil SERİ CİLDİDİR,
+     elenmez. Romen ≥2 harf ("V" tek başına başlık adı olabilir). Denetim
+     parantez-KORUNMUŞ sözcüklerle yapılır ("(Cilt 2)" sökülürse işaret görünmez
+     olurdu). BİLİNEN SINIR: yazıyla cilt adı ("İki Kule") işaret sayılmaz. */
+  function ciltIsareti(w){
+    return /^\d+$/.test(w) || w === 'cilt' || (w.length >= 2 && /^[ivxlcdm]+$/.test(w));
+  }
+  function adBenzer(adA, adB){
+    const tamA = new Set(adAnlamli(adA, true)), tamB = new Set(adAnlamli(adB, true));
+    const fark = [...tamA].filter(w => !tamB.has(w))
+      .concat([...tamB].filter(w => !tamA.has(w)));
+    if(fark.some(ciltIsareti)) return false;
+    // oran YİNELENMEMİŞ sözcük kümeleriyle (taze-göz: "Deniz Deniz" ham uzunluk
+    // 2 ile tek-sözcük korumasını deliyordu)
+    const A = [...new Set(adAnlamli(adA))], B = [...new Set(adAnlamli(adB))];
+    if(!A.length || !B.length) return false;
+    const kisa = A.length <= B.length ? A : B;
+    const uzun = A.length <= B.length ? B : A;
+    if(kisa.length === 1) return uzun.length === 1 && kisa[0] === uzun[0];
+    const set = new Set(uzun);
+    let ortak = 0;
+    kisa.forEach(w => { if(set.has(w)) ortak++; });
+    return ortak / kisa.length >= AD_BENZERLIK_ESIK;
   }
 
   /* Sayı biçimi DETERMİNİSTİK (toLocaleString değil): ICU sürümüne göre
@@ -403,6 +473,9 @@
       adSet.add(katla(k.ad) + '|' + katla(k.yazar || ''));
       if(k.isbn){ const t = isbnTemiz(k.isbn); if(t) isbnSet.add(t); }
     });
+    // M2 (v69): başlık varyantı elemesi için ad+yazar dolu kütüphane kitapları —
+    // eleme bElenmis'te yaşadığı için yazar/seri/tür ÜÇ kaynağı da tek noktadan kapsar
+    const varyantKaynak = (veri.kitaplar || []).filter(k => k.ad && k.yazar);
     const gorulen = new Set();
     return (B.adaylar || []).filter(a => {
       if(!a || !a.ad) return false;
@@ -413,6 +486,12 @@
       if(adSet.has(katla(a.ad) + '|' + katla(a.yazar || ''))) return false;
       const t = a.isbn ? isbnTemiz(a.isbn) : '';
       if(t && isbnSet.has(t)) return false;
+      // M2 (v69): aynı yazarın BAŞLIK VARYANTI da kütüphanede-var sayılır
+      // ("Romeo and Juliet" raftayken "Romeo ve Juliet" önerilmez); yazar
+      // eşleşmiyorsa başlık benzerliğine hiç bakılmaz (farklı yazarın aynı
+      // adlı kitabı elenmez).
+      if(a.yazar && varyantKaynak.some(k =>
+        yazarEslesir(k.yazar, a.yazar) && adBenzer(k.ad, a.ad))) return false;
       if(bGizliMi(anah)) return false;   // v62: geri alınan gizlemeler artık elemez
       return true;
     });
@@ -678,7 +757,7 @@
     const enD = skorlar.length ? Math.min.apply(null, skorlar) : 0;
 
     const erteliler = (typeof veri === 'object' ? veri.kitaplar : [])
-      .filter(k => k.durum === 'okunacak' && M.ertelemeAktif(k));
+      .filter(k => (k.durum === 'okunacak' || k.durum === 'yarim') && M.ertelemeAktif(k));
 
     /* D5 (v62): çeşitlilik kotası aday elediyse sayım şeffaf — hangi kota
        kestiği elenen adaylardan bakılarak söylenir, sayı uydurulmaz. */
@@ -697,8 +776,24 @@
       elemeNotu = ' · ' + (filtreli.length - secilen.length) + ' aday gösterilmiyor: aynı yazardan en fazla 2' +
         (turKesti ? ', benzer türden sınırlı sayıda' : '') + ' öneri';
     }
-    let html = ustHtml(h, havuz.length, filtreli.length, elemeNotu);
+    let html = ustHtml(h, havuz, filtreli.length, elemeNotu);
     html += suzgecHtml(turler, raflar);
+    /* M3 (v69): az-aday yönlendirmesi — sayılar GERÇEK veriden, uydurma yok.
+       Yalnız "Bende" modunda (istek listesi başka kavram) ve aday azken.
+       okunacakN kümesi = SAHİP okunacaklar (taze-göz kusuru: istek-listesi
+       okunacakları sayılıyordu, havuzla çelişiyordu); ertelenmişler DAHİL
+       (kitaplık gerçeği) ama okunacakN >= eşikse not çıkmaz — "6 kitabı
+       ertelemiştin"in yanında "yalnızca 6 kitabın var" çelişkisi doğmasın. */
+    if(S.sahiplik !== 'istek' && havuz.length < AZ_ADAY_ESIK){
+      const okunacakN = veri.kitaplar.filter(k =>
+        k.durum === 'okunacak' && (k.sahiplik || 'sahip') === 'sahip').length;
+      const bittiN = veri.kitaplar.filter(k => k.durum === 'bitti').length;
+      if(okunacakN < AZ_ADAY_ESIK && bittiN >= AZ_ADAY_BITTI_TABAN)
+        html += '<div class="ks-not ks-az-aday">' +
+          (okunacakN ? 'Yalnızca ' + okunacakN + ' okunacak kitabın var. ' : 'Hiç okunacak kitabın yok. ') +
+          'Kitaplığındaki ' + bittiN + ' kitap “bitti” işaretli — aralarında okumadıkların varsa ' +
+          'Kütüphane\'den toplu seçip Okunacak yapabilirsin.</div>';
+    }
     if(h.mod === 'az-veri')
       html += '<div class="ks-not">Henüz kişisel öneri için yeterli veri yok: puan verdiğin ' +
         'bitmiş kitap sayısı ' + h.puanliSayi + ' (en az ' + h.esik + ' gerekir). ' +

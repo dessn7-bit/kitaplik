@@ -392,6 +392,8 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
   line-height:1.25;overflow-wrap:break-word}
 .as-oneri-yazar{display:block;font-style:italic;font-size:.78rem;color:var(--muted);margin-top:1px}
 .as-neden{display:block;font-size:.8rem;color:var(--muted2);line-height:1.5;margin-top:4px}
+/* M3 (v69): Sıradaki'nde yarım kalan aday rozetle ayrılır (Keşfet .ks-rozet reçetesi) */
+.as-yarim{display:block;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--brass);margin-top:3px}
 .as-not{font-size:.85rem;color:var(--muted);line-height:1.5}
 #asSiradaki .kt-bolum-bas{align-items:center}
 #asSiradaki .zar-btn{flex:0 0 38px;height:34px;padding:0}
@@ -1731,6 +1733,19 @@ function hizAnaliz(k){
    saat dilimi/locale sürprizi üretebiliyor (g30/v40 dersi). */
 const KT_AY = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 const KT_GUN = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+/* M1 (v69): OpenLibrary kapak uçları "kapak yok" için 200 + 1×1 boş GIF döndürür —
+   error tetiklenmez, levha SESSİZCE boş kalır (canlı ölçüm: 242 kitabın 174 kapak
+   URL'sinden 37'si böyle boş görünüyordu). ?default=false eklenince kapak yoksa
+   404 döner ve normal error yolu (plateKapakYedek) çalışır. Dönüşüm İSTEK ANINDA
+   yapılır, KAYITLI URL DEĞİŞTİRİLMEZ: 174 kaydı güncellemek her kitabın senkron
+   damgasını tazeler (bayat cihazın günceli ezme riski, kapak.js dersi) ve yalnız
+   mevcutları düzeltirdi — istek-anı dönüşüm eski+yeni tüm kayıtları tek yerden
+   kapsar. Tüm src/data-kp-yedek üreticileri bu süzgeçten geçer (tek yol). */
+function kapakSrc(u){
+  if(!u || u.indexOf('covers.openlibrary.org') < 0 || /[?&]default=/.test(u)) return u;
+  return u + (u.indexOf('?') >= 0 ? '&' : '?') + 'default=false';
+}
+window.kapakSrc = kapakSrc;
 function ktPlate(k, sinif, imgSinif){
   // Kapak önceliği listeyle aynı: yerel foto > uzak URL > kesikli yer tutucu.
   // data-ad/data-yazar: yükleme HATASINDA plateKapakYedek metni buradan alır.
@@ -1738,9 +1753,9 @@ function ktPlate(k, sinif, imgSinif){
   const veriNitelik = ` data-ad="${escAttr(k.ad)}"${k.yazar ? ` data-yazar="${escAttr(k.yazar)}"` : ''}`;
   const ic = imgSinif ? `${imgSinif} ` : '';
   if(k.kapakYerel && window.__kapak)
-    return `<div class="plate ${sinif}"${veriNitelik}><img class="${ic}kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt=""></div>`;
+    return `<div class="plate ${sinif}"${veriNitelik}><img class="${ic}kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(kapakSrc(k.kapak))}"` : ''} alt=""></div>`;
   if(k.kapak)
-    return `<div class="plate ${sinif}"${veriNitelik}><img${imgSinif ? ` class="${imgSinif}"` : ''} src="${escAttr(k.kapak)}" alt="" loading="lazy"></div>`;
+    return `<div class="plate ${sinif}"${veriNitelik}><img${imgSinif ? ` class="${imgSinif}"` : ''} src="${escAttr(kapakSrc(k.kapak))}" alt="" loading="lazy"></div>`;
   return `<div class="plate ${sinif} p-bos" aria-hidden="true"></div>`;
 }
 /* Kapak yüklenemeyince TEK yedek yolu (v44) — hem çekirdek hem gorunum.js bunu
@@ -1788,7 +1803,12 @@ function ktPlateHata(kap){
   kap.querySelectorAll('.plate > img').forEach(img => {
     const dus = () => plateKapakYedek(img);
     img.addEventListener('error', dus, { once: true });
-    if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) dus();
+    /* M1 (v69): 200 + 1×1 boş görsel error ÜRETMEZ — yük SONRASI boyut denetimi.
+       Kaynaktan bağımsız çalışır (OpenLibrary dışı boş görseller de yakalanır);
+       yedek yolu yine TEK: plateKapakYedek. Tembel yükleme bozulmaz — denetim
+       ancak tarayıcı görseli gerçekten yüklediğinde koşar. */
+    img.addEventListener('load', () => { if(img.naturalWidth <= 1) dus(); }, { once: true });
+    if(img.getAttribute('src') && img.complete && img.naturalWidth <= 1) dus();
   });
 }
 /* ---------- Ortak Ciltli bileşenler (v47) ----------
@@ -1849,8 +1869,8 @@ function ktSiraLevhaHtml(k){
   const kapakli = k.kapak || (k.kapakYerel && window.__kapak);
   if(kapakli){
     const ic = (k.kapakYerel && window.__kapak)
-      ? `<img class="kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(k.kapak)}"` : ''} alt="">`
-      : `<img src="${escAttr(k.kapak)}" alt="" loading="lazy">`;
+      ? `<img class="kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(kapakSrc(k.kapak))}"` : ''} alt="">`
+      : `<img src="${escAttr(kapakSrc(k.kapak))}" alt="" loading="lazy">`;
     // data-ad/yazar: kapak hatasında plateKapakYedek levhayı tipografik yedeğe döndürür
     return `<button class="plate kt-sira-plate kt-sira-kapakli" data-act="detay" data-id="${k.id}" title="${escAttr(k.ad)}" data-ad="${escAttr(k.ad)}"${k.yazar ? ` data-yazar="${escAttr(k.yazar)}"` : ''}>${ic}</button>`;
   }
@@ -3231,6 +3251,7 @@ function anaCiz(){
           <span class="as-oneri-ic">
             <span class="as-oneri-ad">${esc(o.kitap.ad)}</span>
             ${o.kitap.yazar ? `<span class="as-oneri-yazar">${esc(o.kitap.yazar)}</span>` : ''}
+            ${o.kitap.durum === 'yarim' ? `<span class="as-yarim">Yarım bıraktığın</span>` : ''}
             ${o.neden ? `<span class="as-neden">${esc(o.neden)}</span>` : ''}
           </span></button>`).join('')
       : okunacakVar

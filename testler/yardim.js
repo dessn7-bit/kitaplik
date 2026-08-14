@@ -8,8 +8,11 @@
 'use strict';
 const { test: temel, expect } = require('@playwright/test');
 
-const BOS_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+/* 2×2 PNG (M1/v69): uygulama artık naturalWidth<=1 görseli "boş kapak" sayıp
+   yedeğe düşürüyor — taklit kapak 1×1 olsaydı her sağlam-kapak vakası yanlış
+   sebeple yedeğe düşerdi. "Sağlam kapak" taklidi bu yüzden >1px olmalı. */
+const KAPAK_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEUlEQVR4nGOoiDKqiDJigFAAHZYEEWc+D7MAAAAASUVORK5CYII=',
   'base64');
 
 let kitapSayac = 0;
@@ -164,7 +167,7 @@ async function agTaklit(page, ayar) {
     }
     if (url.includes('covers.openlibrary.org') || url.includes('books.google')
         || url.includes('gr-assets') || url.includes('1k-cdn.com')) {
-      return route.fulfill({ status: 200, contentType: 'image/png', body: BOS_PNG });
+      return route.fulfill({ status: 200, contentType: 'image/png', body: KAPAK_PNG });
     }
     if (url.includes('identitytoolkit.googleapis.com') || url.includes('securetoken.googleapis.com')
         || url.includes('firebasedatabase.app')) {

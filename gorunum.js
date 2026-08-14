@@ -320,9 +320,13 @@
   function kapakHatalariniBagla(kap){
     kap.querySelectorAll('.kart .plate > img').forEach(img => {
       img.addEventListener('error', () => yedekSirtKoy(img), { once: true });
+      // M1 (v69): 200 + 1×1 boş görsel error üretmez — yük SONRASI boyut denetimi
+      // (çekirdek ktPlateHata ile aynı kural; yedek yolu yine tek: yedekSirtKoy
+      // → window.plateKapakYedek).
+      img.addEventListener('load', () => { if(img.naturalWidth <= 1) yedekSirtKoy(img); }, { once: true });
       // src'siz yerel-kapak img'leri (kapak.js dolduracak) erken-düşme sayılmaz:
       // src yokken complete=true + naturalWidth=0 normaldir, yedeğe çevrilmemeli.
-      if(img.getAttribute('src') && img.complete && img.naturalWidth === 0) yedekSirtKoy(img);
+      if(img.getAttribute('src') && img.complete && img.naturalWidth <= 1) yedekSirtKoy(img);
     });
   }
   function plateHtml(k, sinif){
@@ -330,13 +334,16 @@
     // İzgara img'i .iz-kapak adını taşımaya devam eder (g12/g23 seçici sözleşmesi).
     // data-ad/data-yazar: yükleme hatasında plateKapakYedek metni buradan alır (v44).
     const imgSinif = sinif === 'iz-plate' ? 'iz-kapak' : 'plate-img';
+    // M1 (v69): OpenLibrary URL'sine istek anında ?default=false — çekirdeğin
+    // kapakSrc süzgeci (tek yol); çekirdek bir şekilde yoksa URL olduğu gibi kalır.
+    const kSrc = window.kapakSrc ? window.kapakSrc(k.kapak) : k.kapak;
     const veriNitelik = ' data-ad="' + kacir(k.ad) + '"' +
       (k.yazar ? ' data-yazar="' + kacir(k.yazar) + '"' : '');
     if(k.kapakYerel && window.__kapak)
       return '<div class="plate ' + sinif + '"' + veriNitelik + '><img class="' + imgSinif + ' kp-bekliyor" data-kp-id="' + kacir(k.id) + '"' +
-        (k.kapak ? ' data-kp-yedek="' + kacir(k.kapak) + '"' : '') + ' alt=""></div>';
+        (k.kapak ? ' data-kp-yedek="' + kacir(kSrc) + '"' : '') + ' alt=""></div>';
     if(k.kapak)
-      return '<div class="plate ' + sinif + '"' + veriNitelik + '><img class="' + imgSinif + '" src="' + kacir(k.kapak) + '" alt="" loading="lazy"></div>';
+      return '<div class="plate ' + sinif + '"' + veriNitelik + '><img class="' + imgSinif + '" src="' + kacir(kSrc) + '" alt="" loading="lazy"></div>';
     if(sinif === 'iz-plate')
       return '<div class="plate iz-plate p-bos"><div class="iz-yedek">' + kacir(k.ad) + '</div></div>';
     return '<div class="plate ' + sinif + ' p-bos" aria-hidden="true"></div>';

@@ -158,7 +158,14 @@
     const bittiler = kitaplar.filter(k => ozetler.get(k.id).bitti);
     const puanlilar = bittiler.filter(k => ozetler.get(k.id).puan !== null);
 
-    const adaylar = kitaplar.filter(k => k.durum === 'okunacak' && !ertelemeAktif(k));
+    /* M3 (v69): 'yarim' da aday havuzuna girer — Goodreads aktarımlı kütüphanede
+       neredeyse her şey 'bitti' işaretli, havuz 2 kitaba düşüyordu; yarım
+       bırakılan kitap da "elimdeki okunmamış" sayılır. UI yarım adayı ROZETLE
+       ayırır ("Yarım bıraktığın") ve düğmesi "Devam et" olur. Skor formülü
+       aynı (yazar/tür/etiket/bekleme kitap özellikleridir); 'okunuyor' ve
+       'bitti' havuza yine GİRMEZ. */
+    const adaylar = kitaplar.filter(k =>
+      (k.durum === 'okunacak' || k.durum === 'yarim') && !ertelemeAktif(k));
     const sahipler = adaylar.filter(k => (k.sahiplik || 'sahip') === 'sahip');
     const istekler = adaylar.filter(k => k.sahiplik === 'istek');
 
@@ -170,7 +177,8 @@
         .map(k => {
           const c = {};
           const gun = beklemeGun(k);
-          if(gun !== null && gun >= BEKLEME_GEREKCE_GUN) c.bekleme = beklemeCumle(k);
+          // yarımda "rafta bekliyor" cümlesi kurulmaz (skor dalıyla aynı kural)
+          if(gun !== null && gun >= BEKLEME_GEREKCE_GUN && k.durum !== 'yarim') c.bekleme = beklemeCumle(k);
           return { kitap: k, skor: null, bilesenler: {}, cumleler: c };
         });
       // istek de dolu döner (v50, inceleme K2): Keşfet'in "İstek listem" çipi
@@ -266,7 +274,10 @@
       const bGun = beklemeGun(k);
       if(bGun !== null){
         b.bekleme = Math.min(AGIRLIK.bekleme, bGun / 60);
-        if(bGun >= BEKLEME_GEREKCE_GUN) cumleler.bekleme = beklemeCumle(k);
+        // M3 (v69): "N aydır rafta bekliyor" CÜMLESİ yarımda kurulmaz — kitap
+        // beklemedi, okunuyordu; "Yarım bıraktığın" rozetiyle çelişik anlatı
+        // olurdu (skor katkısı kalır: eklenme yaşı gerçek bir sinyal).
+        if(bGun >= BEKLEME_GEREKCE_GUN && k.durum !== 'yarim') cumleler.bekleme = beklemeCumle(k);
       }
 
       const skor = Object.values(b).reduce((a, x) => a + x, 0);
@@ -322,7 +333,10 @@
      gelen davranışı birebir korunur — değişiklik ayrı karar ister). */
   function basla(id){
     const k = kitapBul(id);
-    if(!k || k.durum !== 'okunacak'){
+    // M3 (v69): 'yarim' de başlatılabilir (oturum.js oturum-basla emsali) —
+    // "Devam et": guncelSayfa'ya DOKUNULMAZ, baslamaTarihi zaten varsa korunur,
+    // bitisTarihi (yarımda = bırakma tarihi) temizlenir.
+    if(!k || (k.durum !== 'okunacak' && k.durum !== 'yarim')){
       bildir('Liste güncellendi — kitabın durumu değişmiş');
       return false;
     }
@@ -336,7 +350,7 @@
   }
   function ertele(id){
     const k = kitapBul(id);
-    if(!k || k.durum !== 'okunacak') return false;   // bayat düğme → çağıran tazeler
+    if(!k || (k.durum !== 'okunacak' && k.durum !== 'yarim')) return false;   // bayat düğme → çağıran tazeler
     k.ertelemeTarihi = bugun();
     depoKaydet();
     bildir(ERTELEME_GUN + ' gün sonra yeniden önerilir');
