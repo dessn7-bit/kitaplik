@@ -1638,8 +1638,17 @@ function kotaUyariGizle(){
    etiketleri sessizce birleştirmek kullanıcının ayrımını yok ederdi. */
 const KATLAMA = { 'ı':'i', 'İ':'i', 'ş':'s', 'ğ':'g', 'ü':'u', 'ö':'o', 'ç':'c',
   'â':'a', 'î':'i', 'û':'u', 'Â':'a', 'Î':'i', 'Û':'u' };
+/* KESME İŞARETİ düzleştirmesi (v71): kaynaklar aynı adı farklı kesmeyle yazar —
+   Goodreads/klavye U+2019 (’), elle liste ASCII (') — ve "Gulliver’s Travels"
+   ≠ "Gulliver's Travels" oluyordu (canlı kanıt: yerleşik tür listesinde 242
+   kaydın 4'ü SALT bu yüzden eşleşmedi; arama da aynı sebeple bulamıyordu).
+   U+2018 ' / U+2019 ' / U+02BC ʼ → ASCII ' tek biçime iner. katla'nın "kaçırmak
+   yanlış eşleşmekten pahalı" ilkesinin doğrudan uygulaması; iKatla'ya BİLEREK
+   dokunulmadı (etiket sözleşmesi ayrı — kesme, ş/s gibi anlam ayırmaz ama
+   etiket kimliği ayrı karar ister). */
 function katla(s){
-  return String(s ?? '').toLocaleLowerCase('tr')
+  return String(s ?? '').replace(/[‘’ʼ]/g, "'")
+    .toLocaleLowerCase('tr')
     .replace(/[ıİşğüöçâîûÂÎÛ]/g, c => KATLAMA[c] || c);
 }
 function iKatla(s){
