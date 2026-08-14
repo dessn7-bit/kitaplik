@@ -30,7 +30,7 @@
   function bildir(m){ if(typeof toast === 'function') toast(m); }
 
   /* ---------- damgalama: depoKaydet sarmalayıcısı ---------- */
-  const ANLIK_SURUM = 9;
+  const ANLIK_SURUM = 10;
   /* SEMA_SURUM: PUT gövdesine yazılan VERİ şeması numarası (parmak izi deposu
      sürümü olan ANLIK_SURUM'dan ayrı — o iz biçimi için de artar). Odadaki sema
      yerelden BÜYÜKSE bu istemci eskidir: birleştirme + yazma tümüyle durur.
@@ -55,7 +55,12 @@
      v9: kitaba puanYok eklendi (hızlı puanlama "hatırlamıyorum"). SEMA_SURUM
      BİLİNÇLİ artmadı: eski istemcinin budaması yalnız işareti düşürür (kitap
      yeniden kuyruğa girer — düşük zarar, gsG'deki veri kaybı sınıfı değil);
-     SEMA artışı ise güncellenmemiş cihazın senkronunu tümüyle dondururdu. */
+     SEMA artışı ise güncellenmemiş cihazın senkronunu tümüyle dondururdu.
+     v10: kitaba adTr eklendi (yabancı başlığın Türkçe adı). SEMA yine sabit —
+     yerleşik 88 kayıt budama kaybında tek dokunuşla geri gelir; ELLE girilen
+     adTr içinse kayıp v9 sınıfının genel kabulüne tabidir (eski istemcinin
+     gerçek düzenlemesi ezebilir — tek kullanıcı + hızlı SW güncellemesi
+     penceresinde kabul edilen risk). */
   function anlikYukle(){
     try{
       const h = JSON.parse(localStorage.getItem(ANLIK_ANAHTAR));

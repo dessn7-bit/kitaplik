@@ -471,6 +471,9 @@
     const adSet = new Set(), isbnSet = new Set();
     (veri.kitaplar || []).forEach(k => {
       adSet.add(katla(k.ad) + '|' + katla(k.yazar || ''));
+      // adTr (v73): kitabın TÜRKÇE ADI da "kütüphanede var" anahtarıdır —
+      // kaynak Türkçe baskıyı önerince birebir eleme yakalar
+      if(k.adTr) adSet.add(katla(k.adTr) + '|' + katla(k.yazar || ''));
       if(k.isbn){ const t = isbnTemiz(k.isbn); if(t) isbnSet.add(t); }
     });
     // M2 (v69): başlık varyantı elemesi için ad+yazar dolu kütüphane kitapları —
@@ -489,9 +492,12 @@
       // M2 (v69): aynı yazarın BAŞLIK VARYANTI da kütüphanede-var sayılır
       // ("Romeo and Juliet" raftayken "Romeo ve Juliet" önerilmez); yazar
       // eşleşmiyorsa başlık benzerliğine hiç bakılmaz (farklı yazarın aynı
-      // adlı kitabı elenmez).
+      // adlı kitabı elenmez). adTr (v73): benzerlik hem ad hem TÜRKÇE AD
+      // üzerinden denenir — "Suç ve Ceza"/"Crime and Punishment" tipi
+      // ÇAPRAZ-DİL çifti (v69'un bilinen sınırı) adTr kayıtlıysa yakalanır.
       if(a.yazar && varyantKaynak.some(k =>
-        yazarEslesir(k.yazar, a.yazar) && adBenzer(k.ad, a.ad))) return false;
+        yazarEslesir(k.yazar, a.yazar) &&
+        (adBenzer(k.ad, a.ad) || (k.adTr && adBenzer(k.adTr, a.ad))))) return false;
       if(bGizliMi(anah)) return false;   // v62: geri alınan gizlemeler artık elemez
       return true;
     });

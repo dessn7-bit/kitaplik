@@ -639,62 +639,122 @@
        atanan defterine BİLEREK dokunulmaz: elle yüklenen tür "otomatik" değil;
        üzerine yazılan eski otomatik kayıt atananGecerli'de kendiliğinden düşer,
        "geri al" elle yükleneni asla silemez. */
-  let turIcePlan = null;
+  /* ---------- alan içe aktarım borusu (v73: cfg-parametreli) ----------
+     v67/v70 tür borusu ALAN-PARAMETRELİ genelleştirildi (KARAR): adTr için
+     ikinci bir boru kopyalamak yerine alan-özel ~25 nokta cfg nesnesine
+     taşındı. Tür cfg'sindeki TÜM id/act/metinler eski değerlerle BİREBİR —
+     g56/g59/g60 seçici ve metin kilitleri bozulmadan. Plan TEKİL (icePlan):
+     aynı anda tek akış; iceOku başka akışın açık ortusunu kapatır (paylaşılan
+     uygula düğmesinin yanlış plana yazma riski sıfırlanır). */
+  const ICE_TUR = {
+    anahtar: 'tur', kaynakAnahtar: 'tur', taksonomiKapisi: true,
+    ortuId: 'zgTurIceOrtu', ortuBaslik: 'Tür listesi yükle',
+    hazirYol: 'veri/turler-yerlesik.json',
+    /* deneme damgası YALNIZ tür: açılış TUR taraması dolan kitabı yeniden
+       sormasın. adTr'de damga basılmaz — basılsaydı türü hâlâ boş kitabın
+       gelecekteki tur taramasını 90 gün bastırırdı (çapraz-alan yan etki). */
+    denemeDamgala: true,
+    sonTazele(){ durumTazele(); otoDurumTazele(); },
+    act: { uygula: 'zg-tur-uygula', vazgec: 'zg-tur-vazgec' },
+    metin: {
+      bicimYok: 'Bu dosyada tür listesi yok — beklenen biçim: { "tur": [ {ad, yazar, tur} ] }',
+      dolacak: ' kitapta boş tür dolacak',
+      degisecek: ' kitapta mevcut tür DEĞİŞECEK',
+      yalnizNot: 'Yalnız TÜR alanı yazılır; puan, sayfa, durum, not gibi hiçbir başka alana ' +
+        'dokunulmaz. Onaylamadan hiçbir şey yazılmaz.',
+      degisecekBaslik: 'Mevcut türü değişecekler',
+      yazDugme: n => 'Türleri yaz (' + n + ')',
+      toastYazildi: n => n + ' kitabın türü dosyadan yazıldı'
+    }
+  };
+  const ICE_ADTR = {
+    anahtar: 'adTr', kaynakAnahtar: 'adTr', taksonomiKapisi: false,
+    ortuId: 'zgAdTrOrtu', ortuBaslik: 'Türkçe ad listesi',
+    // KARAR: adTr için dosya seçici yok — tek giriş yerleşik liste
+    hazirYol: 'veri/turkce-adlar-yerlesik.json',
+    denemeDamgala: false,
+    sonTazele(){ durumTazele(); },
+    act: { uygula: 'zg-adtr-uygula', vazgec: 'zg-adtr-vazgec' },
+    metin: {
+      bicimYok: 'Bu dosyada Türkçe ad listesi yok — beklenen biçim: { "adTr": [ {ad, yazar, adTr} ] }',
+      dolacak: ' kitapta boş Türkçe ad dolacak',
+      degisecek: ' kitapta mevcut Türkçe ad DEĞİŞECEK',
+      yalnizNot: 'Yalnız TÜRKÇE AD alanı yazılır; kitabın adı, türü, puanı, notları — hiçbir başka ' +
+        'alana dokunulmaz. Onaylamadan hiçbir şey yazılmaz.',
+      degisecekBaslik: 'Mevcut Türkçe adı değişecekler',
+      yazDugme: n => 'Türkçe adları yaz (' + n + ')',
+      toastYazildi: n => n + ' kitabın Türkçe adı dosyadan yazıldı'
+    }
+  };
+  let icePlan = null;   // tekil: uygula/vazgec daima SON okunan plana işler
   /* dosya: File YA DA fetch Response — yalnız .text() kullanılır (v70: yerleşik
      liste aynı borudan Response ile girer; boru tek, kopya mantık yok). */
-  async function turIceOku(dosya){
+  async function iceOku(cfg, dosya){
     let govde;
     try{ govde = JSON.parse(await dosya.text()); }
     catch(e){ bildir('Dosya okunamadı — geçerli bir JSON değil'); return; }
-    const kayitlar = govde && Array.isArray(govde.tur) ? govde.tur : null;
+    const kayitlar = govde && Array.isArray(govde[cfg.kaynakAnahtar]) ? govde[cfg.kaynakAnahtar] : null;
     if(!kayitlar || !kayitlar.length){
-      bildir('Bu dosyada tür listesi yok — beklenen biçim: { "tur": [ {ad, yazar, tur} ] }');
+      bildir(cfg.metin.bicimYok);
       return;
     }
-    if(!taksonomi){
-      try{ taksonomi = await window.__ara.turler(); }
-      catch(e){ taksonomi = null; }
-    }
-    if(!Array.isArray(taksonomi) || !taksonomi.length){
-      bildir('Tür düzeni doğrulanamadı (internet gerekli) — hiçbir şey yazılmadı, sonra yeniden dene');
-      return;
+    if(cfg.taksonomiKapisi){
+      if(!taksonomi){
+        try{ taksonomi = await window.__ara.turler(); }
+        catch(e){ taksonomi = null; }
+      }
+      if(!Array.isArray(taksonomi) || !taksonomi.length){
+        bildir('Tür düzeni doğrulanamadı (internet gerekli) — hiçbir şey yazılmadı, sonra yeniden dene');
+        return;
+      }
     }
     const harita = {};
     (veri.kitaplar || []).forEach(k => {
       const anah = katla(k.ad) + '|' + katla(k.yazar || '');
       (harita[anah] = harita[anah] || []).push(k);
     });
-    const plan = { dolacak: [], degisecek: [], ayni: 0, gecersiz: 0,
+    const plan = { cfg, dolacak: [], degisecek: [], ayni: 0, gecersiz: 0,
       eslesmeyen: [], taksonomiDisi: [] };
     const planli = new Set();   // dosyada çift kayıt: İLK kayıt kazanır
     for(const r of kayitlar){
-      if(!r || !String(r.ad || '').trim() || !String(r.tur || '').trim()){ plan.gecersiz++; continue; }
-      const hedef = taksonomi.find(x =>
-        katla(x.ad) === katla(r.tur) || katla(x.seo) === katla(r.tur));
-      if(!hedef){ plan.taksonomiDisi.push(r); continue; }
+      if(!r || !String(r.ad || '').trim() || !String(r[cfg.kaynakAnahtar] || '').trim()){ plan.gecersiz++; continue; }
+      let yeniDeger;
+      if(cfg.taksonomiKapisi){
+        const hedef = taksonomi.find(x =>
+          katla(x.ad) === katla(r[cfg.kaynakAnahtar]) || katla(x.seo) === katla(r[cfg.kaynakAnahtar]));
+        if(!hedef){ plan.taksonomiDisi.push(r); continue; }
+        yeniDeger = hedef.ad;   // yazılan değer her zaman taksonominin KENDİ adı
+      }else{
+        yeniDeger = String(r[cfg.kaynakAnahtar]).trim();   // serbest metin alanı
+      }
       const kitaplar = harita[katla(r.ad) + '|' + katla(r.yazar || '')];
       if(!kitaplar){ plan.eslesmeyen.push(r); continue; }
       for(const k of kitaplar){
         if(planli.has(k.id)) continue;
         planli.add(k.id);
-        if(k.tur === hedef.ad){ plan.ayni++; continue; }
-        (alanBos(k, 'tur') ? plan.dolacak : plan.degisecek)
-          .push({ id: k.id, ad: k.ad, eski: k.tur, yeni: hedef.ad });
+        if(k[cfg.anahtar] === yeniDeger){ plan.ayni++; continue; }
+        (alanBos(k, cfg.anahtar) ? plan.dolacak : plan.degisecek)
+          .push({ id: k.id, ad: k.ad, eski: k[cfg.anahtar], yeni: yeniDeger });
       }
     }
-    turIcePlan = plan;
-    ortuKur('zgTurIceOrtu', 'Tür listesi yükle');
-    turIceOnizleCiz();
-    ac('zgTurIceOrtu');
+    // başka akışın önizlemesi açıksa kapat: paylaşılan tekil plan yanlış
+    // pencereden yazılamasın
+    if(icePlan && icePlan.cfg !== cfg) kapat(icePlan.cfg.ortuId);
+    icePlan = plan;
+    ortuKur(cfg.ortuId, cfg.ortuBaslik);
+    iceOnizleCiz();
+    ac(cfg.ortuId);
   }
-  function turIceOnizleCiz(){
-    const g = document.getElementById('zgTurIceOrtuGovde');
-    const plan = turIcePlan;
-    if(!g || !plan) return;
+  function iceOnizleCiz(){
+    const plan = icePlan;
+    if(!plan) return;
+    const cfg = plan.cfg;
+    const g = document.getElementById(cfg.ortuId + 'Govde');
+    if(!g) return;
     const yazilacak = plan.dolacak.length + plan.degisecek.length;
     const ozet = [];
-    if(plan.dolacak.length) ozet.push('<b>' + plan.dolacak.length + '</b> kitapta boş tür dolacak');
-    if(plan.degisecek.length) ozet.push('<b>' + plan.degisecek.length + '</b> kitapta mevcut tür DEĞİŞECEK');
+    if(plan.dolacak.length) ozet.push('<b>' + plan.dolacak.length + '</b>' + cfg.metin.dolacak);
+    if(plan.degisecek.length) ozet.push('<b>' + plan.degisecek.length + '</b>' + cfg.metin.degisecek);
     if(plan.ayni) ozet.push(plan.ayni + ' kitap zaten aynı');
     if(plan.eslesmeyen.length) ozet.push(plan.eslesmeyen.length + ' kayıt kütüphanede bulunamadı');
     if(plan.taksonomiDisi.length) ozet.push(plan.taksonomiDisi.length + ' kayıt taksonomi dışı (atlanacak)');
@@ -705,9 +765,8 @@
       : '';
     g.innerHTML =
       '<div class="zg-ozet">' + (ozet.join(' · ') || 'Dosyada işlenecek kayıt yok.') + '</div>' +
-      '<p class="zg-not">Yalnız TÜR alanı yazılır; puan, sayfa, durum, not gibi hiçbir başka alana ' +
-        'dokunulmaz. Onaylamadan hiçbir şey yazılmaz.</p>' +
-      katla_('Mevcut türü değişecekler', plan.degisecek.map(y =>
+      '<p class="zg-not">' + cfg.metin.yalnizNot + '</p>' +
+      katla_(cfg.metin.degisecekBaslik, plan.degisecek.map(y =>
         '<div class="zg-onizle-satir"><div class="zg-onizle-ic">' +
         '<span class="zg-onizle-ad">' + esc(y.ad) + '</span>' +
         '<span class="zg-onizle-alan">' + esc(y.eski) + ' → ' + esc(y.yeni) + '</span></div></div>')) +
@@ -720,54 +779,53 @@
         '<span class="zg-onizle-ad">' + esc(r.ad) + '</span>' +
         '<span class="zg-onizle-alan">tanınmayan tür: ' + esc(r.tur) + '</span></div></div>')) +
       '<div class="form-alt">' +
-        '<button class="btn btn-cerceve" data-act="zg-tur-vazgec" style="flex:1">Vazgeç</button>' +
+        '<button class="btn btn-cerceve" data-act="' + cfg.act.vazgec + '" style="flex:1">Vazgeç</button>' +
         (yazilacak
-          ? '<button class="btn btn-cerceve" data-act="zg-tur-uygula" style="flex:2">Türleri yaz (' + yazilacak + ')</button>'
+          ? '<button class="btn btn-cerceve" data-act="' + cfg.act.uygula + '" style="flex:2">' +
+            cfg.metin.yazDugme(yazilacak) + '</button>'
           : '') +
       '</div>';
   }
-  function turIceUygula(){
-    const plan = turIcePlan;
+  function iceUygula(){
+    const plan = icePlan;
     if(!plan) return;
-    const deneme = defterOku(OTO_DENEME_ANAHTAR);
+    const cfg = plan.cfg;
+    const deneme = cfg.denemeDamgala ? defterOku(OTO_DENEME_ANAHTAR) : null;
     let n = 0;
     for(const y of plan.dolacak.concat(plan.degisecek)){
       const k = (veri.kitaplar || []).find(x => x.id === y.id);
       if(!k) continue;
-      k.tur = y.yeni;
+      k[cfg.anahtar] = y.yeni;
       k.g = Date.now();          // kullanıcı eylemi — senkron damgası
-      deneme[k.id] = Date.now(); // açılış taraması bu kitabı yeniden sormasın
+      if(deneme) deneme[k.id] = Date.now(); // açılış taraması bu kitabı yeniden sormasın
       n++;
     }
-    defterYaz(OTO_DENEME_ANAHTAR, deneme);
-    turIcePlan = null;
+    if(deneme) defterYaz(OTO_DENEME_ANAHTAR, deneme);
+    icePlan = null;
     if(typeof depoKaydet === 'function') depoKaydet();
-    kapat('zgTurIceOrtu');
-    bildir(n + ' kitabın türü dosyadan yazıldı');
+    kapat(cfg.ortuId);
+    bildir(cfg.metin.toastYazildi(n));
     if(typeof hepsiniCiz === 'function') hepsiniCiz();
-    durumTazele(); otoDurumTazele();
+    cfg.sonTazele();
   }
-  function turIceVazgec(){
-    turIcePlan = null;
-    kapat('zgTurIceOrtu');
+  function iceVazgec(){
+    const cfg = icePlan && icePlan.cfg;
+    icePlan = null;
+    if(cfg) kapat(cfg.ortuId);
     bildir('Vazgeçildi — hiçbir şey yazılmadı');
   }
-  /* YERLEŞİK liste (v70): Kaan'ın 242 kayıtlık tür listesi uygulamayla gelir
-     (veri/turler-yerlesik.json, sw ASSETS'te — çevrimdışı da okunur). Dosya
-     seçiciyle AYNI boru: turIceOku yalnız .text() çağırır, Response da taşır —
-     önizleme, taksonomi kapısı, yalnız-tür yazımı, damga, rapor birebir aynı.
-     KARAR: düğme tekrar uygulanabilir kalır — iş idempotent, "uygulandı"
-     durumunu önizleme özeti zaten taşır (ikinci basışta "zaten aynı" görünür);
-     kütüphane değiştikçe (yeni kitap) yeniden uygulamak değerli, ayrı durum
-     rozeti kopya bilgi + yeni LS anahtarı olurdu (v67 "iş tekrarlanabilir"). */
-  async function turHazirYukle(){
+  /* YERLEŞİK liste (v70): uygulamayla gelen liste (sw ASSETS'te — çevrimdışı da
+     okunur) dosya seçiciyle AYNI borudan Response ile girer. KARAR: düğme
+     tekrar uygulanabilir kalır — iş idempotent, "uygulandı" durumunu önizleme
+     özeti zaten taşır; kütüphane değiştikçe yeniden uygulamak değerli (v67). */
+  async function iceHazirYukle(cfg){
     let y = null;
-    try{ y = await fetch('veri/turler-yerlesik.json'); }catch(e){}
+    try{ y = await fetch(cfg.hazirYol); }catch(e){}
     if(!y || !y.ok){
       bildir('Hazır liste okunamadı — uygulamanın güncel sürümü ve bir kez internet gerekli');
       return;
     }
-    turIceOku(y);
+    iceOku(cfg, y);
   }
   function turDosyaKur(){
     let g = document.getElementById('zgTurDosya');
@@ -781,7 +839,7 @@
       g.__zgBagli = true;
       g.addEventListener('change', e => {
         const f = e.target.files && e.target.files[0];
-        if(f) turIceOku(f);
+        if(f) iceOku(ICE_TUR, f);
         e.target.value = '';   // aynı dosya ikinci kez seçilebilsin
       });
     }
@@ -887,7 +945,9 @@
       '<div class="zg-govde" id="' + id + 'Govde"></div>' +
     '</div>';
     document.body.appendChild(o);
-    o.addEventListener('click', e => { if(e.target === o) ortuKapat(id); });
+    // v73 onarımı (taze-göz): ortuKapat bu modülde TANIMSIZDI — fon tıklaması
+    // v63'ten beri ReferenceError atıyor, zengin pencereleri fonla kapanmıyordu
+    o.addEventListener('click', e => { if(e.target === o) kapat(id); });
   }
   function ac(id){
     const o = document.getElementById(id);
@@ -1269,9 +1329,12 @@
           break; }
         case 'zg-kapat': kapat(el.dataset.ortu); break;
         case 'zg-tur-ice': turDosyaKur(); document.getElementById('zgTurDosya').click(); break;
-        case 'zg-tur-hazir': turHazirYukle(); break;
-        case 'zg-tur-uygula': turIceUygula(); break;
-        case 'zg-tur-vazgec': turIceVazgec(); break;
+        case 'zg-tur-hazir': iceHazirYukle(ICE_TUR); break;
+        case 'zg-tur-uygula': iceUygula(); break;
+        case 'zg-tur-vazgec': iceVazgec(); break;
+        case 'zg-adtr-hazir': iceHazirYukle(ICE_ADTR); break;
+        case 'zg-adtr-uygula': iceUygula(); break;
+        case 'zg-adtr-vazgec': iceVazgec(); break;
         case 'zg-oto-liste':
           ortuKur('zgOtoOrtu', 'Otomatik atanan türler');
           otoListeCiz(); ac('zgOtoOrtu');

@@ -195,8 +195,10 @@ test.describe('G61 hızlı puanlama akışı', () => {
     await page.reload();
     // normalize alanı yenilemede söKMEDİ (g15 kuralı)
     expect(await page.evaluate(() => veri.kitaplar[0].puanYok)).toBe(true);
-    // şema sürümü arttı (göç turu damga basmaz — anlikYukle v3'ten beri aynı desen)
-    expect(await page.evaluate(() => window.__senkron.ANLIK_SURUM)).toBe(9);
+    // şema sürümü arttı (göç turu damga basmaz — anlikYukle v3'ten beri aynı
+    // desen). ">= 9": sabit eşitlik sonraki şema artışında kırılırdı (v50 dersi
+    // — v73 adTr artışı tam bunu ısırdı, eşiğe çevrildi)
+    expect(await page.evaluate(() => window.__senkron.ANLIK_SURUM)).toBeGreaterThanOrEqual(9);
     // kitap-LWW birleşiminde alan taşınır: uzak yeni damgalı puanYok kazanır
     const b = await page.evaluate(() => {
       const yerel = { ...veri.kitaplar[0], puanYok: false, g: 100 };

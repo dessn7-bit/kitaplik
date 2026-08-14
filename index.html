@@ -1155,6 +1155,15 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
           <button class="btn btn-cerceve" data-act="zg-tur-hazir">Hazır listeyi uygula</button>
           <button class="btn btn-cerceve" data-act="zg-tur-ice">Tür dosyası seç</button>
         </div>
+        <!-- Türkçe ad listesi (v73) — aynı içe aktarım borusu, alan=adTr.
+             Taksonomi kapısı yok (serbest metin); önizleme + onay aynen. -->
+        <h3 class="ay-baslik">Türkçe ad listesi</h3>
+        <p class="ay-not">Yabancı başlıkla eklenmiş kitaplara <b>Türkçe adı</b> yazar (88 kayıtlık hazır
+      liste uygulamayla gelir). Kayıtlar ad + yazar ile eşlenir; yalnız Türkçe ad alanı değişir, önizleme
+      onayı olmadan hiçbir şey yazılmaz. Türkçe ad aramada ve Keşfet elemesinde de kullanılır.</p>
+        <div class="ay-eylem">
+          <button class="btn btn-cerceve" data-act="zg-adtr-hazir">Hazır Türkçe ad listesini uygula</button>
+        </div>
       </section>
 
       <!-- ZENGİNLEŞTİR (zg-) — mantık zengin.js'te. Eksik alan sayımı + toplu
@@ -1270,6 +1279,9 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 
     <label for="f-yazar">Yazar</label>
     <input id="f-yazar" autocomplete="off">
+
+    <label for="f-adtr">Türkçe adı</label>
+    <input id="f-adtr" autocomplete="off" placeholder="Yabancı başlıklı kitabın Türkçe adı (isteğe bağlı)">
 
     <div class="form-iki">
       <div>
@@ -1500,6 +1512,11 @@ function kitapNormalize(k){
   return {
     id: k.id || uid(), eklenme: k.eklenme || Date.now(),
     ad: String(k.ad || ''), yazar: String(k.yazar || ''),
+    /* adTr (v73): yabancı başlıklı kitabın TÜRKÇE ADI (88 kitap Goodreads'te
+       TR baskı bulunamadığı için yabancı başlıkla ekli). BOŞ kalabilir. Arama,
+       detay künyesi ve Keşfet elemesi kullanır; sıralama/gruplama ad'da kalır.
+       Şema değişti → ANLIK_SURUM 10 (senkron.js). */
+    adTr: String(k.adTr || ''),
     sayfa: parseInt(k.sayfa) || null, tur: String(k.tur || ''),
     yayinevi: String(k.yayinevi || ''), yil: parseInt(k.yil) || null,
     durum: DURUM_AD[k.durum] ? k.durum : 'okunacak',
@@ -1951,7 +1968,7 @@ function listeCiz(){
       : durum.filtre === 'puansiz' ? (k.durum === 'bitti' && !k.puan && !k.puanYok)
       : k.durum === durum.filtre;
     const etiketUy = !durum.etiket || (k.etiketler||[]).includes(durum.etiket);
-    const metin = katla(k.ad + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.raf||'')
+    const metin = katla(k.ad + ' ' + (k.adTr||'') + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.raf||'')
       + ' ' + (k.cevirmen||'') + ' ' + (k.seri||'') + ' ' + (k.etiketler||[]).join(' '));
     const sahiplikUy = durum.sahiplikFiltre === 'hepsi' || (k.sahiplik || 'sahip') === durum.sahiplikFiltre;
     return durumUy && etiketUy && sahiplikUy && (!q || metin.includes(q));
@@ -2224,6 +2241,7 @@ function formAc(id){
   document.getElementById('f-ad').placeholder = 'Yazmaya başla, önerileri getireyim…';
   sonucTemizle();
   document.getElementById('f-ad').value = k ? k.ad : '';
+  document.getElementById('f-adtr').value = k ? (k.adTr||'') : '';
   document.getElementById('f-yazar').value = k ? (k.yazar||'') : '';
   document.getElementById('f-yayinevi').value = k ? (k.yayinevi||'') : '';
   document.getElementById('f-yil').value = k && k.yil ? k.yil : '';
@@ -2257,7 +2275,7 @@ function formAc(id){
    söyler ("Ayrıntılar · yazar, sayfa dolu"). Aramadan (olSec), barkoddan
    (formuDoldur kancası) ve elle girişten (input dinleyicisi) tazelenir. */
 const F_AYRINTI_ALANLAR = [
-  ['f-yazar','yazar'], ['f-yayinevi','yayınevi'], ['f-yil','yıl'], ['f-sayfa','sayfa'],
+  ['f-yazar','yazar'], ['f-adtr','Türkçe ad'], ['f-yayinevi','yayınevi'], ['f-yil','yıl'], ['f-sayfa','sayfa'],
   ['f-tur','tür'], ['f-cevirmen','çevirmen'], ['f-dil','dil'], ['f-seri','seri'],
   ['f-cilt','cilt'], ['f-isbn','ISBN'], ['f-etiket','etiket'], ['f-raf','raf'],
   ['f-bas','tarih'], ['f-bit','tarih']
@@ -2309,7 +2327,8 @@ function formKaydet(){
   const ikizUyari = ikiz ? ' — dikkat: "' + ikiz.ad + '" aynı ISBN ile zaten kayıtlı' : '';
 
   const ortak = {
-    ad, yazar: document.getElementById('f-yazar').value.trim(),
+    ad, adTr: document.getElementById('f-adtr').value.trim(),
+    yazar: document.getElementById('f-yazar').value.trim(),
     yayinevi: document.getElementById('f-yayinevi').value.trim(),
     yil: parseInt(document.getElementById('f-yil').value) || null,
     sayfa, tur: document.getElementById('f-tur').value.trim(),
@@ -2451,6 +2470,7 @@ function detayAc(id){
   const kunyeSatirlar = [];
   const kEkle = (etiket, deger) => { if(deger) kunyeSatirlar.push([etiket, deger]); };
   kEkle('Yazar', k.yazar ? esc(k.yazar) : '');
+  kEkle('Türkçe adı', k.adTr ? esc(k.adTr) : '');   // kimlik grubunda (v73)
   kEkle('Sayfa', k.sayfa ? String(k.sayfa) : '');
   kEkle('İlk basım', k.yil ? String(k.yil) : '');
   kEkle('Tür', k.tur ? esc(k.tur) : '');
@@ -2643,7 +2663,7 @@ function alintiCiz(){
 
   const q = katla(durum.alintiArama);
   const filtreli = tumu
-    .filter(n => !q || katla(n.metin + ' ' + n.kitap.ad + ' ' + (n.kitap.yazar||'')).includes(q))
+    .filter(n => !q || katla(n.metin + ' ' + n.kitap.ad + ' ' + (n.kitap.adTr||'') + ' ' + (n.kitap.yazar||'')).includes(q))
     .sort((a,b) => (b.tarih||'').localeCompare(a.tarih||''));
 
   const listeHtml = filtreli.length ? filtreli.map(n => `
@@ -2922,10 +2942,10 @@ function disaAktar(){
 }
 function csvAktar(){
   const b = s => `"${String(s ?? '').replace(/"/g,'""')}"`;
-  const sat = [['Ad','Yazar','Çevirmen','Dil','Yayınevi','Yıl','Tür','Seri','Cilt','ISBN','Sahiplik',
+  const sat = [['Ad','Türkçe Ad','Yazar','Çevirmen','Dil','Yayınevi','Yıl','Tür','Seri','Cilt','ISBN','Sahiplik',
     'Durum','Puan','Sayfa','Güncel Sayfa','Başlama','Bitiş','Okuma Sayısı','Etiketler','Not Sayısı'].join(';')];
   veri.kitaplar.forEach(k => sat.push([
-    b(k.ad), b(k.yazar), b(k.cevirmen), b(k.dil), b(k.yayinevi), k.yil ?? '', b(k.tur),
+    b(k.ad), b(k.adTr), b(k.yazar), b(k.cevirmen), b(k.dil), b(k.yayinevi), k.yil ?? '', b(k.tur),
     b(k.seri), k.ciltNo ?? '', b(k.isbn), b(k.sahiplik === 'istek' ? 'İstek listesi' : 'Bende var'),
     b(DURUM_AD[k.durum]), k.puan ?? '', k.sayfa ?? '',
     k.guncelSayfa ?? '', k.baslamaTarihi ?? '', k.bitisTarihi ?? '',

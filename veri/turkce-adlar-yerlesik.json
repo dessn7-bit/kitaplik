@@ -1,0 +1,445 @@
+{
+ "surum": 1,
+ "adTr": [
+  {
+   "ad": "Der Stationsaufseher",
+   "yazar": "Alexander Pushkin",
+   "adTr": "Menzil Müdürü"
+  },
+  {
+   "ad": "Egyptian Nights",
+   "yazar": "Alexander Pushkin",
+   "adTr": "Mısır Geceleri"
+  },
+  {
+   "ad": "Kirdzhali",
+   "yazar": "Alexander Pushkin",
+   "adTr": "Kirdjali"
+  },
+  {
+   "ad": "The Coffin Maker",
+   "yazar": "Alexander Pushkin",
+   "adTr": "Tabutçu"
+  },
+  {
+   "ad": "The Blizzard",
+   "yazar": "Alexander Pushkin",
+   "adTr": "Tipi"
+  },
+  {
+   "ad": "Roslavlev",
+   "yazar": "Alexander Pushkin",
+   "adTr": "Roslavlev"
+  },
+  {
+   "ad": "Novelle del defunto Ivan Petrovič Belkin",
+   "yazar": "Alexander Pushkin",
+   "adTr": "Merhum İvan Petroviç Belkin'in Hikâyeleri"
+  },
+  {
+   "ad": "Evenings Near the Village of Dikanka",
+   "yazar": "Nikolai Gogol",
+   "adTr": "Dikanka Yakınlarında Bir Çiftlikte Akşamlar"
+  },
+  {
+   "ad": "Une terrible vengeance",
+   "yazar": "Nikolai Gogol",
+   "adTr": "Korkunç İntikam"
+  },
+  {
+   "ad": "The Night Before Christmas",
+   "yazar": "Nikolai Gogol",
+   "adTr": "Noel Gecesi"
+  },
+  {
+   "ad": "Ivan Fyodorovich Shponka and His Aunt",
+   "yazar": "Nikolai Gogol",
+   "adTr": "İvan Fyodoroviç Şponka ve Teyzesi"
+  },
+  {
+   "ad": "Ночь перед Рождеством [Noch' Pered Rozhdestvom]",
+   "yazar": "Nikolai Gogol",
+   "adTr": "Noel Gecesi"
+  },
+  {
+   "ad": "A May Evening",
+   "yazar": "Nikolai Gogol",
+   "adTr": "Bir Mayıs Gecesi"
+  },
+  {
+   "ad": "The Eve of Ivan Kupala (Moonlit Tales of the Macabre - Small Bites Book 7)",
+   "yazar": "Nikolai Gogol",
+   "adTr": "İvan Kupala Arifesi"
+  },
+  {
+   "ad": "Sorotchintzy Fair",
+   "yazar": "Nikolai Gogol",
+   "adTr": "Soroçintsi Panayırı"
+  },
+  {
+   "ad": "Nevsky Prospect",
+   "yazar": "Nikolai Gogol",
+   "adTr": "Nevski Bulvarı"
+  },
+  {
+   "ad": "The Mysterious Portrait",
+   "yazar": "Nikolai Gogol",
+   "adTr": "Portre"
+  },
+  {
+   "ad": "Игроки (Russian Edition)",
+   "yazar": "Nikolai Gogol",
+   "adTr": "Kumarbazlar"
+  },
+  {
+   "ad": "Peace",
+   "yazar": "Aristophanes",
+   "adTr": "Barış"
+  },
+  {
+   "ad": "The Acharnians",
+   "yazar": "Aristophanes",
+   "adTr": "Akharnialılar"
+  },
+  {
+   "ad": "Birds",
+   "yazar": "Aristophanes",
+   "adTr": "Kuşlar"
+  },
+  {
+   "ad": "Richard II",
+   "yazar": "William Shakespeare",
+   "adTr": "II. Richard"
+  },
+  {
+   "ad": "Pericles",
+   "yazar": "William Shakespeare",
+   "adTr": "Perikles"
+  },
+  {
+   "ad": "Julius Caesar",
+   "yazar": "William Shakespeare",
+   "adTr": "Jül Sezar"
+  },
+  {
+   "ad": "King Lear",
+   "yazar": "William Shakespeare",
+   "adTr": "Kral Lear"
+  },
+  {
+   "ad": "Romeo and Juliet",
+   "yazar": "William Shakespeare",
+   "adTr": "Romeo ve Juliet"
+  },
+  {
+   "ad": "Philoctetes",
+   "yazar": "Sophocles",
+   "adTr": "Philoktetes"
+  },
+  {
+   "ad": "Sophocles: Philoktetes (Focus Classical Library)",
+   "yazar": "Sophocles",
+   "adTr": "Philoktetes"
+  },
+  {
+   "ad": "Antigone (Theban Plays, #3)",
+   "yazar": "Sophocles",
+   "adTr": "Antigone"
+  },
+  {
+   "ad": "Les Fourberies de Scapin",
+   "yazar": "Molière",
+   "adTr": "Scapin'in Dolapları"
+  },
+  {
+   "ad": "The Impromptu at Versailles",
+   "yazar": "Molière",
+   "adTr": "Versailles Tuluatı"
+  },
+  {
+   "ad": "Le Sicilien ou L'Amour Peintre: Comédie = The Sicilian or Love Makes a Painter: A Comedy",
+   "yazar": "Molière",
+   "adTr": "Sicilyalı yahut Ressam Aşk"
+  },
+  {
+   "ad": "Bacchides",
+   "yazar": "Plautus",
+   "adTr": "Bakkhis Kardeşler"
+  },
+  {
+   "ad": "Amphitryon",
+   "yazar": "Plautus",
+   "adTr": "Amphitryon"
+  },
+  {
+   "ad": "Another Man's Wife and a Husband Under the Bed",
+   "yazar": "Fyodor Dostoevsky",
+   "adTr": "Başkasının Karısı ve Karyola Altındaki Koca"
+  },
+  {
+   "ad": "An Honest Thief",
+   "yazar": "Fyodor Dostoevsky",
+   "adTr": "Dürüst Hırsız"
+  },
+  {
+   "ad": "The Christmas Tree and the Wedding",
+   "yazar": "Fyodor Dostoevsky",
+   "adTr": "Noel Ağacı ve Düğün"
+  },
+  {
+   "ad": "The Death of Ivan Ilyich",
+   "yazar": "Leo Tolstoy",
+   "adTr": "İvan İlyiç'in Ölümü"
+  },
+  {
+   "ad": "Selected Stories of Anton Chekhov",
+   "yazar": "Anton Chekhov",
+   "adTr": "Seçme Öyküler"
+  },
+  {
+   "ad": "L'enfance d'un chef",
+   "yazar": "Jean-Paul Sartre",
+   "adTr": "Bir Yöneticinin Çocukluğu"
+  },
+  {
+   "ad": "Herostrat",
+   "yazar": "Jean-Paul Sartre",
+   "adTr": "Herostratos"
+  },
+  {
+   "ad": "the room",
+   "yazar": "Jean-Paul Sartre",
+   "adTr": "Oda"
+  },
+  {
+   "ad": "The Travels",
+   "yazar": "Marco Polo",
+   "adTr": "Seyahatnâme"
+  },
+  {
+   "ad": "Frankenstein: The 1818 Text",
+   "yazar": "Mary Wollstonecraft Shelley",
+   "adTr": "Frankenstein"
+  },
+  {
+   "ad": "Philebos (German Edition)",
+   "yazar": "Plato",
+   "adTr": "Philebos"
+  },
+  {
+   "ad": "Platon: Phaidon (Klassiker Auslegen, #44)",
+   "yazar": "Jörn Müller",
+   "adTr": "Phaidon"
+  },
+  {
+   "ad": "Das Simarillion",
+   "yazar": "J.R.R. Tolkien",
+   "adTr": "Silmarillion"
+  },
+  {
+   "ad": "The Picture of Dorian Gray",
+   "yazar": "Oscar Wilde",
+   "adTr": "Dorian Gray'in Portresi"
+  },
+  {
+   "ad": "Sophie's World",
+   "yazar": "Jostein Gaarder",
+   "adTr": "Sofie'nin Dünyası"
+  },
+  {
+   "ad": "Sapiens: A Brief History of Humankind",
+   "yazar": "Yuval Noah Harari",
+   "adTr": "Hayvanlardan Tanrılara: Sapiens"
+  },
+  {
+   "ad": "The Hobbit, or There and Back Again",
+   "yazar": "J.R.R. Tolkien",
+   "adTr": "Hobbit"
+  },
+  {
+   "ad": "Harry Potter and the Sorcerer's Stone (Harry Potter, #1)",
+   "yazar": "J.K. Rowling",
+   "adTr": "Harry Potter ve Felsefe Taşı"
+  },
+  {
+   "ad": "Harry Potter and the Chamber of Secrets (Harry Potter, #2)",
+   "yazar": "J.K. Rowling",
+   "adTr": "Harry Potter ve Sırlar Odası"
+  },
+  {
+   "ad": "Harry Potter and the Prisoner of Azkaban (Harry Potter, #3)",
+   "yazar": "J.K. Rowling",
+   "adTr": "Harry Potter ve Azkaban Tutsağı"
+  },
+  {
+   "ad": "Jonathan Livingston Seagull",
+   "yazar": "Richard Bach",
+   "adTr": "Martı"
+  },
+  {
+   "ad": "The Alchemist",
+   "yazar": "Paulo Coelho",
+   "adTr": "Simyacı"
+  },
+  {
+   "ad": "The Adventures of Tom Sawyer",
+   "yazar": "Mark Twain",
+   "adTr": "Tom Sawyer'ın Maceraları"
+  },
+  {
+   "ad": "Gulliver's Travels",
+   "yazar": "Jonathan Swift",
+   "adTr": "Güliver'in Gezileri"
+  },
+  {
+   "ad": "The Little Prince",
+   "yazar": "Antoine de Saint-Exupéry",
+   "adTr": "Küçük Prens"
+  },
+  {
+   "ad": "Don Quixote",
+   "yazar": "Miguel de Cervantes Saavedra",
+   "adTr": "Don Kişot"
+  },
+  {
+   "ad": "The Lightning Thief (Percy Jackson and the Olympians, #1)",
+   "yazar": "Rick Riordan",
+   "adTr": "Şimşek Hırsızı"
+  },
+  {
+   "ad": "The Sea of Monsters (Percy Jackson and the Olympians, #2)",
+   "yazar": "Rick Riordan",
+   "adTr": "Canavarlar Denizi"
+  },
+  {
+   "ad": "The Titan's Curse (Percy Jackson and the Olympians, #3)",
+   "yazar": "Rick Riordan",
+   "adTr": "Titan'ın Laneti"
+  },
+  {
+   "ad": "The Battle of the Labyrinth (Percy Jackson and the Olympians, #4)",
+   "yazar": "Rick Riordan",
+   "adTr": "Labirent Savaşı"
+  },
+  {
+   "ad": "The Last Olympian (Percy Jackson and the Olympians, #5)",
+   "yazar": "Rick Riordan",
+   "adTr": "Son Olimposlu"
+  },
+  {
+   "ad": "Percy Jackson and the Sword of Hades (Percy Jackson and the Olympians, #4.5)",
+   "yazar": "Rick Riordan",
+   "adTr": "Hades'in Kılıcı"
+  },
+  {
+   "ad": "The Demigod Files (Percy Jackson and the Olympians)",
+   "yazar": "Rick Riordan",
+   "adTr": "Yarı Tanrı Dosyaları"
+  },
+  {
+   "ad": "The Lost Hero (The Heroes of Olympus, #1)",
+   "yazar": "Rick Riordan",
+   "adTr": "Kayıp Kahraman"
+  },
+  {
+   "ad": "The Son of Neptune (The Heroes of Olympus, #2)",
+   "yazar": "Rick Riordan",
+   "adTr": "Neptün'ün Oğlu"
+  },
+  {
+   "ad": "The Mark of Athena (The Heroes of Olympus, #3)",
+   "yazar": "Rick Riordan",
+   "adTr": "Athena'nın Mührü"
+  },
+  {
+   "ad": "The House of Hades (The Heroes of Olympus, #4)",
+   "yazar": "Rick Riordan",
+   "adTr": "Hades'in Evi"
+  },
+  {
+   "ad": "The Blood of Olympus (The Heroes of Olympus, #5)",
+   "yazar": "Rick Riordan",
+   "adTr": "Olimpos'un Kanı"
+  },
+  {
+   "ad": "The Demigod Diaries (The Heroes of Olympus)",
+   "yazar": "Rick Riordan",
+   "adTr": "Yarı Tanrı Günlükleri"
+  },
+  {
+   "ad": "The Red Pyramid (The Kane Chronicles, #1)",
+   "yazar": "Rick Riordan",
+   "adTr": "Kızıl Piramit"
+  },
+  {
+   "ad": "The Throne of Fire (The Kane Chronicles, #2)",
+   "yazar": "Rick Riordan",
+   "adTr": "Ateş Tahtı"
+  },
+  {
+   "ad": "The Serpent's Shadow (The Kane Chronicles, #3)",
+   "yazar": "Rick Riordan",
+   "adTr": "Yılanın Gölgesi"
+  },
+  {
+   "ad": "The Son of Sobek (Demigods & Magicians, #1)",
+   "yazar": "Rick Riordan",
+   "adTr": "Sobek'in Oğlu"
+  },
+  {
+   "ad": "The Staff of Serapis (Demigods & Magicians, #2)",
+   "yazar": "Rick Riordan",
+   "adTr": "Serapis'in Asası"
+  },
+  {
+   "ad": "The Crown of Ptolemy (Demigods & Magicians, #3)",
+   "yazar": "Rick Riordan",
+   "adTr": "Ptolemaios'un Tacı"
+  },
+  {
+   "ad": "The Sword of Summer (Magnus Chase and the Gods of Asgard, #1)",
+   "yazar": "Rick Riordan",
+   "adTr": "Yaz Kılıcı"
+  },
+  {
+   "ad": "The Hammer of Thor (Magnus Chase and the Gods of Asgard, #2)",
+   "yazar": "Rick Riordan",
+   "adTr": "Thor'un Çekici"
+  },
+  {
+   "ad": "The Ship of the Dead (Magnus Chase and the Gods of Asgard, #3)",
+   "yazar": "Rick Riordan",
+   "adTr": "Ölüler Gemisi"
+  },
+  {
+   "ad": "The Hidden Oracle (The Trials of Apollo, #1)",
+   "yazar": "Rick Riordan",
+   "adTr": "Gizli Kehanet"
+  },
+  {
+   "ad": "The Dark Prophecy (The Trials of Apollo, #2)",
+   "yazar": "Rick Riordan",
+   "adTr": "Karanlık Kehanet"
+  },
+  {
+   "ad": "The Burning Maze (The Trials of Apollo, #3)",
+   "yazar": "Rick Riordan",
+   "adTr": "Yanan Labirent"
+  },
+  {
+   "ad": "Percy Jackson's Greek Gods",
+   "yazar": "Rick Riordan",
+   "adTr": "Percy Jackson'ın Yunan Tanrıları"
+  },
+  {
+   "ad": "Percy Jackson's Greek Heroes",
+   "yazar": "Rick Riordan",
+   "adTr": "Percy Jackson'ın Yunan Kahramanları"
+  },
+  {
+   "ad": "The Maze of Bones  (The 39 Clues, #1)",
+   "yazar": "Rick Riordan",
+   "adTr": "Kemikler Labirenti"
+  }
+ ]
+}
