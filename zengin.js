@@ -986,49 +986,138 @@
   }
 
   /* ---------- M2: hızlı puanlama ---------- */
+  /* v72 akış revizyonu (canlı ölçüm, 412px, 195 puansız kütüphane):
+     · Otomatik geçiş zaten vardı ama GÖRSEL ONAY yoktu ("geçmedi" algısı) →
+       üstte SATIR İÇİ onay ("✓ Ad → 8 · Geri") — toast değil, akışın içinde.
+     · GERİ salt konum hareketi: puan SİLİNMEZ (yanlış basışta panel kapansa
+       bile kayıp olmaz); önceki kitabın bu-oturum puanı VURGULU gösterilir,
+       yeni basış üzerine yazar. Üzerine yazma yalnız bu oturumda BENİM
+       yazdıklarımda (puanYazdigim kapısı) — dışarıdan gelen puan ezilmez.
+     · KAPAK: ktPlate 'iz-plate zg-pkapak' — ızgara karosu dalı; kapak yoksa
+       plateKapakYedek'in mevcut AD-KAROSU yedeği. Üretici + yedek TEK yol.
+     · "HATIRLAMIYORUM" = kitapta puanYok işareti (kitapNormalize, senkronlu):
+       kuyruktan KALICI düşer, bitti ekranındaki listeden geri alınabilir.
+       ATLA GEÇİCİ: bu turda ilerler, puan yazılmaz → sonraki açılışta döner.
+     · Puan şeridi TEK SATIR: bitişik segment (gap 0, kenar dolgusuna taşan
+       negatif margin) — 412px'te düğme başına >=40px dokunma hedefi. Ayrık
+       10 düğme + aralıklar 412'ye 40px hedefle SIĞMAZDI (ölçüm: 8+2
+       kırılıyordu); bitişik segmentte şeridin TÜM genişliği dokunma alanıdır. */
   function puanlanacaklar(){
-    return (veri.kitaplar || []).filter(k => k.durum === 'bitti' && !k.puan)
+    return (veri.kitaplar || []).filter(k => k.durum === 'bitti' && !k.puan && !k.puanYok)
       .sort((a, b) => String(b.bitisTarihi || '').localeCompare(String(a.bitisTarihi || '')));
   }
+  function puanYoklular(){
+    return (veri.kitaplar || []).filter(k => k.durum === 'bitti' && k.puanYok);
+  }
+  let puanYazdigim = new Set();   // bu oturumda yazdıklarım — geri dönüşte üzerine yazma izni
   function puanBaslat(){
     puanKuyruk = puanlanacaklar();
     puanSira = 0; puanBasi = puanKuyruk.length;
-    if(!puanBasi){ bildir('Puansız bitmiş kitap kalmadı'); return; }
+    puanYazdigim = new Set();
+    // kuyruk boş ama "hatırlamıyorum" işaretli kitap varsa panel yine açılır:
+    // geri alma yüzeyi kaybolmasın (bitti ekranı listeyi taşır)
+    if(!puanBasi && !puanYoklular().length){ bildir('Puansız bitmiş kitap kalmadı'); return; }
     ortuKur('zgPuanOrtu', 'Hızlı puanlama');
     puanCiz_();
     ac('zgPuanOrtu');
+  }
+  function puanOnayHtml_(){
+    if(!puanSira) return '';
+    const onceki = puanKuyruk[puanSira - 1];
+    const canli = (veri.kitaplar || []).find(x => x.id === onceki.id) || onceki;
+    const sonuc = canli.puanYok ? 'hatırlamıyorum'
+      : (canli.puan && puanYazdigim.has(canli.id)) ? String(canli.puan) : 'atlandı';
+    return '<div class="zg-onay"><span class="zg-onay-metin">' +
+      (sonuc === 'atlandı' ? '' : '✓ ') + esc(canli.ad) + ' → ' + sonuc + '</span>' +
+      '<button class="d-link" data-act="zg-puan-geri">Geri</button></div>';
   }
   function puanCiz_(){
     const g = document.getElementById('zgPuanOrtuGovde');
     if(!g) return;
     if(puanSira >= puanKuyruk.length){
-      g.innerHTML = '<div class="zg-satir">Bitti — ' + puanBasi + ' kitabın tümü gözden geçirildi.</div>' +
+      const yoklar = puanYoklular();
+      g.innerHTML = puanOnayHtml_() +
+        '<div class="zg-satir">' + (puanBasi
+          ? 'Bitti — ' + puanBasi + ' kitabın tümü gözden geçirildi.'
+          : 'Puansız bitmiş kitap kalmadı.') + '</div>' +
+        (yoklar.length
+          ? '<details class="zg-katla"><summary>Hatırlamıyorum dediklerin (' + yoklar.length + ')</summary>' +
+            '<div class="zg-onizle-liste">' + yoklar.map(k =>
+              '<div class="zg-onizle-satir"><div class="zg-onizle-ic">' +
+              '<span class="zg-onizle-ad">' + esc(k.ad) + '</span></div>' +
+              '<button class="zg-cikar" data-act="zg-puanyok-geri" data-id="' + escAttr(k.id) + '">Geri al</button>' +
+              '</div>').join('') + '</div></details>'
+          : '') +
         '<div class="form-alt"><button class="btn btn-cerceve" data-act="zg-kapat" data-ortu="zgPuanOrtu" style="flex:1">Kapat</button></div>';
       return;
     }
     const k = puanKuyruk[puanSira];
-    g.innerHTML =
-      '<div class="zg-sayac">' + (puanSira + 1) + ' / ' + puanBasi + '</div>' +
-      '<div class="zg-kitap">' + (typeof ktPlate === 'function' ? ktPlate(k, 'p-mini') : '') +
+    const canli = (veri.kitaplar || []).find(x => x.id === k.id) || k;
+    const mevcutPuan = puanYazdigim.has(k.id) ? canli.puan : null;
+    // yardımcı bilgi: yıl + sayfa + tür — yıllar önce okunan kitabı hatırlatır
+    const alt = [
+      k.bitisTarihi ? String(k.bitisTarihi).slice(0, 4) + ' yılında bitti' : '',
+      k.sayfa > 0 ? k.sayfa + ' sayfa' : '',
+      k.tur || ''
+    ].filter(Boolean).join(' · ');
+    g.innerHTML = puanOnayHtml_() +
+      '<div class="zg-sayac-satir"><span class="zg-sayac">' + (puanSira + 1) + ' / ' + puanBasi + '</span>' +
+        '<span class="zg-kalan">kalan ' + (puanKuyruk.length - puanSira) + '</span></div>' +
+      '<div class="zg-kitap">' + (typeof ktPlate === 'function' ? ktPlate(k, 'iz-plate zg-pkapak') : '') +
         '<div class="zg-kitap-ic"><span class="zg-kitap-ad">' + esc(k.ad) + '</span>' +
         (k.yazar ? '<span class="zg-kitap-yazar">' + esc(k.yazar) + '</span>' : '') +
-        (k.bitisTarihi ? '<span class="zg-kitap-alt">' + esc(String(k.bitisTarihi).slice(0, 4)) + ' yılında bitti</span>' : '') +
+        (alt ? '<span class="zg-kitap-alt">' + esc(alt) + '</span>' : '') +
         '</div></div>' +
       '<div class="zg-puan-secim">' + Array.from({ length: 10 }, (_, i) =>
-        '<button class="zg-puan-btn" data-act="zg-puan" data-v="' + (i + 1) + '">' + (i + 1) + '</button>').join('') + '</div>' +
-      '<div class="zg-eylem"><button class="zg-sessiz" data-act="zg-atla">Atla</button></div>';
+        '<button class="zg-puan-btn' + (mevcutPuan === i + 1 ? ' zg-secili' : '') +
+        '" data-act="zg-puan" data-v="' + (i + 1) + '"' +
+        ' aria-pressed="' + (mevcutPuan === i + 1 ? 'true' : 'false') + '"' +
+        '>' + (i + 1) + '</button>').join('') + '</div>' +
+      '<div class="zg-eylem"><button class="zg-sessiz" data-act="zg-atla">Atla</button>' +
+        '<button class="zg-sessiz' + (canli.puanYok ? ' zg-secili-metin' : '') +
+        '" data-act="zg-puan-yok">Hatırlamıyorum</button></div>';
     if(typeof ktPlateHata === 'function') ktPlateHata(g);
   }
   function puanVer(p){
     const k = puanKuyruk && puanKuyruk[puanSira];
     if(!k) return;
     const canli = (veri.kitaplar || []).find(x => x.id === k.id);
-    if(canli && p >= 1 && p <= 10 && !canli.puan){
+    // üzerine yazma yalnız BU oturumda benim yazdığım puanda (geri → düzeltme);
+    // dışarıdan (detay, başka cihaz) gelen puan ezilmez — bayat-kuyruk koruması
+    if(canli && p >= 1 && p <= 10 && (!canli.puan || puanYazdigim.has(canli.id))){
       canli.puan = p;
-      canli.g = Date.now();   // kullanıcı eylemi — açık damga (d-puan ile aynı kalıp)
+      canli.puanYok = false;   // puan verildiyse "hatırlamıyorum" işareti düşer
+      canli.g = Date.now();    // kullanıcı eylemi — açık damga (d-puan ile aynı kalıp)
+      puanYazdigim.add(canli.id);
       if(typeof depoKaydet === 'function') depoKaydet();
     }
     puanSira++;
+    puanCiz_();
+  }
+  function puanYokVer(){
+    const k = puanKuyruk && puanKuyruk[puanSira];
+    if(!k) return;
+    const canli = (veri.kitaplar || []).find(x => x.id === k.id);
+    if(canli && (!canli.puan || puanYazdigim.has(canli.id))){
+      canli.puan = null;       // geri dönülüp fikir değişmişse bu-oturum puanı düşer
+      canli.puanYok = true;
+      canli.g = Date.now();
+      if(typeof depoKaydet === 'function') depoKaydet();
+    }
+    puanSira++;
+    puanCiz_();
+  }
+  function puanGeri(){
+    // salt konum: veri değişmez — önceki ekran mevcut işaretiyle (vurgulu) gelir
+    if(puanSira > 0){ puanSira--; puanCiz_(); }
+  }
+  function puanYokGeri(id){
+    const canli = (veri.kitaplar || []).find(x => x.id === id);
+    if(canli && canli.puanYok){
+      canli.puanYok = false;   // işaret kalkar; sonraki başlatmada kuyruğa döner
+      canli.g = Date.now();
+      if(typeof depoKaydet === 'function') depoKaydet();
+    }
     puanCiz_();
   }
 
@@ -1106,9 +1195,32 @@
     '.zg-kitap-alt{display:block;font-size:.75rem;color:var(--muted2);margin-top:4px}',
     /* puan/yıl düğmeleri: .puan-btn görsel reçetesinin zg- kopyası (sınıf
        yeniden kullanılmaz — test seçici sözleşmesi) */
-    '.zg-puan-secim,.zg-yil-izgara{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}',
-    '.zg-puan-btn{width:40px;height:40px;border-radius:var(--r-md);border:1px solid var(--kontur);' +
-      'background:transparent;color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}',
+    '.zg-yil-izgara{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}',
+    /* v72: puan şeridi TEK SATIR bitişik segment — gap 0 + panel dolgusuna
+       taşan negatif kenar; 412px'te düğme başına >=40px dokunma hedefi
+       (ayrık düğme + aralık bu genişliğe 40px hedefle sığmıyordu, ölçüldü).
+       Kontur dili: dolgu yok, seçili durum kontur + %7 tint (gorunum-dugme
+       .aktif reçetesi). */
+    '.zg-puan-secim{display:flex;gap:0;flex-wrap:nowrap;margin:4px -10px 0}',
+    '.zg-puan-btn{flex:1 1 0;min-width:0;height:44px;border-radius:0;border:1px solid var(--kontur);' +
+      'margin-left:-1px;background:transparent;color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}',
+    '.zg-puan-btn:first-child{margin-left:0;border-radius:var(--r-md) 0 0 var(--r-md)}',
+    '.zg-puan-btn:last-child{border-radius:0 var(--r-md) var(--r-md) 0}',
+    '.zg-puan-btn.zg-secili{border-color:var(--brass);color:var(--brass);font-weight:600;' +
+      'position:relative;z-index:1;background:color-mix(in srgb,var(--brass) 7%,transparent)}',
+    '.zg-secili-metin{color:var(--brass);font-weight:600;text-decoration-color:var(--brass)}',
+    '.zg-onay{display:flex;align-items:baseline;gap:10px;justify-content:space-between;' +
+      'font-size:.8rem;color:var(--muted);margin:2px 0 6px;padding-bottom:8px;border-bottom:1px solid var(--cizgi)}',
+    '.zg-onay-metin{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}',
+    '.zg-sayac-satir{display:flex;justify-content:space-between;align-items:baseline}',
+    '.zg-kalan{font-size:.72rem;color:var(--muted2);font-variant-numeric:tabular-nums}',
+    /* büyük kapak levhası: ktPlate iz-plate dalı — yedek ad-karosu (iz-yedek)
+       reçetesi gorunum.js'tekiyle aynı ama o kural #liste.izgara'ya kilitli,
+       ortü kapsamı için burada yinelenir (davranış üreticisi TEK: plateKapakYedek) */
+    '.zg-pkapak{width:88px;height:auto;aspect-ratio:96/150;flex:0 0 auto}',
+    '.zg-pkapak .iz-yedek{position:absolute;inset:0;padding:7px 8px;overflow:hidden;' +
+      'font-family:var(--serif);font-size:.78rem;font-weight:600;color:var(--paper);' +
+      'line-height:1.25;text-align:left;overflow-wrap:break-word}',
     '.zg-yil-btn{padding:9px 12px;border-radius:var(--r-md);border:1px solid var(--kontur);' +
       'background:transparent;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}',
     '.zg-puan-btn:active,.zg-yil-btn:active{background:color-mix(in srgb,var(--brass) 12%,transparent)}',
@@ -1168,7 +1280,10 @@
         case 'zg-oto-geri-tum': otoGeriAlTum(); break;
         case 'zg-puanla': puanBaslat(); break;
         case 'zg-puan': puanVer(parseInt(el.dataset.v)); break;
-        case 'zg-atla': puanSira++; puanCiz_(); break;
+        case 'zg-atla': puanSira++; puanCiz_(); break;   // GEÇİCİ: puan yazılmaz, sonraki turda döner
+        case 'zg-puan-yok': puanYokVer(); break;
+        case 'zg-puan-geri': puanGeri(); break;
+        case 'zg-puanyok-geri': puanYokGeri(el.dataset.id); break;
         case 'zg-tarih': tarihBaslat(); break;
         case 'zg-yil': yilVer(parseInt(el.dataset.v)); break;
         case 'zg-atla-tarih': tarihSira++; tarihCiz_(); break;

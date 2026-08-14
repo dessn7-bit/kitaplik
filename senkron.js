@@ -30,7 +30,7 @@
   function bildir(m){ if(typeof toast === 'function') toast(m); }
 
   /* ---------- damgalama: depoKaydet sarmalayıcısı ---------- */
-  const ANLIK_SURUM = 8;
+  const ANLIK_SURUM = 9;
   /* SEMA_SURUM: PUT gövdesine yazılan VERİ şeması numarası (parmak izi deposu
      sürümü olan ANLIK_SURUM'dan ayrı — o iz biçimi için de artar). Odadaki sema
      yerelden BÜYÜKSE bu istemci eskidir: birleştirme + yazma tümüyle durur.
@@ -51,7 +51,11 @@
      v7: notlara ng (not damgası) + kitaba silinenNotlar (not mezar taşı)
      eklendi — dizi birleşimi ve not silme kalıcılığı için (SEMA_SURUM 1).
      v8: kitaba gsG (guncelSayfa damgası) eklendi — düzeltme/sıfırlama senkronda
-     korunur, damgalar eşitse koşullu max sürer (SEMA_SURUM 2). */
+     korunur, damgalar eşitse koşullu max sürer (SEMA_SURUM 2).
+     v9: kitaba puanYok eklendi (hızlı puanlama "hatırlamıyorum"). SEMA_SURUM
+     BİLİNÇLİ artmadı: eski istemcinin budaması yalnız işareti düşürür (kitap
+     yeniden kuyruğa girer — düşük zarar, gsG'deki veri kaybı sınıfı değil);
+     SEMA artışı ise güncellenmemiş cihazın senkronunu tümüyle dondururdu. */
   function anlikYukle(){
     try{
       const h = JSON.parse(localStorage.getItem(ANLIK_ANAHTAR));

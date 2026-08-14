@@ -1504,6 +1504,16 @@ function kitapNormalize(k){
     yayinevi: String(k.yayinevi || ''), yil: parseInt(k.yil) || null,
     durum: DURUM_AD[k.durum] ? k.durum : 'okunacak',
     puan: (k.puan >= 1 && k.puan <= 10) ? Math.round(k.puan) : null,
+    /* puanYok (v72): "hatırlamıyorum" — kullanıcı bu kitaba puan VERMEYECEĞİNİ
+       söyledi; hızlı puanlama kuyruğundan ve puansız sayımlarından KALICI düşer
+       (Atla geçicidir, sonraki turda yine sorulur). Geri alınabilir. Kitap
+       düzeyinde kullanıcı kararı olduğu için SENKRONLA taşınır (cihaz-yerel
+       defter öbür cihazda listeyi yeniden şişirirdi) ve yedeğe girer.
+       Şema değişti → ANLIK_SURUM 9 (senkron.js).
+       MUTABAKAT KAPISI (taze-göz): puanlı kitapta işaret İMKÂNSIZ — panel
+       dışındaki puan yazan yollar (detay şeridi, form) işareti bilmese de
+       normalize çelişkiyi düşürür. */
+    puanYok: k.puanYok === true && !(k.puan >= 1),
     guncelSayfa: parseInt(k.guncelSayfa) || 0,
     /* gsG: guncelSayfa alan damgası — yalnız KULLANICI ilerleme girişleri basar
        (ilerleme-kaydet, oturum bitir, bitir, yeniden-oku, form/toplu durum).
@@ -1768,6 +1778,12 @@ function ktPlate(k, sinif, imgSinif){
     return `<div class="plate ${sinif}"${veriNitelik}><img class="${ic}kp-bekliyor" data-kp-id="${escAttr(k.id)}"${k.kapak ? ` data-kp-yedek="${escAttr(kapakSrc(k.kapak))}"` : ''} alt=""></div>`;
   if(k.kapak)
     return `<div class="plate ${sinif}"${veriNitelik}><img${imgSinif ? ` class="${imgSinif}"` : ''} src="${escAttr(kapakSrc(k.kapak))}" alt="" loading="lazy"></div>`;
+  /* iz-plate bağlamında kapaksız kitap AD-KAROSU alır (v72) — ızgara üreticisi
+     plateHtml ve düşüş yolu plateKapakYedek ile aynı görsel sözleşme: metin
+     karonun üzerinde. Diğer bağlamlar (p-mini/d-plate/kt-sira) adı komşusunda
+     taşıdığı için sade çerçevede kalır. */
+  if(sinif && sinif.indexOf('iz-plate') >= 0)
+    return `<div class="plate ${sinif} p-bos"${veriNitelik}><div class="iz-yedek">${esc(k.ad)}</div></div>`;
   return `<div class="plate ${sinif} p-bos" aria-hidden="true"></div>`;
 }
 /* Kapak yüklenemeyince TEK yedek yolu (v44) — hem çekirdek hem gorunum.js bunu
@@ -1932,7 +1948,7 @@ function listeCiz(){
   const q = katla(durum.arama);
   let ks = veri.kitaplar.filter(k => {
     const durumUy = durum.filtre === 'hepsi' ? true
-      : durum.filtre === 'puansiz' ? (k.durum === 'bitti' && !k.puan)
+      : durum.filtre === 'puansiz' ? (k.durum === 'bitti' && !k.puan && !k.puanYok)
       : k.durum === durum.filtre;
     const etiketUy = !durum.etiket || (k.etiketler||[]).includes(durum.etiket);
     const metin = katla(k.ad + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.raf||'')
@@ -2316,6 +2332,7 @@ function formKaydet(){
     if(k){
       const eskiGS = k.guncelSayfa;
       Object.assign(k, ortak);
+      if(k.puan >= 1) k.puanYok = false;   // formdan puan girildi → işaret düşer (v72)
       if(k.durum === 'bitti' && k.sayfa) k.guncelSayfa = k.sayfa;
       if(k.durum === 'okunacak') k.guncelSayfa = 0;
       if(k.guncelSayfa !== eskiGS) k.gsG = Date.now();   // kullanıcı eliyle sayfa değişti
@@ -2739,7 +2756,8 @@ function istCiz(){
     </div>`;
 
   /* ---- TOPLAM: tüm zamanlar; payda ("N kitaptan") burada yaşar ---- */
-  const puansizBitmis = bittiler.filter(k => !k.puan).length;
+  // puanYok ("hatırlamıyorum", v72) sayımdan düşer — köprü ile kuyruk aynı kümeyi görsün
+  const puansizBitmis = bittiler.filter(k => !k.puan && !k.puanYok).length;
   html += `<section class="is-bolum" id="istBolumToplam">
     <div class="is-bolum-bas"><span class="kicker">Toplam</span></div>
     <div class="is-toplam">
@@ -2752,6 +2770,14 @@ function istCiz(){
     html += `<div class="mini-not" id="istPuansiz">${puansizBitmis} bitmiş kitap henüz puansız —
       <button class="d-link" data-act="puansiz-git">rafta göster, puanla</button> ·
       <button class="d-link" data-act="zg-puanla">hızlı puanla</button></div>`;
+  }else{
+    /* K1 (taze-göz, v72): son puansız da "hatırlamıyorum" işaretlenince bu blok
+       tümüyle kayboluyordu — geri alma yüzeyinin (hızlı puanlama bitti ekranı)
+       TEK giriş kapısı ölüyordu. İşaretli kitap varken köprü farklı metinle kalır. */
+    const puanYokSay = bittiler.filter(k => k.puanYok).length;
+    if(puanYokSay)
+      html += `<div class="mini-not" id="istPuansiz">${puanYokSay} bitmiş kitabı “hatırlamıyorum” işaretledin —
+        <button class="d-link" data-act="zg-puanla">gözden geçir / geri al</button></div>`;
   }
   html += `</section>`;
 
@@ -3533,6 +3559,7 @@ document.addEventListener('click', e => {
         if(k.guncelSayfa !== 0) k.gsG = Date.now();   // sıfırlama da kasıtlı giriştir
         k.guncelSayfa = 0;
         k.baslamaTarihi = bugun(); k.bitisTarihi = null; k.puan = null;
+        k.puanYok = false;   // "hatırlamıyorum" ESKİ okumanın hükmüydü — yeni döngüye miras kalmaz (v72)
         k.g = Date.now();
         // önceki okumadan açık oturum kaldıysa o okumaya ait sayılır: kaydederek kapat
         if(window.__oturum && window.__oturum.durumKapat) window.__oturum.durumKapat(k.id, true);
@@ -3667,6 +3694,7 @@ document.addEventListener('click', e => {
         if(!confirm(`"${k.ad}" okunacaklara dönsün mü?${silinecek ? ` Şunlar silinir: ${silinecek}.` : ''}`)) break;
         if(k.guncelSayfa !== 0){ k.guncelSayfa = 0; k.gsG = Date.now(); }  // sıfırlama da kasıtlı giriştir
         k.durum = 'okunacak'; k.baslamaTarihi = null; k.bitisTarihi = null; k.puan = null;
+        k.puanYok = false;   // "bu okuma sayılmasın" jesti işareti de sıfırlar (v72)
         k.g = Date.now();
         // Geri alma "bu okuma sayılmasın" jestidir: açık oturum kaydedilmeden atılır.
         if(window.__oturum && window.__oturum.durumKapat) window.__oturum.durumKapat(k.id, false);
@@ -3678,7 +3706,8 @@ document.addEventListener('click', e => {
       const p = parseInt(v);
       if(k && p >= 1 && p <= 10 && (k.durum === 'bitti' || k.durum === 'yarim')){
         if(k.puan !== p){
-          k.puan = p; k.g = Date.now();
+          k.puan = p; k.puanYok = false;   // puan verildi → "hatırlamıyorum" işareti düşer (v72)
+          k.g = Date.now();
           depoKaydet(); hepsiniCiz(); detayAc(k.id); toast(`Puanın kaydedildi: ★ ${p}/10`);
         }
       }
