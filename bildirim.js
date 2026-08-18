@@ -279,6 +279,63 @@
       }
     });
   }
+  /* ---------- görünür durum (v62) ----------
+     Tek satırlık düz metin parçaları; yeni sınıf yalnız `ht-` ad alanında
+     (proje kuralı). Ciltli sözleşmeleri: dolgu/yuvarlak kart eklenmez, mevcut
+     tipografi devralınır. */
+  function satir(metin){
+    const d = document.createElement('div');
+    d.className = 'ht-tani-satir';
+    d.textContent = metin;
+    return d;
+  }
+  function trGun(iso){
+    if(!iso) return '';
+    const t = new Date(iso);
+    return isNaN(t) ? '' : t.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+  }
+  /* Kuyruk cümlesi. 0 ise SEBEP + NE YAPILACAĞI söylenir — "bildirim gelmiyor"
+     şikâyetinin kökü tam olarak buydu. */
+  async function kuyrukSatiri(){
+    let o;
+    try{ o = await tazele(); }catch(e){ o = { vadeler: [] }; }
+    const bugun = gunIso();
+    const bekleyen = o.vadeler.filter(v => v <= bugun).length;
+    if(!o.vadeler.length)
+      return 'Tekrar kuyruğunda alıntı YOK — bu yüzden bildirim gönderilmeyecek. '
+        + 'Önce bir kitaba alıntı ekleyip tekrara al.';
+    if(!bekleyen)
+      return 'Kuyrukta ' + o.vadeler.length + ' alıntı var; bugün vadesi gelen yok. '
+        + 'Sıradaki vade: ' + o.vadeler[0] + ' — o güne kadar bildirim gelmez.';
+    return 'Bugün vadesi gelen ' + bekleyen + ' alıntı var (kuyrukta toplam '
+      + o.vadeler.length + '). Bildirim ' + saatMetni(ayarYukle().saat) + ' civarı gelir.';
+  }
+  /* Sunucudaki kaydı SORAR — tarayıcı "açık" derken sunucuda kayıt olmayabilir.
+     Ağ yoksa sessiz kalmak yerine bunu da söyler (dürüst belirsizlik). */
+  async function sunucuSatiriEkle(kutu, abonelik){
+    const yer = satir('Sunucu durumu sorgulanıyor…');
+    kutu.appendChild(yer);
+    try{
+      const y = await fetch(SUNUCU + '/abone-durum?endpoint=' +
+        encodeURIComponent(abonelik.endpoint));
+      if(!y.ok) throw new Error('durum');
+      const d = await y.json();
+      if(!d.kayitli){
+        yer.textContent = 'Sunucuda kayıt YOK — hatırlatmayı kapatıp yeniden aç.';
+        return;
+      }
+      const parca = ['Sunucuda kayıtlı'];
+      if(d.olusturma) parca.push(trGun(d.olusturma) + ' tarihinden beri');
+      parca.push('saat ' + saatMetni(d.saat));
+      yer.textContent = parca.join(' · ') + '.';
+      kutu.appendChild(satir(d.sonGonderim
+        ? 'Son bildirim: ' + trGun(d.sonGonderim) + '.'
+        : 'Henüz hiç bildirim gönderilmedi.'));
+    }catch(e){
+      yer.textContent = 'Sunucu durumu okunamadı (çevrimdışı olabilirsin).';
+    }
+  }
+
   async function durumYaz(){
     const el = document.getElementById('htDurum');
     if(!el) return;
@@ -301,8 +358,20 @@
     const a = ayarYukle();
     const abonelik = a.acik ? await abonelikGetir() : null;
     if(a.acik && abonelik){
-      el.textContent = 'Açık — tekrar vakti gelen alıntın varsa her gün ' + saatMetni(a.saat) +
-        ' civarı hatırlatılır (günde en fazla bir bildirim).';
+      /* v62: eski hâli yalnız "Açık — ... hatırlatılır" diyordu. Kuyruk BOŞKEN
+         de aynı cümleyi kuruyordu; kullanıcı iki gün bildirim bekledi, sistem
+         ise (doğru biçimde) hiç göndermedi çünkü tekrar kuyruğunda alıntı yok.
+         Sessiz-doğru davranış, kullanıcı için arızadan ayırt edilemez —
+         bu yüzden durum artık AÇIKÇA yazılır. */
+      el.textContent = 'Açık — her gün ' + saatMetni(a.saat) +
+        ' civarı, günde en fazla bir bildirim.';
+      const kutu = document.createElement('div');
+      kutu.className = 'ht-tani';
+      kutu.appendChild(satir(await kuyrukSatiri()));
+      el.appendChild(kutu);
+      /* Sunucu tarafı ayrı bir gerçek: tarayıcıda abonelik durup sunucuda
+         kaydın düşmüş olması mümkün. Ölçülmeden "açık" denmez. */
+      sunucuSatiriEkle(kutu, abonelik);
       g(false, true, true);
     }else{
       if(a.acik && !abonelik){ a.acik = false; ayarKaydet(a); }   // abonelik dışarıdan silinmiş — dürüst duruma dön

@@ -133,7 +133,16 @@ test.describe('G51 worker uçları', () => {
     await w.fetch(istekYap('/abone', gecerliGovde()), env);
     const durumUrl = '/abone-durum?endpoint=' + encodeURIComponent(ABONELIK.endpoint);
     let d = await (await w.fetch(istekYap(durumUrl), env)).json();
-    expect(d).toEqual({ kayitli: true, saat: 9, dilim: 'UTC', vade: '2026-08-11' });
+    /* v62: Ayarlar'ın görünür durumu için olusturma + sonGonderim EKLENDİ.
+       Anahtar kümesi yine TAM sınanır — kazara alan sızması yakalansın
+       (abonelik nesnesi, endpoint, anahtarlar buraya ASLA girmemeli). */
+    expect(Object.keys(d).sort()).toEqual(['dilim', 'kayitli', 'olusturma', 'saat', 'sonGonderim', 'vade']);
+    expect(d.kayitli).toBe(true);
+    expect(d.saat).toBe(9);
+    expect(d.dilim).toBe('UTC');
+    expect(d.vade).toBe('2026-08-11');
+    expect(typeof d.olusturma).toBe('string');
+    expect(d.sonGonderim).toBe(null);       // henüz gönderim yok
     expect((await w.fetch(istekYap('/abone-guncelle', { endpoint: ABONELIK.endpoint, vade: '2026-09-01', saat: 21 }), env)).status).toBe(200);
     d = await (await w.fetch(istekYap(durumUrl), env)).json();
     expect(d.vade).toBe('2026-09-01');
@@ -231,6 +240,124 @@ test.describe('G51 worker uçları', () => {
       expect(metin.includes(ozelD)).toBe(false);
       expect(metin.includes('VAPID_OZEL')).toBe(false);
     }
+  });
+
+  /* ===== v62 TEŞHİS UÇLARI =====
+     Gerçek arıza: iki gün bildirim gelmedi, ama "worker ayakta" dışında
+     ölçülebilir hiçbir şey yoktu. /saglik yalnız {durum:'calisiyor'}
+     dönüyordu; cron'un koşup koşmadığı, kaç abonenin tarandığı, NEDEN
+     atlandığı dışarıdan görülemiyordu. Kök neden (vade:null) ancak bu
+     sayaçlarla kanıtlanabildi.
+     (Mutasyon 3: atlananVadeYok sayacı kaldırılır → sebep vakası kırmızı.
+      Mutasyon 4: gecmisYaz çağrısı kaldırılır → /cron-gecmis vakası kırmızı.) */
+
+  test('v62 /saglik: abone sayısı + son cron özeti; cron koşmadan sonCron null', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    let y = await w.fetch(istekYap('/saglik'), env);
+    let d = await y.json();
+    expect(d.durum).toBe('calisiyor');
+    expect(d.aboneSayisi).toBe(0);
+    expect(d.sonCron).toBe(null);           // cron HİÇ koşmamış
+    expect(d.turSayisi).toBe(0);
+
+    await w.fetch(istekYap('/abone', gecerliGovde()), env);
+    pushServisi(201);
+    await w.gonderTuru(env, new Date('2026-08-12T09:30:00Z'));
+    d = await (await w.fetch(istekYap('/saglik'), env)).json();
+    expect(d.aboneSayisi).toBe(1);
+    expect(d.sonCron.taranan).toBe(1);
+    expect(d.sonCron.gonderilen).toBe(1);
+    expect(d.turSayisi).toBe(1);
+    expect(typeof d.sonCronDkOnce).toBe('number');
+  });
+
+  test('v62 cron özeti ATLAMA SEBEBİNİ ayırır (vade yok / saat / günlük)', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    // vade null — kullanıcının gerçek durumu: kuyrukta alıntı yok
+    await w.fetch(istekYap('/abone', gecerliGovde({ vade: null })), env);
+    pushServisi(201);
+    await w.gonderTuru(env, new Date('2026-08-12T09:30:00Z'));
+    let t = (await (await w.fetch(istekYap('/cron-gecmis'), env)).json()).turler;
+    expect(t[0].taranan).toBe(1);
+    expect(t[0].gonderilen).toBe(0);
+    expect(t[0].atlananVadeYok).toBe(1);      // ← kök nedeni gösteren sayaç
+    expect(t[0].atlananSaat).toBe(0);
+
+    // saat tutmayan tur
+    await w.gonderTuru(env, new Date('2026-08-12T15:30:00Z'));
+    t = (await (await w.fetch(istekYap('/cron-gecmis'), env)).json()).turler;
+    expect(t[1].atlananSaat).toBe(1);
+    expect(t[1].atlananVadeYok).toBe(0);
+
+    // vadesi gelmiş + gönderildi, sonra aynı gün ikinci tur → günlük işaret
+    const env2 = ortamKur();
+    await w.fetch(istekYap('/abone', gecerliGovde()), env2);
+    pushServisi(201);
+    await w.gonderTuru(env2, new Date('2026-08-12T09:10:00Z'));
+    await w.gonderTuru(env2, new Date('2026-08-12T09:50:00Z'));
+    const t2 = (await (await w.fetch(istekYap('/cron-gecmis'), env2)).json()).turler;
+    expect(t2[0].gonderilen).toBe(1);
+    expect(t2[1].gonderilen).toBe(0);
+    expect(t2[1].atlananGunluk).toBe(1);
+  });
+
+  test('v62 /cron-gecmis DÖNEN tampon — sınırsız büyümez', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    await w.fetch(istekYap('/abone', gecerliGovde({ saat: 15 })), env);
+    pushServisi(201);
+    for (let i = 0; i < 30; i++) await w.gonderTuru(env, new Date('2026-08-12T09:30:00Z'));
+    const t = (await (await w.fetch(istekYap('/cron-gecmis'), env)).json()).turler;
+    expect(t.length).toBe(24);                // CRON_GECMIS tavanı
+  });
+
+  test('v62 GİZLİLİK: teşhis uçları endpoint/hash/metin SIZDIRMAZ', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    await w.fetch(istekYap('/abone', gecerliGovde()), env);
+    pushServisi(201);
+    await w.gonderTuru(env, new Date('2026-08-12T09:30:00Z'));
+    const saglik = await (await w.fetch(istekYap('/saglik'), env)).text();
+    const gecmis = await (await w.fetch(istekYap('/cron-gecmis'), env)).text();
+    for (const govde of [saglik, gecmis]) {
+      expect(govde).not.toContain(ABONELIK.endpoint);
+      expect(govde).not.toContain('fcm.googleapis.com');
+      expect(govde).not.toContain('p256ORNEK');
+      expect(govde).not.toContain('authORNEK');
+      expect(govde).not.toContain('abone:');       // hash anahtarı da geçmez
+      expect(govde).not.toContain('TESTACIK');
+      expect(govde).not.toContain('"d"');          // VAPID özel anahtar alanı
+    }
+  });
+
+  test('v62 /test-push: kayıtlı endpoint için gönderir, koşulları atlar, GÜNLÜK İŞARET YAZMAZ', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    // saat tutmuyor + vade null: gerçek cron GÖNDERMEZ ama test push gönderir
+    await w.fetch(istekYap('/abone', gecerliGovde({ saat: 3, vade: null })), env);
+    const istekler = pushServisi(201);
+    const y = await w.fetch(istekYap('/test-push', { endpoint: ABONELIK.endpoint }), env);
+    const d = await y.json();
+    expect(d.sonuc).toBe('tamam');
+    expect(d.durum).toBe(201);                     // push servisinin GERÇEK kodu
+    expect(istekler.length).toBe(1);
+    expect(istekler[0].secenek.body).toBeUndefined();   // payload'sız sözleşmesi sürüyor
+    // gerçek hatırlatmayı tüketmemeli
+    expect([...env.KV.depo.keys()].filter(k => k.startsWith('gonderim:'))).toEqual([]);
+  });
+
+  test('v62 /test-push: kayıtsız endpoint 404; ölü abonelik (410) KV\'den silinir', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    expect((await w.fetch(istekYap('/test-push', { endpoint: 'https://fcm.googleapis.com/yok' }), env)).status).toBe(404);
+    await w.fetch(istekYap('/abone', gecerliGovde()), env);
+    pushServisi(410);
+    const d = await (await w.fetch(istekYap('/test-push', { endpoint: ABONELIK.endpoint }), env)).json();
+    expect(d.sonuc).toBe('olu');
+    expect(d.durum).toBe(410);
+    expect([...env.KV.depo.keys()].filter(k => k.startsWith('abone:'))).toEqual([]);
   });
 
   test('worker kaynak kopyaları özdeş (canlı deploy ↔ repo arşivi, CRLF hariç)', async () => {
@@ -417,6 +544,85 @@ test.describe('G51 sayfa tarafı', () => {
     await expect(page.locator('#htDurum')).toContainText('site ayarları');
     await expect(page.locator('#ayBolumHatirlatma [data-act="ht-ac"]')).toBeHidden();
     await expect(page.locator('#ayBolumHatirlatma [data-act="ht-kapat"]')).toBeHidden();
+  });
+
+  /* ===== v62 GÖRÜNÜR DURUM =====
+     GERÇEK ARIZA: kullanıcı hatırlatmayı açtı, saatini seçti, iki gün bekledi;
+     hiç bildirim gelmedi. Sistem DOĞRU çalışıyordu — tekrar kuyruğunda hiç
+     alıntı yoktu, sunucu da "vade yoksa gönderme" kuralını uyguluyordu.
+     Ama Ayarlar yalnız "Açık — ... hatırlatılır" diyordu; doğru-sessiz davranış
+     kullanıcı için arızadan ayırt edilemiyordu. Bu vakalar o sessizliği kilitler.
+     (Mutasyon 5: kuyrukSatiri'nın boş-kuyruk dalı kaldırılır → vaka kırmızı.) */
+  /* Testte gerçek service worker YOK (yardim.js SW'yi bloklar) ve gerçek push
+     aboneliği alınamaz. durumYaz'ın "açık" dalına girebilmek için push yığını
+     taklit edilir: izin granted + kayıtlı abonelik döndüren pushManager. */
+  async function hatirlatmaAc(page, sunucuYanit) {
+    page.__agAyar.bildirim = sunucuYanit || { kayitli: true, saat: 12, dilim: 'Europe/Istanbul',
+      vade: null, olusturma: '2026-08-14T17:57:03.512Z', sonGonderim: null };
+    await page.addInitScript(() => {
+      try { Object.defineProperty(Notification, 'permission', { value: 'granted', configurable: true }); } catch (e) {}
+      const abonelik = {
+        endpoint: 'https://fcm.googleapis.com/fcm/send/test-abone',
+        keys: { p256dh: 'p', auth: 'a' },
+        toJSON() { return { endpoint: this.endpoint, keys: this.keys }; }
+      };
+      const kayit = {
+        pushManager: { getSubscription: async () => abonelik, subscribe: async () => abonelik },
+        showNotification: async () => {}
+      };
+      try {
+        Object.defineProperty(navigator, 'serviceWorker', {
+          configurable: true,
+          value: { getRegistration: async () => kayit, register: async () => kayit,
+            ready: Promise.resolve(kayit), controller: null, addEventListener() {} }
+        });
+      } catch (e) {}
+      localStorage.setItem('kk_bildirim_v1', JSON.stringify({ acik: true, saat: 12, sonVade: null }));
+    });
+  }
+
+  test('v62 kuyruk BOŞKEN dürüst mesaj: "bildirim gönderilmeyecek" + ne yapılacağı', async ({ page }) => {
+    await hatirlatmaAc(page);
+    await tohumla(page, [sahteKitap({ ad: 'Notsuz Kitap' })]);   // hiç alıntı yok
+    await rafAc(page);
+    await ayarlarAc(page);
+    const d = page.locator('#htDurum');
+    await expect(d).toContainText('Tekrar kuyruğunda alıntı YOK');
+    await expect(d).toContainText('gönderilmeyecek');
+    await expect(d).toContainText('alıntı ekle');
+  });
+
+  test('v62 kuyrukta alıntı VARKEN sayı ve vade söylenir (boş mesajı ÇIKMAZ)', async ({ page }) => {
+    await hatirlatmaAc(page);
+    const bugun = bugunISO();
+    await tohumla(page, [sahteKitap({ ad: 'Alıntılı Kitap', notlar: [
+      { id: 'n1', tip: 'alinti', metin: 'Deneme alıntısı', tarih: bugun,
+        tekrarDurum: 'aktif', tekrarSonraki: bugun }
+    ] })]);
+    await rafAc(page);
+    await ayarlarAc(page);
+    const d = page.locator('#htDurum');
+    await expect(d).toContainText('Bugün vadesi gelen 1 alıntı');
+    await expect(d).not.toContainText('alıntı YOK');
+  });
+
+  test('v62 sunucuda kayıt YOKKEN dürüst mesaj (tarayıcı "açık" dese bile)', async ({ page }) => {
+    await hatirlatmaAc(page, { kayitli: false });
+    await tohumla(page, [sahteKitap({ ad: 'Notsuz Kitap' })]);
+    await rafAc(page);
+    await ayarlarAc(page);
+    await expect(page.locator('#htDurum')).toContainText('Sunucuda kayıt YOK');
+  });
+
+  test('v62 sunucu durumu: kayıt tarihi + "henüz hiç bildirim gönderilmedi"', async ({ page }) => {
+    await hatirlatmaAc(page);   // sonGonderim: null
+    await tohumla(page, [sahteKitap({ ad: 'Notsuz Kitap' })]);
+    await rafAc(page);
+    await ayarlarAc(page);
+    const d = page.locator('#htDurum');
+    await expect(d).toContainText('Sunucuda kayıtlı');
+    await expect(d).toContainText('14 Ağustos');
+    await expect(d).toContainText('Henüz hiç bildirim gönderilmedi');
   });
 
   test('saat seçici 24 seçenek, tercih localStorage\'da kalıcı', async ({ page }) => {

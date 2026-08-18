@@ -883,6 +883,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .form-alt[hidden]{display:none}
 /* ---- HATIRLATMA (ht-) — mantık bildirim.js'te ---- */
 .ht-durum{font-size:.85rem;color:var(--muted);margin:10px 0;line-height:1.5}
+/* v62 teşhis satırları: ayrı KART değil, aynı metin bloğunun devamı —
+   Ciltli sözleşmesi gereği dolgu/yuvarlak kart eklenmez, yalnız ince bir
+   ayraç ve nefes payı. */
+.ht-tani{margin-top:8px;border-top:1px solid var(--kontur);padding-top:8px}
+.ht-tani-satir{margin-top:4px}
 .ht-saat-satir{display:flex;align-items:center;gap:10px;margin:10px 0}
 .ht-saat-etiket{font-size:.85rem;color:var(--muted);margin:0}
 .ht-saat-sec{width:auto;min-width:88px}
