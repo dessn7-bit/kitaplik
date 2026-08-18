@@ -1002,6 +1002,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
       <span class="count-label" id="sayac"></span>
       <select id="etiketFiltre" aria-label="Etiket filtresi"><option value="">Tüm etiketler</option></select>
       <select id="sirala" aria-label="Sıralama">
+        <option value="bitis">Son bitirilen</option>
         <option value="eklenme">Son eklenen</option>
         <option value="baslik">Ada göre</option>
         <option value="yazar">Yazara göre</option>
@@ -1502,10 +1503,33 @@ let veri = depoYukle();
    yazılmamış bir kural üretirdi.
    sahiplikFiltre:'sahip' — Kütüphane "elimdekiler" demek. Kayıp riski yok:
    kitapNormalize sahiplik'i 'istek' değilse 'sahip'e sabitliyor. */
-let durum = { filtre:'hepsi', arama:'', etiket:'', sirala:'eklenme', sekme:'ana',
+let durum = { filtre:'hepsi', arama:'', etiket:'', sirala:'bitis', sekme:'ana',
   formDuzenId:null, formDurum:'okunacak', formPuan:null, formKapak:null,
   detayId:null, notTip:'not', alintiArama:'', araTip:'ad',
   gelenKitapId:null, gelenTip:'alinti', sahiplikFiltre:'sahip' };
+
+/* ---------- sıralama tercihi (v74) ----------
+   Bulgu: sıralama seçimi HİÇBİR yerde saklanmıyordu — her yenilemede
+   varsayılana dönüyordu (kk_* anahtarları arasında sıralama yoktu).
+   Varsayılan bu sürümde 'eklenme' → 'bitis' oldu; gerekçe: kütüphanenin
+   239/242'si bitmiş kitap ve 'eklenme' = Goodreads'e ekleme günü (çoğu için
+   2020 toplu aktarımı), oysa kullanıcının beklentisi "en son okuduğum üstte".
+   KAYITLI TERCİHE SAYGI: anahtar YOKSA varsayılan uygulanır (kk_gorunum_v1
+   deseni); kullanıcı bir kez seçtiyse o seçim her açılışta geri gelir. */
+const SIRALA_ANAHTAR = 'kk_sirala_v1';
+const SIRALAMALAR = ['bitis', 'eklenme', 'baslik', 'yazar', 'puan', 'sayfa'];
+function siralaYukle(){
+  try{
+    const ham = localStorage.getItem(SIRALA_ANAHTAR);
+    /* anahtar yok = kullanıcı hiç seçim yapmamış → varsayılana dokunma */
+    if(ham !== null && SIRALAMALAR.indexOf(ham) >= 0) durum.sirala = ham;
+  }catch(e){}
+  const s = document.getElementById('sirala');
+  if(s) s.value = durum.sirala;
+}
+function siralaKaydet(){
+  try{ localStorage.setItem(SIRALA_ANAHTAR, durum.sirala); }catch(e){}
+}
 
 /* ---------- depo + geriye uyumlu göç ---------- */
 function kitapNormalize(k){
@@ -1974,13 +1998,30 @@ function listeCiz(){
     return durumUy && etiketUy && sahiplikUy && (!q || metin.includes(q));
   });
   const cmp = {
+    /* v74 "Son bitirilen": bitisTarihi 'YYYY-MM-DD' STRING'dir (eklenme ise ms
+       SAYI) — sayısal fark değil localeCompare kullanılır. Tarihi OLMAYAN kitap
+       listeden ATILMAZ, kuyruğa düşer: ölçüm (2026-08-18 yedeği) tarihsiz 79
+       kitabın 69'unun 2020 toplu aktarımı olduğunu, son eklenen 50 kitabın
+       %86'sının tarihli olduğunu gösterdi — yani kuyruğa düşenler "en son
+       okuduklarım" değil, tarihi hiç girilmemiş eski aktarım. Kuyruk kendi
+       içinde eklenmeye göre sıralanır (kararlı ve anlamlı kalsın). */
+    bitis:(a,b) => {
+      const A = a.bitisTarihi || '', B = b.bitisTarihi || '';
+      if(!A && !B) return (b.eklenme||0) - (a.eklenme||0);
+      if(!A) return 1;
+      if(!B) return -1;
+      return B.localeCompare(A);
+    },
     eklenme:(a,b) => (b.eklenme||0) - (a.eklenme||0),
     baslik:(a,b) => a.ad.localeCompare(b.ad,'tr'),
     yazar:(a,b) => (a.yazar||'').localeCompare(b.yazar||'','tr') || a.ad.localeCompare(b.ad,'tr'),
     puan:(a,b) => (b.puan||0) - (a.puan||0),
     sayfa:(a,b) => (b.sayfa||0) - (a.sayfa||0)
   }[durum.sirala];
-  ks.sort(cmp);
+  /* cmp yoksa sort(undefined) nesneleri metne çevirip sıralar (çöp sıra).
+     Beyaz liste zaten koruyor; bu, tanınmayan bir değerin kaçak yoldan
+     (eski/elle yazılmış tercih) gelmesine karşı emniyet kemeri. */
+  if(cmp) ks.sort(cmp);
 
   /* Sayaç (v43 D1): varsayılan durumda başlıktaki "N cilt" ile TEKRAR üretmez —
      yalnız süzgeç daraltıyorken tam sayım yazar. Varsayılanda tek istisna
@@ -3830,7 +3871,7 @@ document.getElementById('arama').addEventListener('input', e => {
   durum.arama = e.target.value.trim(); listeCiz();
 });
 document.getElementById('sirala').addEventListener('change', e => {
-  durum.sirala = e.target.value; listeCiz();
+  durum.sirala = e.target.value; siralaKaydet(); listeCiz();
 });
 document.getElementById('etiketFiltre').addEventListener('change', e => {
   durum.etiket = e.target.value; listeCiz();
@@ -3876,6 +3917,7 @@ if('serviceWorker' in navigator){
   });
 }
 
+siralaYukle();
 hepsiniCiz();
 temaDugmeleriCiz();
 sekmeGorunum(durum.sekme);

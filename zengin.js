@@ -215,10 +215,48 @@
   }
 
   /* ---------- eksik alan sayımı ---------- */
+  /* v74 kapak tazeleme yardımcıları.
+     ÖLÜ KAPAK: kitapta kapak URL'si VAR ama OpenLibrary o ISBN için kapak
+     tutmuyor. ÖLÇÜM (kullanıcının 174 kapaklı kütüphanesi, 2026-08-18):
+     `?default=false` eklenmiş URL, kapağı OLMAYAN 37 ISBN'in 37'sinde HTTP 404,
+     kapağı OLAN 137'sinin 137'sinde HTTP 200 döndü — TAM ayrım, sıfır çakışma.
+     Bu yüzden piksel/parlaklık sezgisi KULLANILMAZ: ölçüldü ve kümedeki en
+     düşük varyanslı görselin (Oxford "Peace") gerçek bir kapak olduğu görüldü;
+     eşik, kullanıcının çok sayıda sahip olduğu krem/minimal klasik baskıyı
+     (İş Bankası, Gallimard) silerdi. HTTP durumu kesin, ucuz ve yanlış
+     pozitif üretmez.
+     EMNİYET YÖNÜ: yalnız KESİN 404 ölü sayılır; ağ hatası/CORS/başka durum →
+     kapak GEÇERLİ kabul edilir (geçerli kapağı ezmemek esastır). */
+  async function olKapakOluMu(u){
+    if(!u || String(u).indexOf('covers.openlibrary.org') < 0) return false;
+    const src = window.kapakSrc ? window.kapakSrc(u) : u;
+    try{
+      const r = await fetch(src, { method: 'HEAD' });
+      return r.status === 404;
+    }catch(e){ return false; }
+  }
+  /* Google Books thumbnail temizliği: http:// → https:// (karma içerik engellenir)
+     ve &edge=curl kaldırılır (kıvrık kenar çizimi levha diline uymuyor).
+     ÖLÇÜM: ölü kapaklı 37 kitabın isbn: sorgusunda dönen 13 thumbnail'in
+     13'ü (%100) http:// ile başlıyordu, 1'i edge=curl taşıyordu. */
+  function kapakTemizle(u){
+    return String(u || '')
+      .replace(/^http:\/\//i, 'https://')
+      .replace(/([?&])edge=curl(&|$)/gi, (m, p1, p2) => p2 === '&' ? p1 : '');
+  }
+  function kapakAdayBul(liste){
+    const a = (liste || []).find(v => v && v.imageLinks && v.imageLinks.thumbnail);
+    return a ? kapakTemizle(a.imageLinks.thumbnail) : '';
+  }
   function alanBos(k, alan){
     if(alan === 'sayfa' || alan === 'yil') return !k[alan];
     return !(k[alan] && String(k[alan]).trim());
   }
+  /* BİLİNEN SINIR (v74): kapak sayacı ÖLÜ kapakları göremez — ölülük ancak ağ
+     isteğiyle (HTTP 404) anlaşılır, sayaç ise eşzamanlı koşar. Yani "N kitapta
+     kapak eksik" sayısı GERÇEKTEN eksik olandan düşüktür (kullanıcının
+     verisinde 68 yazar, tarama 105'e kadar dokunur). Eksik göstermek fazla
+     göstermekten iyidir; tarama sonunda önizleme gerçek sayıyı verir. */
   function eksikSayim(){
     const s = { toplam: 0 };
     ALANLAR.forEach(a => { s[a] = 0; });
@@ -287,7 +325,27 @@
      hâlâ boşken (kategori kaynağını genişletmek için) atılır. */
   async function kitapSorgula(k){
     const eksikler = ALANLAR.filter(a => alanBos(k, a));
+    /* v74: kapak alanı DOLU görünse de OpenLibrary o ISBN'de kapak tutmuyorsa
+       (?default=false → 404) kitap kapaksız sayılır ve tazelenir. Kullanıcının
+       kütüphanesinde bu durumda 37 kitap ölçüldü; alan dolu olduğu için
+       zenginleştirmeye hiç girmiyorlardı. Tek ek istek, yalnız OpenLibrary
+       kapağı olan kitaplar için. */
+    let kapakOlu = false;
+    if(eksikler.indexOf('kapak') < 0 && await olKapakOluMu(k.kapak)){
+      eksikler.push('kapak'); kapakOlu = true;
+    }
     if(!eksikler.length) return null;
+    /* v74 KAYNAK SIRASI — kapak için ÖNCE isbn: sorgusu.
+       Gerekçe (ölçüm): ISBN sorgusu BASKIYA birebirdir; başlık eşleşmesi farklı
+       baskının kapağını getirebiliyor. Ölü kapaklı 37 kitapta isbn: sorgusu
+       13 kapak buldu (%35,1). İstek yalnız kapak eksikken ve ISBN varken atılır
+       (kota: kitap başına +1). Diğer alanlar mevcut ad+yazar yolundan gelir —
+       tür/sayfa/yıl mantığı DEĞİŞMEDİ. */
+    let isbnAdaylar = null;
+    if(eksikler.indexOf('kapak') >= 0 && k.isbn && String(k.isbn).trim()){
+      isbnAdaylar = await gbSor('isbn:' + String(k.isbn).replace(/[^0-9Xx]/g, ''));
+      await bekle(ARALIK_MS);
+    }
     const dar = 'intitle:"' + k.ad + '"' + (k.yazar ? ' inauthor:"' + k.yazar + '"' : '');
     const adaylar1 = await gbSor(dar);
     let aday = adaylar1.find(v => baslikUyar(k.ad, v.title));
@@ -310,7 +368,12 @@
         tur = turCevir(kategoriTopla(adaylar2, k.ad));
       }
     }
-    if(!aday) return null;
+    /* Başlık eşleşmesi tutmasa bile ISBN'den gelen kapak KAYBOLMAZ: isbn:
+       sorgusu baskıya birebir olduğu için başlık doğrulamasına ihtiyaç duymaz.
+       (Ölü kapaklı kitapların bir kısmında başlık eşleşmesi tutmuyor.) */
+    const isbnKapak = kapakAdayBul(isbnAdaylar);
+    if(!aday) return isbnKapak ? (kapakOlu ? { kapak: isbnKapak, __kapakOlu: true }
+                                           : { kapak: isbnKapak }) : null;
     const kimlik = aday.industryIdentifiers || [];
     const i13 = kimlik.find(x => x && x.type === 'ISBN_13');
     const i10 = kimlik.find(x => x && x.type === 'ISBN_10');
@@ -328,8 +391,16 @@
       const y = parseInt(String(aday.publishedDate).slice(0, 4));
       if(y > 1400 && y <= new Date().getFullYear() + 1) bulunan.yil = y;
     }
-    if(eksikler.indexOf('kapak') >= 0 && aday.imageLinks && aday.imageLinks.thumbnail)
-      bulunan.kapak = aday.imageLinks.thumbnail.replace('http://', 'https://');
+    /* Kapak: isbn: sonucu öncelikli, yoksa başlık-eşleşen aday. İkisi de yoksa
+       alan BOŞ KALIR — uydurma kapak yazılmaz. OpenLibrary'ye "son çare" olarak
+       DÖNÜLMEZ (karar): tazelenen kapakların 37'si zaten OpenLibrary'nin
+       kapağı olmayan ISBN'leri; doğrulanmamış bir URL yazmak aynı ölü-kapak
+       kusurunu yeniden üretirdi. */
+    if(eksikler.indexOf('kapak') >= 0){
+      const kpk = isbnKapak || (aday.imageLinks && aday.imageLinks.thumbnail
+        ? kapakTemizle(aday.imageLinks.thumbnail) : '');
+      if(kpk){ bulunan.kapak = kpk; if(kapakOlu) bulunan.__kapakOlu = true; }
+    }
     return Object.keys(bulunan).length ? bulunan : null;
   }
 
@@ -910,7 +981,12 @@
     return { alanSayi, kitapSayi };
   }
   /* UYGULA: yalnız hâlâ BOŞ olan alana yazar — dolu alan (bu arada elle
-     doldurulmuş olsa bile) KORUNUR; çelişen değer yazılmaz. */
+     doldurulmuş olsa bile) KORUNUR; çelişen değer yazılmaz.
+     v74 TEK İSTİSNA — ÖLÜ KAPAK: kapak alanı dolu görünse de OpenLibrary o
+     ISBN için kapak tutmuyorsa (sorgu anında ?default=false → HTTP 404 ölçüldü)
+     yeni kapak YAZILIR. Bu istisna olmadan tazeleme, asıl hedefi olan 37 kitapta
+     kapağı bulup sessizce yazmadan geçerdi. İstisna YALNIZ kapak alanına ve
+     YALNIZ ölü damgası taşıyan kayda uygulanır; geçerli kapak asla ezilmez. */
   function uygula(kdurum){
     let kitapN = 0, alanN = 0;
     Object.entries(kdurum.bulunan).forEach(([id, b]) => {
@@ -919,7 +995,8 @@
       let yazildi = false;
       ALANLAR.forEach(a => {
         if(b[a] === undefined) return;
-        if(!alanBos(k, a)) return;   // DOLU ALANA DOKUNMA
+        const oluKapakIstisnasi = (a === 'kapak' && b.__kapakOlu === true);
+        if(!alanBos(k, a) && !oluKapakIstisnasi) return;   // DOLU ALANA DOKUNMA
         k[a] = b[a];
         yazildi = true; alanN++;
       });
