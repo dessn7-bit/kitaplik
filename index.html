@@ -888,6 +888,14 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
    ayraç ve nefes payı. */
 .ht-tani{margin-top:8px;border-top:1px solid var(--kontur);padding-top:8px}
 .ht-tani-satir{margin-top:4px}
+/* v63 tetik satırları: .ht-saat-satir'in ikizi. Kart/zemin/gölge YOK —
+   Ayarlar'ın düz metin dili sürüyor; anahtar mevcut .btn dilinden türer. */
+.ht-tetikler{margin:10px 0}
+.ht-tetik-satir{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0}
+.ht-tetik-ad{font-size:.85rem;color:var(--muted)}
+.ht-anahtar{font-size:.78rem;padding:4px 12px;min-width:74px}
+.ht-anahtar[aria-pressed="true"]{border-color:var(--brass);color:var(--brass)}
+.ht-tetik-not{font-size:.78rem;color:var(--muted2);margin:2px 0 0}
 .ht-saat-satir{display:flex;align-items:center;gap:10px;margin:10px 0}
 .ht-saat-etiket{font-size:.85rem;color:var(--muted);margin:0}
 .ht-saat-sec{width:auto;min-width:88px}
@@ -1112,6 +1120,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
         <p class="ay-not">Tekrar vakti gelen alıntın olduğunda günde en fazla bir bildirim.
       Alıntıların cihazında kalır — sunucuya yalnız hatırlatma saati ve bir sonraki tekrar günü gider.</p>
         <div class="ht-durum" id="htDurum">Hesaplanıyor…</div>
+        <!-- v63 tetik listesi. YENİ .ay-bolum AÇILMADI: g48 vakaları sekiz
+             bölüm id'sini ve kicker sayısını kilitliyor; içeri koymak sıfır
+             çarpışma. Satır dili .ht-saat-satir'in ikizi (yuvarlak kart/dolgu
+             yok — Ciltli sözleşmesi). -->
+        <div class="ht-tetikler" id="htTetikler" hidden></div>
         <div class="ht-saat-satir">
           <label for="htSaat" class="ht-saat-etiket">Hatırlatma saati</label>
           <select id="htSaat" class="ht-saat-sec"></select>
@@ -2764,6 +2777,30 @@ function istKayit(k){
   return { ...k, durum:'bitti', bitisTarihi: son.bit, baslamaTarihi: son.bas || null,
     puan: (son.puan >= 1 && son.puan <= 10) ? son.puan : null };
 }
+/* ---------- yıl tempo durumu (v63) ----------
+   İstatistik ekranı ve bildirim tetiği AYNI sayıyı kullansın diye tek yerde.
+   Önceden bu hesap istCiz içinde satır içiydi; tempo bildirimi için ikinci bir
+   kopya yazılsaydı ekranda "~9" derken bildirimde başka bir sayı çıkabilirdi.
+   Sayım tabanı istKayit (rapor.js semantiği: yeniden okunan kitap arşivden de
+   sayılır) — ekranla birebir aynı taban.
+   SAVUNMA: veri.hedef damgaSuz'dan GEÇMİYOR (index.html:1644 asimetrisi), yani
+   bozuk yedekte sayı olmayan değer gelebilir — Number(...)||0 ile kapatılır. */
+function tempoDurum(yil){
+  const y = yil || new Date().getFullYear();
+  const bitmis = (veri.kitaplar || []).map(istKayit).filter(Boolean)
+    .filter(k => k.bitisTarihi && String(k.bitisTarihi).startsWith(String(y)));
+  const hedef = Number((veri.hedef || {})[y]) || 0;
+  const gunNo = Math.floor((new Date() - new Date(y, 0, 0)) / 86400000);
+  const projeksiyon = gunNo > 0 ? Math.round(bitmis.length / gunNo * 365) : 0;
+  return {
+    yil: y, hedef, gunNo, bitti: bitmis.length, projeksiyon,
+    yuzde: hedef > 0 ? Math.min(100, Math.round(bitmis.length / hedef * 100)) : null,
+    /* GERİDE: projeksiyon hedefin %80'inin altında. Yılın ilk 45 günü MUAF —
+       Ocak'ta 1 kitap projeksiyonu 365 yapar, 0 kitap 0 yapar; iki uç da
+       anlamsız alarm üretir. 45 gün, örneklemin anlamlı olmaya başladığı yer. */
+    geride: hedef > 0 && gunNo >= 45 && projeksiyon < hedef * 0.8
+  };
+}
 /* Katlanır uzun liste üreticisi. ÖZET her zaman gerçek veriden bir cümle taşır:
    kapalıyken bile başlığın sayısı görünür, katlama yalnız DÖKÜMÜ gizler. */
 function istKatla(id, ad, ozet, ic){
@@ -2803,10 +2840,11 @@ function istCiz(){
     ? (puanlilar.reduce((t,k) => t + k.puan, 0) / puanlilar.length).toFixed(1) : '—';
   const sy = n => n.toLocaleString('tr');
 
-  const hedef = veri.hedef[yil] || 0;
-  const gunNo = Math.floor((new Date() - new Date(yil,0,0)) / 86400000);
-  const projeksiyon = gunNo > 0 ? Math.round(buYil.length / gunNo * 365) : 0;
-  const hedefYuzde = hedef > 0 ? Math.min(100, Math.round(buYil.length / hedef * 100)) : null;
+  /* v63: bu dört satır tempoDurum()'a taşındı — bildirim tetiği de AYNI sayıyı
+     kullanacak. İki kopya iki farklı "yıl sonu ~N" üretirdi. */
+  const td = tempoDurum(yil);
+  const hedef = td.hedef, gunNo = td.gunNo, projeksiyon = td.projeksiyon;
+  const hedefYuzde = td.yuzde;
 
   /* ---- ÜST + HERO: "bu yıl nasıl gidiyorum?" — ekranın ilk sorusu ---- */
   let html = `<div class="is-ust"><span class="kicker">Rakamlar</span>
@@ -3919,6 +3957,23 @@ if('serviceWorker' in navigator){
         if(kutu && kutu.innerHTML !== '') kutu.scrollIntoView({ block: 'start' });
       });
     }
+    /* v63: açık sekmede tetiğe göre yönlendirme. Hedef ÇÖZÜMLEMESİ boot'takiyle
+       aynı kurallar (?kitap= önce, sonra ?sekme=) — iki yerde iki farklı davranış
+       olmasın diye aynı sırayla okunur. */
+    if(e.data && e.data.tur === 'bildirim-ac' && e.data.hedef){
+      try{
+        const p = new URLSearchParams(String(e.data.hedef).split('?')[1] || '');
+        const kid = p.get('kitap');
+        if(kid){
+          const k = (veri.kitaplar || []).find(x => x && x.id === kid);
+          sekmeGec('raf');
+          if(k) detayAc(k.id);
+          return;
+        }
+        const s = p.get('sekme');
+        if(s && s !== 'alinti' && document.getElementById('panel-' + s)) sekmeGec(s);
+      }catch(h){}
+    }
   });
 }
 
@@ -3956,6 +4011,15 @@ cipKaydirmaKur();
   const gelen = gelenParametre();
   if(gelen){ gelenAc(gelen); return; }
   try{
+    /* v63: ?kitap=<id> — okuma hatırlatması bildirimine tıklayınca doğrudan o
+       kitabın detayı açılsın. Kitap silinmiş/senkronla gitmişse SESSİZCE rafa
+       düşülür (boş detay penceresi açmak, "kayıp kitap" hissi verir). */
+    const kid = new URLSearchParams(location.search).get('kitap');
+    if(kid){
+      const k = (veri.kitaplar || []).find(x => x && x.id === kid);
+      if(k){ sekmeGec('raf'); detayAc(k.id); } else { sekmeGec('raf'); }
+      urlTemizle(); return;
+    }
     const s = new URLSearchParams(location.search).get('sekme');
     if(!s) return;
     /* ?sekme=yedek artık bir panel değil: eski yer imi/kısayol sessizce Ana

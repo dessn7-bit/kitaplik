@@ -88,8 +88,11 @@ test.describe('G51 worker uçları', () => {
     expect(kayit.dilim).toBe('UTC');
     expect(kayit.vade).toBe('2026-08-11');
     expect(kayit.abonelik.endpoint).toBe(ABONELIK.endpoint);
-    // gizlilik: kayıtta yalnız beklenen alanlar — metin taşıyabilecek alan yok
-    expect(Object.keys(kayit).sort()).toEqual(['abonelik', 'dilim', 'olusturma', 'saat', 'vade']);
+    /* GİZLİLİK: kayıtta YALNIZ beklenen alanlar. v63'te dört tetik alanı
+       eklendi — hepsi GÜN/BAYRAK; metin taşıyabilecek alan yok. Küme TAM
+       sınanıyor ki kazara bir alan sızarsa vaka kırmızıya dönsün. */
+    expect(Object.keys(kayit).sort()).toEqual(['abonelik', 'dilim', 'okumaSonGun',
+      'olusturma', 'oneriGun', 'oneriVar', 'saat', 'tempoGeride', 'vade']);
   });
 
   test('abone: geçersiz gövdeler 4xx (bozuk json, eksik anahtar, saat, dilim, vade)', async () => {
@@ -360,6 +363,166 @@ test.describe('G51 worker uçları', () => {
     expect([...env.KV.depo.keys()].filter(k => k.startsWith('abone:'))).toEqual([]);
   });
 
+  /* ===== v63 DÖRT TETİK — sunucu kapıları =====
+     Eşikler ÖLÇÜLEREK seçildi (kullanıcının 163 tarihli bitişi, 99 ardışık
+     boşluk: medyan 6 gün). 3 gün normal boşlukların %74'ünde çalardı (dırdır);
+     7 gün %47 ve medyan kitap döngüsünün hemen üstünde.
+     (Mutasyon A: OKUMA_ESIK merdiveni kaldırılır → "her gün çalmaz" kırmızı.
+      Mutasyon B: ONCELIK sırası bozulur → çakışma vakası kırmızı.) */
+  const TETIK_GOVDE = { abonelik: ABONELIK, saat: 9, dilim: 'UTC' };
+  function tetikGovde(ek) { return Object.assign({}, TETIK_GOVDE, ek || {}); }
+  const AN = g => new Date(g + 'T09:30:00Z');
+
+  test('v63 okuma: eşik dolmadan GÖNDERMEZ, 7. günde gönderir', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    await w.fetch(istekYap('/abone', tetikGovde({ vade: null, okumaSonGun: '2026-08-01' })), env);
+    const istekler = pushServisi(201);
+    await w.gonderTuru(env, AN('2026-08-06'));   // 5 gün — eşik dolmadı
+    expect(istekler.length).toBe(0);
+    await w.gonderTuru(env, AN('2026-08-08'));   // 7 gün — TAM eşik
+    expect(istekler.length).toBe(1);
+  });
+
+  test('v63 okuma MERDİVENİ: eşik geçtikten sonra HER GÜN değil, 7\'nin katlarında', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    await w.fetch(istekYap('/abone', tetikGovde({ vade: null, okumaSonGun: '2026-08-01' })), env);
+    const calan = [];
+    for (let g = 1; g <= 21; g++) {
+      const gun = '2026-08-' + String(g).padStart(2, '0');
+      const e2 = ortamKur(sahteKV(Object.fromEntries(env.KV.depo)));
+      pushServisi(201);
+      const ozet = await w.gonderTuru(e2, AN(gun));
+      if (ozet.gonderilen) calan.push(g);
+    }
+    // 1 Ağustos'tan itibaren 7, 14, 21. günler = 8, 15, 22 Ağustos
+    expect(calan).toEqual([8, 15]);
+  });
+
+  test('v63 haftalık öneri: yalnız SEÇİLİ günde ve aday VARKEN', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    // 2026-08-23 Pazar, 2026-08-24 Pazartesi
+    await w.fetch(istekYap('/abone', tetikGovde({ vade: null, oneriGun: 0, oneriVar: true })), env);
+    const istekler = pushServisi(201);
+    await w.gonderTuru(env, AN('2026-08-24'));   // Pazartesi
+    expect(istekler.length).toBe(0);
+    await w.gonderTuru(env, AN('2026-08-23'));   // Pazar
+    expect(istekler.length).toBe(1);
+
+    // aday yoksa Pazar da olsa göndermez
+    const env2 = ortamKur();
+    await w.fetch(istekYap('/abone', tetikGovde({ vade: null, oneriGun: 0, oneriVar: false })), env2);
+    pushServisi(201);
+    const o = await w.gonderTuru(env2, AN('2026-08-23'));
+    expect(o.gonderilen).toBe(0);
+  });
+
+  test('v63 tempo: ayda BİR (ayın 1\'i) ve yalnız GERİDE iken', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    await w.fetch(istekYap('/abone', tetikGovde({ vade: null, tempoGeride: true })), env);
+    const istekler = pushServisi(201);
+    await w.gonderTuru(env, AN('2026-08-15'));   // ayın ortası
+    expect(istekler.length).toBe(0);
+    await w.gonderTuru(env, AN('2026-09-01'));   // ayın 1'i
+    expect(istekler.length).toBe(1);
+
+    const env2 = ortamKur();
+    await w.fetch(istekYap('/abone', tetikGovde({ vade: null, tempoGeride: false })), env2);
+    pushServisi(201);
+    expect((await w.gonderTuru(env2, AN('2026-09-01'))).gonderilen).toBe(0);
+  });
+
+  test('v63 ÇAKIŞMA: dört tetik de dolu → günde 1 bildirim, ÖNCELİK tempo', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    await w.fetch(istekYap('/abone', tetikGovde({
+      vade: '2026-08-01', okumaSonGun: '2026-08-25', oneriGun: 2, oneriVar: true, tempoGeride: true
+    })), env);
+    const istekler = pushServisi(201);
+    const o = await w.gonderTuru(env, AN('2026-09-01'));   // Salı(2) + ayın 1'i + vade geçmiş
+    expect(istekler.length).toBe(1);          // GÜNDE EN FAZLA 1
+    expect(o.secimTempo).toBe(1);             // en nadir olan kazanır
+    expect(o.secimAlinti).toBe(0);
+    // aynı gün ikinci tur: günlük işaret bloklar
+    await w.gonderTuru(env, AN('2026-09-01'));
+    expect(istekler.length).toBe(1);
+  });
+
+  test('v63 KAPALI tetik özetten düşer → sunucu uyandırmaz', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    /* İstemci kapalı tetiği null/false gönderir (aynaOlustur). Sunucu için
+       "kapalı" ile "koşulu yok" AYNI şeydir — hangi tetiğin kapatıldığını
+       öğrenmez (ek gizlilik). */
+    await w.fetch(istekYap('/abone', tetikGovde({
+      vade: null, okumaSonGun: null, oneriGun: null, oneriVar: false, tempoGeride: false
+    })), env);
+    pushServisi(201);
+    const o = await w.gonderTuru(env, AN('2026-09-01'));
+    expect(o.gonderilen).toBe(0);
+    expect(o.atlananVadeYok).toBe(1);
+  });
+
+  test('v63 GİZLİLİK: tetik alanları metin KABUL ETMEZ (gövde denetimi)', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    const kotu = [
+      { okumaSonGun: 'Tanrı Yanılgısı' },          // kitap adı
+      { okumaSonGun: '2026-8-1' },                  // bozuk gün biçimi
+      { oneriGun: 'Pazar' },                        // metin
+      { oneriGun: 7 },                              // aralık dışı
+      { oneriVar: 'evet' },                         // metin
+      { tempoGeride: 1 }                            // sayı (boolean değil)
+    ];
+    for (const ek of kotu) {
+      const y = await w.fetch(istekYap('/abone', tetikGovde(Object.assign({ vade: null }, ek))), env);
+      expect(y.status, JSON.stringify(ek)).toBe(400);
+    }
+    expect([...env.KV.depo.keys()].filter(k => k.startsWith('abone:'))).toEqual([]);
+  });
+
+  test('v63 ESKİ KAYIT GÖÇÜ: tetik alanı olmayan abone yalnız alıntıyla çalışır', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    /* v62 şemasıyla yazılmış kayıt (yeni alanlar YOK) — elle kuruluyor. */
+    const hash = 'a'.repeat(64);
+    env.KV.depo.set('abone:' + hash, JSON.stringify({
+      abonelik: ABONELIK, saat: 9, dilim: 'UTC', vade: '2026-08-01',
+      olusturma: '2026-08-01T00:00:00.000Z'
+    }));
+    const istekler = pushServisi(201);
+    const o = await w.gonderTuru(env, AN('2026-09-01'));
+    expect(o.gonderilen).toBe(1);
+    expect(o.secimAlinti).toBe(1);      // yeni tetikler "kapalı" sayıldı
+    expect(istekler.length).toBe(1);
+  });
+
+  test('v63 /saglik: hazır tetik sayımı + ONCELIK dizisi', async () => {
+    const w = await workerYukle();
+    const env = ortamKur();
+    await w.fetch(istekYap('/abone', tetikGovde({
+      vade: '2026-08-01', okumaSonGun: null, oneriGun: null, oneriVar: false, tempoGeride: true
+    })), env);
+    const d = await (await w.fetch(istekYap('/saglik'), env)).json();
+    expect(d.oncelik).toEqual(['tempo', 'oneri', 'okuma', 'alinti']);
+    expect(d.hazirTetikler.alinti).toBe(1);
+    expect(d.hazirTetikler.okuma).toBe(0);
+    expect(d.hazirTetikler.oneri).toBe(0);
+  });
+
+  test('v63 ONCELIK dizisi sw.js ve worker.js\'de BİREBİR aynı (statik kilit)', async () => {
+    const oku = p => {
+      const m = fs.readFileSync(p, 'utf8').match(/const ONCELIK = (\[[^\]]*\])/);
+      expect(m, p + ' içinde ONCELIK bulunamadı').toBeTruthy();
+      return m[1].replace(/\s|'/g, '');
+    };
+    expect(oku(path.join(KOK, 'sw.js')))
+      .toBe(oku(path.join(KOK, 'worker-bildirim', 'worker.js')));
+  });
+
   test('worker kaynak kopyaları özdeş (canlı deploy ↔ repo arşivi, CRLF hariç)', async () => {
     const duz = s => s.replace(/\r\n/g, '\n');
     const repo = duz(fs.readFileSync(path.join(KOK, 'worker-bildirim', 'worker.js'), 'utf8'));
@@ -369,7 +532,8 @@ test.describe('G51 worker uçları', () => {
 });
 
 /* ================= sw.js push / notificationclick (vm) ================= */
-function sahteIdb(kayit) {
+/* v63: iki anahtar — 'guncel' (metin üretimi) ve 'ayna' (tetik seçimi). */
+function sahteIdb(kayit, ayna) {
   return {
     open() {
       const istek = {};
@@ -379,7 +543,10 @@ function sahteIdb(kayit) {
             return { objectStore() {
               return { get(k) {
                 const g = {};
-                setTimeout(() => { g.result = (k === 'guncel') ? kayit : undefined; if (g.onsuccess) g.onsuccess(); }, 0);
+                setTimeout(() => {
+                  g.result = (k === 'guncel') ? kayit : (k === 'ayna' ? ayna : undefined);
+                  if (g.onsuccess) g.onsuccess();
+                }, 0);
                 return g;
               } };
             } };
@@ -418,9 +585,17 @@ function swPushKur(ozet, ayar) {
     caches: { open: async () => ({ put: async () => {}, match: async () => undefined, addAll: async () => {} }),
       keys: async () => [], delete: async () => {}, match: async () => undefined },
     fetch: async () => ({ clone: () => ({}) }),
-    indexedDB: sahteIdb(ozet),
+    indexedDB: sahteIdb(ozet, a.ayna),
     Response: class { constructor(g, o) { this.govde = g; Object.assign(this, o || {}); } },
-    URL, console, Date, setTimeout
+    /* v63: `bugun` verilirse argümansız `new Date()` o güne sabitlenir —
+       merdiven/haftagünü/ayın-günü kapıları deterministik sınanabilsin.
+       Date.parse ve argümanlı kurucu DEĞİŞMEZ (swGunFarki onları kullanıyor). */
+    URL, console, setTimeout,
+    Date: a.bugun ? new Proxy(Date, {
+      construct(hedef, args) {
+        return args.length ? new hedef(...args) : new hedef(a.bugun + 'T12:00:00Z');
+      }
+    }) : Date
   };
   vm.createContext(ctx);
   vm.runInContext(SW_KAYNAK, ctx);
@@ -439,7 +614,8 @@ function gunKaydir(n) {
 test.describe('G51 service worker push', () => {
 
   test('push: dünkü+bugünkü vadeler sayılır, gelecektekiler sayılmaz; örnek metin gövdede (mutasyon kilidi)', async () => {
-    const k = swPushKur({ vadeler: [gunKaydir(-1), gunKaydir(0), gunKaydir(3)], ornekMetin: 'Örnek kırpık cümle…', guncelleme: 1 });
+    const k = swPushKur({ vadeler: [gunKaydir(-1), gunKaydir(0), gunKaydir(3)], ornekMetin: 'Örnek kırpık cümle…', guncelleme: 1 },
+      { ayna: { vade: gunKaydir(-1) } });
     await olayGonder(k, 'push');
     expect(k.bildirimler.length).toBe(1);
     expect(k.bildirimler[0].baslik).toBe('2 alıntı seni bekliyor');
@@ -447,16 +623,25 @@ test.describe('G51 service worker push', () => {
     expect(k.bildirimler[0].secenek.tag).toBe('kitaplik-tekrar');
   });
 
-  test('push: bugün vadesi YOK → bildirim gösterilmez (bugunSayi=0 kararı: sessizlik)', async () => {
-    const k = swPushKur({ vadeler: [gunKaydir(2), gunKaydir(9)], ornekMetin: 'x', guncelleme: 1 });
+  /* v63 SÖZLEŞME DEĞİŞİKLİĞİ (bilinçli): eskiden "bugün vadesi yoksa SESSİZ".
+     Artık her push MUTLAKA bir bildirim gösterir — userVisibleOnly gereği
+     göstermezsek Chrome jenerik bildirim basar ve tekrarında aboneliği
+     düşürebilir. Üç tetik eklenince sapma olasılığı üçe katlandığı için bu
+     risk kabul edilemez hale geldi. Sessizlik yerine DÜRÜST GENEL metin. */
+  test('v63 push: hiçbir tetik hazır değilse SESSİZ KALMAZ — genel yedek gösterilir', async () => {
+    const k = swPushKur({ vadeler: [gunKaydir(2), gunKaydir(9)], ornekMetin: 'x', guncelleme: 1 },
+      { ayna: { vade: gunKaydir(2) } });
     await olayGonder(k, 'push');
-    expect(k.bildirimler).toEqual([]);
+    expect(k.bildirimler.length).toBe(1);
+    expect(k.bildirimler[0].baslik).toBe('Kitaplığın seni bekliyor');
+    expect(k.bildirimler[0].secenek.tag).toBe('kitaplik-genel');
   });
 
-  test('push: özet hiç yok → bildirim gösterilmez', async () => {
+  test('v63 push: özet ve ayna HİÇ yoksa da tam 1 bildirim (userVisibleOnly)', async () => {
     const k = swPushKur(undefined);
     await olayGonder(k, 'push');
-    expect(k.bildirimler).toEqual([]);
+    expect(k.bildirimler.length).toBe(1);
+    expect(k.bildirimler[0].baslik).toBe('Kitaplığın seni bekliyor');
   });
 
   test('notificationclick: açık sekme odaklanır + tekrar-ac mesajı; pencere AÇILMAZ', async () => {
@@ -465,8 +650,80 @@ test.describe('G51 service worker push', () => {
     await olayGonder(k, 'notificationclick', { notification: { close: () => { kapatildi = true; } } });
     expect(kapatildi).toBe(true);
     expect(k.istemciler[0].odaklandi).toBe(true);
-    expect(k.mesajlar).toEqual([{ tur: 'tekrar-ac' }]);
+    /* v63: data'sız (eski) bildirimde alıntı hedefi yedek kalır → hem genel
+       yönlendirme mesajı hem eski 'tekrar-ac' gider (geriye uyum). */
+    expect(k.mesajlar).toEqual([
+      { tur: 'bildirim-ac', hedef: './index.html?sekme=alinti' },
+      { tur: 'tekrar-ac' }
+    ]);
     expect(k.acilan).toEqual([]);
+  });
+
+  /* ===== v63 SW: hangi tetik AYNADAN, metin ÖZETTEN ===== */
+  const OZET63 = {
+    vadeler: [], ornekMetin: null, guncelleme: 1,
+    okuma: { id: 'k1', ad: 'Tanrı Yanılgısı', sayfa: 250, toplam: 352, sonGun: '2026-08-01' },
+    oneri: { ad: 'Varlık ve Hiçlik', neden: 'Sartre: bitirdiğin 2 kitaba ortalama 9,5 verdin' },
+    tempo: { hedef: 24, bitti: 6, projeksiyon: 9, geride: true }
+  };
+  test('v63 SW okuma metni: kitap adı + kaldığı sayfa + kaç gün; hedef KİTAP DETAYI', async () => {
+    const k = swPushKur(OZET63, { ayna: { okumaSonGun: '2026-08-01' }, bugun: '2026-08-08' });
+    await olayGonder(k, 'push');
+    expect(k.bildirimler.length).toBe(1);
+    expect(k.bildirimler[0].baslik).toBe('Tanrı Yanılgısı');
+    expect(k.bildirimler[0].secenek.body).toContain('250. sayfadasın');
+    expect(k.bildirimler[0].secenek.body).toContain('7 gündür');
+    expect(k.bildirimler[0].secenek.data.hedef).toBe('./index.html?kitap=k1');
+  });
+
+  test('v63 SW öneri metni: öneri adı + gerekçe; hedef KEŞFET', async () => {
+    const k = swPushKur(OZET63, { ayna: { oneriGun: 0, oneriVar: true }, bugun: '2026-08-23' });
+    await olayGonder(k, 'push');
+    expect(k.bildirimler[0].baslik).toContain('Varlık ve Hiçlik');
+    expect(k.bildirimler[0].secenek.body).toContain('Sartre');
+    expect(k.bildirimler[0].secenek.data.hedef).toBe('./index.html?sekme=kesfet');
+  });
+
+  test('v63 SW tempo metni: projeksiyon + hedef; hedef RAKAMLAR', async () => {
+    const k = swPushKur(OZET63, { ayna: { tempoGeride: true }, bugun: '2026-09-01' });
+    await olayGonder(k, 'push');
+    expect(k.bildirimler[0].secenek.body).toContain('~9 kitap');
+    expect(k.bildirimler[0].secenek.body).toContain('hedefin 24');
+    expect(k.bildirimler[0].secenek.data.hedef).toBe('./index.html?sekme=ist');
+  });
+
+  test('v63 SW: ayrıntı üretilemezse SESSİZ kalmaz, yumuşak metne düşer', async () => {
+    // ayna okuma diyor ama özette okuma bloğu YOK (kitap silinmiş olabilir)
+    const k = swPushKur({ vadeler: [], guncelleme: 1 },
+      { ayna: { okumaSonGun: '2026-08-01' }, bugun: '2026-08-08' });
+    await olayGonder(k, 'push');
+    expect(k.bildirimler.length).toBe(1);
+    expect(k.bildirimler[0].baslik).toBe('Yarım kalan kitabın var');
+    expect(k.bildirimler[0].secenek.data.hedef).toBe('./index.html?sekme=raf');
+  });
+
+  test('v63 SW ÖNCELİK: dört tetik de hazırken tempo seçilir', async () => {
+    const k = swPushKur(Object.assign({}, OZET63, { vadeler: ['2026-08-01'], ornekMetin: 'x' }),
+      { ayna: { vade: '2026-08-01', okumaSonGun: '2026-08-25', oneriGun: 2, oneriVar: true, tempoGeride: true },
+        bugun: '2026-09-01' });
+    await olayGonder(k, 'push');
+    expect(k.bildirimler.length).toBe(1);
+    expect(k.bildirimler[0].secenek.tag).toBe('kitaplik-tempo');
+  });
+
+  test('v63 notificationclick: okuma bildirimi kitabın detayına gider', async () => {
+    const k = swPushKur(undefined, { istemciler: ['https://dessn7-bit.github.io/kitaplik/index.html'] });
+    await olayGonder(k, 'notificationclick', {
+      notification: { close: () => {}, data: { hedef: './index.html?kitap=k1' } } });
+    expect(k.mesajlar).toEqual([{ tur: 'bildirim-ac', hedef: './index.html?kitap=k1' }]);
+    expect(k.acilan).toEqual([]);
+  });
+
+  test('v63 notificationclick: sekme kapalıysa tetiğin hedefiyle pencere açılır', async () => {
+    const k = swPushKur(undefined);
+    await olayGonder(k, 'notificationclick', {
+      notification: { close: () => {}, data: { hedef: './index.html?sekme=ist' } } });
+    expect(k.acilan).toEqual(['./index.html?sekme=ist']);
   });
 
   test('notificationclick: açık sekme yoksa ?sekme=alinti ile pencere açılır', async () => {
@@ -577,7 +834,10 @@ test.describe('G51 sayfa tarafı', () => {
             ready: Promise.resolve(kayit), controller: null, addEventListener() {} }
         });
       } catch (e) {}
-      localStorage.setItem('kk_bildirim_v1', JSON.stringify({ acik: true, saat: 12, sonVade: null }));
+      /* addInitScript HER gezinmede koşar; koşulsuz yazsaydı reload vakaları
+         uygulamanın kaydettiği tercihi ezerdi (tohumla'daki aynı gerekçe). */
+      if (localStorage.getItem('kk_bildirim_v1') === null)
+        localStorage.setItem('kk_bildirim_v1', JSON.stringify({ acik: true, saat: 12, sonVade: null }));
     });
   }
 
@@ -623,6 +883,93 @@ test.describe('G51 sayfa tarafı', () => {
     await expect(d).toContainText('Sunucuda kayıtlı');
     await expect(d).toContainText('14 Ağustos');
     await expect(d).toContainText('Henüz hiç bildirim gönderilmedi');
+  });
+
+  /* ===== v63 özet + Ayarlar ===== */
+  test('v63 özet: okuma/öneri/tempo blokları doğru dolar', async ({ page }) => {
+    const bugun = bugunISO();
+    await tohumla(page, [
+      sahteKitap({ id: 'ok1', ad: 'Okunan Kitap', durum: 'okunuyor', guncelSayfa: 250, sayfa: 352,
+        seanslar: [{ a: 0, b: 250, t: '2026-08-01' }] }),
+      sahteKitap({ ad: 'Aday Kitap', durum: 'okunacak', yazar: 'Bir Yazar' }),
+      sahteKitap({ ad: 'Bitmis', durum: 'bitti', puan: 9, bitisTarihi: bugun })
+    ]);
+    await rafAc(page);
+    const o = await page.evaluate(() => window.__bildirim.ozetHesapla());
+    expect(o.okuma.id).toBe('ok1');
+    expect(o.okuma.ad).toBe('Okunan Kitap');
+    expect(o.okuma.sayfa).toBe(250);
+    expect(o.okuma.sonGun).toBe('2026-08-01');
+    expect(o.oneri && o.oneri.ad).toBe('Aday Kitap');
+    expect(typeof (o.oneri && o.oneri.neden)).toBe('string');
+    expect(o.tempo).toBe(null);        // hedef yok
+  });
+
+  test('v63 okuma günü: gsG ile seans arasında EN YENİ olan seçilir', async ({ page }) => {
+    await tohumla(page, [sahteKitap({ ad: 'K', durum: 'okunuyor', guncelSayfa: 10,
+      seanslar: [{ a: 0, b: 10, t: '2026-08-01' }],
+      gsG: Date.parse('2026-08-05T10:00:00Z') })]);
+    await rafAc(page);
+    const o = await page.evaluate(() => window.__bildirim.ozetHesapla());
+    expect(o.okuma.sonGun).toBe('2026-08-05');   // bayat seans taze damgayı gölgelemez
+  });
+
+  test('v63 AYNA: kapalı tetik alanı DÜŞER; gizlilik — metin alanı YOK', async ({ page }) => {
+    await tohumla(page, [sahteKitap({ id: 'ok1', ad: 'Okunan Kitap', durum: 'okunuyor',
+      guncelSayfa: 5, seanslar: [{ a: 0, b: 5, t: '2026-08-01' }] })]);
+    await rafAc(page);
+    const r = await page.evaluate(() => {
+      const B = window.__bildirim;
+      const o = B.ozetHesapla();
+      const kapali = B.aynaOlustur(o, { tetik: { alinti: true, okuma: false, oneri: false, tempo: false }, oneriGun: 0 });
+      const acik = B.aynaOlustur(o, { tetik: { alinti: true, okuma: true, oneri: true, tempo: true }, oneriGun: 0 });
+      return { kapali, acik };
+    });
+    expect(r.kapali.okumaSonGun).toBe(null);       // KAPALI → düşer
+    expect(r.acik.okumaSonGun).toBe('2026-08-01'); // AÇIK → gider
+    // gizlilik: aynada yalnız beş alan, hiçbiri metin değil
+    expect(Object.keys(r.acik).sort()).toEqual(['okumaSonGun', 'oneriGun', 'oneriVar', 'tempoGeride', 'vade']);
+    const govde = JSON.stringify(r.acik);
+    expect(govde).not.toContain('Okunan Kitap');
+    expect(govde).not.toContain('ok1');
+  });
+
+  test('v63 Ayarlar: dört tetik listelenir, varsayılan yalnız alıntı AÇIK', async ({ page }) => {
+    await hatirlatmaAc(page);
+    await tohumla(page, [sahteKitap({ ad: 'Deneme' })]);
+    await rafAc(page);
+    await ayarlarAc(page);
+    const dugmeler = page.locator('#htTetikler [data-act="ht-tetik"]');
+    await expect(dugmeler).toHaveCount(4);
+    await expect(page.locator('#htTetikler [data-v="alinti"]')).toHaveAttribute('aria-pressed', 'true');
+    for (const t of ['okuma', 'oneri', 'tempo']) {
+      await expect(page.locator('#htTetikler [data-v="' + t + '"]')).toHaveAttribute('aria-pressed', 'false');
+    }
+  });
+
+  test('v63 Ayarlar: tetik açılıp kapanır ve tercih KALICI', async ({ page }) => {
+    await hatirlatmaAc(page);
+    await tohumla(page, [sahteKitap({ ad: 'Deneme' })]);
+    await rafAc(page);
+    await ayarlarAc(page);
+    await page.click('#htTetikler [data-v="okuma"]');
+    await expect(page.locator('#htTetikler [data-v="okuma"]')).toHaveAttribute('aria-pressed', 'true');
+    expect(await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('kk_bildirim_v1')).tetik.okuma)).toBe(true);
+    await page.reload();
+    await ayarlarAc(page);
+    await expect(page.locator('#htTetikler [data-v="okuma"]')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('v63 Ayarlar: açık ama koşulsuz tetik SESSİZ KALACAĞINI söyler', async ({ page }) => {
+    await hatirlatmaAc(page);
+    await tohumla(page, [sahteKitap({ ad: 'Notsuz', durum: 'bitti' })]);   // okunuyor kitap YOK, hedef YOK
+    await rafAc(page);
+    await ayarlarAc(page);
+    await page.click('#htTetikler [data-v="okuma"]');
+    await expect(page.locator('#htTetikler')).toContainText('okunuyor" kitabın yok');
+    await page.click('#htTetikler [data-v="tempo"]');
+    await expect(page.locator('#htTetikler')).toContainText('Yıl hedefi koymadın');
   });
 
   test('saat seçici 24 seçenek, tercih localStorage\'da kalıcı', async ({ page }) => {

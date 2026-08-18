@@ -29,6 +29,72 @@ const HIZ_SINIR = 30;             // IP başına saatte istek (abonelik uçları
 const VADE_DESEN = /^\d{4}-\d{2}-\d{2}$/;
 const CRON_GECMIS = 24;           // saklanacak tur sayısı (saatlik cron = 1 gün)
 
+/* ---------- v63: DÖRT TETİK ----------
+   v61'de tek tetik vardı (alıntı tekrarı) ve kullanıcının hiç alıntısı yoksa
+   sistem hiç konuşmuyordu. Üç tetik eklendi. TASARIM SÖZLEŞMESİ:
+
+   1) Her tetiğin HAZIR olup olmadığı, cihazın gönderdiği alanların SAF
+      FONKSİYONUDUR. Sunucu ve cihaz aynı girdilerden aynı sonucu bağımsız
+      hesaplar — bu yüzden payload'sız push'ta "hangi tetik seçildi" bilgisini
+      taşımaya gerek KALMAZ (v61 payload'sız sözleşmesi korunur).
+   2) Durum TUTULMAZ. "Son ne zaman gönderildi" damgası yok; sıklık, tarihin
+      kendisinden türetilir (merdiven/haftagünü/ayın günü). Göç yok, iki taraf
+      ayrışamaz, test deterministik.
+   3) Gövde yalnız GÜN ve BAYRAK taşır. Kitap adı, alıntı metni, sayfa numarası
+      sunucuya GELMEZ (v61 gizlilik sözleşmesi).
+
+   ÖNCELİK — KITLIK sırası. Naif sıra (alıntı önce) STARVATION üretir: alıntı
+   kuyruğu doluyken günde-1 kuralı yüzünden diğerleri HİÇ görünmez. Nadir sinyal
+   kaçırılırsa uzun süre geri gelmez; bol sinyal yarın yine dolu olur.
+   sw.js'deki ONCELIK dizisi bununla BİREBİR aynı olmalı (statik vaka kilitler). */
+const ONCELIK = ['tempo', 'oneri', 'okuma', 'alinti'];
+/* OKUMA_ESIK — ÖLÇÜLEREK seçildi (kullanıcının 163 tarihli bitişi, 99 ardışık
+   boşluk): p25=2, MEDYAN=6, p75=12, p90=32 gün.
+     3 gün → normal boşlukların %74'ünde çalar (dırdır)
+     5 gün → %63
+     7 gün → %47 — medyan TAM KİTAP döngüsünün (6 gün) hemen üstü
+    14 gün → %23 (güvenli ama geç; medyan kitap 6 günde bitiyor)
+   DÜRÜSTLÜK PAYI: bu bir VEKİL ölçüm (bitiş-bitiş boşluğu). Doğrudan "iki
+   ilerleme kaydı arası" ölçülemedi — 242 kitapta 1 seans, 0 oturum kaydı var.
+   Bu azlığın kendisi eşiği destekliyor: 7'nin altı, okuma sessizliğini değil
+   KAYIT sessizliğini ölçer. */
+const OKUMA_ESIK = 7;
+
+function gunFarki(a, b) {         // b - a, tam gün (ISO 'YYYY-MM-DD')
+  return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+}
+/* MERDİVEN: eşik geçtikten sonra HER GÜN değil, eşiğin katlarında hatırlatır
+   (3, 6, 9, 12...). 21 günlük sessizlikte 19 yerine 7 bildirim — dırdır olmaz,
+   ama unutulmaz da. Durum tutmadan sıklık sınırı sağlar. */
+function okumaHazir(sonGun, bugun) {
+  if (!sonGun) return false;
+  const g = gunFarki(sonGun, bugun);
+  return g >= OKUMA_ESIK && g % OKUMA_ESIK === 0;
+}
+function oneriHazir(kayit, an) {
+  if (!kayit.oneriVar || kayit.oneriGun === null || kayit.oneriGun === undefined) return false;
+  const haftaGunu = new Date(new Intl.DateTimeFormat('en-CA', { timeZone: kayit.dilim })
+    .format(an) + 'T00:00:00Z').getUTCDay();
+  return haftaGunu === kayit.oneriGun;
+}
+/* Ayda TAM 1: ayın 1'i. Durumsuz; kullanıcının saati o gün gelmezse ay atlanır —
+   kabul edilen maliyet (tempo aylık bir sinyal, bir ay gecikmesi zarar vermez). */
+function tempoHazir(kayit, gun) {
+  return !!kayit.tempoGeride && parseInt(gun.slice(8, 10), 10) === 1;
+}
+function tetikHazirMi(tetik, kayit, gun, an) {
+  if (tetik === 'alinti') return !!kayit.vade && kayit.vade <= gun;
+  if (tetik === 'okuma') return okumaHazir(kayit.okumaSonGun, gun);
+  if (tetik === 'oneri') return oneriHazir(kayit, an);
+  if (tetik === 'tempo') return tempoHazir(kayit, gun);
+  return false;
+}
+/* Gönderilecek tetik (öncelik sırasıyla ilk hazır olan) ya da null. */
+function secilenTetik(kayit, gun, an) {
+  for (const t of ONCELIK) if (tetikHazirMi(t, kayit, gun, an)) return t;
+  return null;
+}
+
 function corsBasliklar() {
   return {
     'Access-Control-Allow-Origin': IZINLI_KOKEN,
@@ -113,6 +179,34 @@ function dilimGecerli(dilim) {
   catch (e) { return false; }
 }
 
+/* v63 tetik alanlarının KATI doğrulaması — vade ile aynı sertlikte.
+   GİZLİLİK KAPISI: yalnız ISO gün / 0-6 tamsayı / boolean kabul edilir. Bir
+   istemci hatası (ya da kötü niyet) kitap adı veya alıntı metni göndermeye
+   kalkarsa buradan GEÇEMEZ ve kayda hiç yazılmaz. Bilinmeyen alan da yazılmaz:
+   dönen nesne yalnız beyaz listedeki dört alanı taşır.
+   Dönüş: {okumaSonGun, oneriGun, oneriVar, tempoGeride} | null (geçersiz). */
+function tetikAlanlariOku(g) {
+  const cikti = { okumaSonGun: null, oneriGun: null, oneriVar: false, tempoGeride: false };
+  if (g.okumaSonGun !== undefined && g.okumaSonGun !== null) {
+    if (typeof g.okumaSonGun !== 'string' || !VADE_DESEN.test(g.okumaSonGun)) return null;
+    cikti.okumaSonGun = g.okumaSonGun;
+  }
+  if (g.oneriGun !== undefined && g.oneriGun !== null) {
+    if (typeof g.oneriGun !== 'number' || !Number.isInteger(g.oneriGun)
+      || g.oneriGun < 0 || g.oneriGun > 6) return null;
+    cikti.oneriGun = g.oneriGun;
+  }
+  if (g.oneriVar !== undefined) {
+    if (typeof g.oneriVar !== 'boolean') return null;
+    cikti.oneriVar = g.oneriVar;
+  }
+  if (g.tempoGeride !== undefined) {
+    if (typeof g.tempoGeride !== 'boolean') return null;
+    cikti.tempoGeride = g.tempoGeride;
+  }
+  return cikti;
+}
+
 function abonelikGecerli(a) {
   return a && typeof a.endpoint === 'string' && a.endpoint.startsWith('https://')
     && a.endpoint.length < 1024 && a.keys
@@ -167,16 +261,30 @@ export default {
     if (url.pathname === '/saglik') {
       const gecmis = await gecmisOku(env);
       const son = gecmis.length ? gecmis[gecmis.length - 1] : null;
+      /* v63: abone sayımının yanında CANLI tetik hazırlığı. "Cron koşuyor ama
+         gönderilen 0" durumunda hangi tetiğin dolu/boş olduğunu ölçmek için —
+         yalnız SAYI döner, kimin hangi tetiği olduğu değil. */
       let aboneSayisi = 0, cursor;
+      const hazir = { tempo: 0, oneri: 0, okuma: 0, alinti: 0 };
+      const an = new Date();
       do {
         const liste = await env.KV.list({ prefix: 'abone:', cursor });
         aboneSayisi += liste.keys.length;
+        for (const a of liste.keys) {
+          try {
+            const k = JSON.parse(await env.KV.get(a.name));
+            const gun = yerelGun(k.dilim, an);
+            for (const t of ONCELIK) if (tetikHazirMi(t, k, gun, an)) hazir[t]++;
+          } catch (e) { /* bozuk kayıt sayımı düşürmez */ }
+        }
         cursor = liste.list_complete ? null : liste.cursor;
       } while (cursor);
       const simdi = Date.now();
       return json({
         durum: 'calisiyor',
         aboneSayisi,
+        hazirTetikler: hazir,       // v63: su an hangi tetik kac abonede dolu
+        oncelik: ONCELIK,           // sw.js ile ayni olmali (statik vaka kilitler)
         cronTanimli: true,          // wrangler.toml [triggers] crons
         sonCron: son,               // null = cron HİÇ koşmamış (ya da tampon boş)
         sonCronDkOnce: son ? Math.round((simdi - Date.parse(son.zaman)) / 60000) : null,
@@ -213,13 +321,15 @@ export default {
       if (!(saat >= 0 && saat <= 23)) return json({ hata: 'saat' }, 400);
       if (typeof govde.dilim !== 'string' || !dilimGecerli(govde.dilim)) return json({ hata: 'dilim' }, 400);
       if (govde.vade !== null && !VADE_DESEN.test(govde.vade || '')) return json({ hata: 'vade' }, 400);
+      const tetikler = tetikAlanlariOku(govde);
+      if (tetikler === null) return json({ hata: 'tetik' }, 400);
       const anahtar = 'abone:' + await endpointHash(govde.abonelik.endpoint);
-      await env.KV.put(anahtar, JSON.stringify({
+      await env.KV.put(anahtar, JSON.stringify(Object.assign({
         abonelik: { endpoint: govde.abonelik.endpoint,
           keys: { p256dh: govde.abonelik.keys.p256dh, auth: govde.abonelik.keys.auth } },
         saat, dilim: govde.dilim, vade: govde.vade || null,
         olusturma: new Date().toISOString()
-      }));
+      }, tetikler)));
       return json({ tamam: true });
     }
 
@@ -242,6 +352,17 @@ export default {
         if (govde.vade !== null && !VADE_DESEN.test(govde.vade || '')) return json({ hata: 'vade' }, 400);
         k.vade = govde.vade;
       }
+      /* v63: tetik alanları da güncellenebilir. GÖÇ: eski kayıtta bu alanlar
+         YOKTUR; okuyucu tarafta null/false gibi davranırlar (secilenTetik
+         hepsini "hazır değil" sayar) — yani eski abone yalnız alıntı tetiğiyle
+         çalışmaya devam eder, sessizce YANLIŞ bildirim ALMAZ. Güvenli yön:
+         bilinmeyen = kapalı. */
+      const yeniTetik = tetikAlanlariOku(govde);
+      if (yeniTetik === null) return json({ hata: 'tetik' }, 400);
+      if (govde.okumaSonGun !== undefined) k.okumaSonGun = yeniTetik.okumaSonGun;
+      if (govde.oneriGun !== undefined) k.oneriGun = yeniTetik.oneriGun;
+      if (govde.oneriVar !== undefined) k.oneriVar = yeniTetik.oneriVar;
+      if (govde.tempoGeride !== undefined) k.tempoGeride = yeniTetik.tempoGeride;
       await env.KV.put(anahtar, JSON.stringify(k));
       return json({ tamam: true });
     }
@@ -293,9 +414,12 @@ async function gonderTuru(env, an) {
     zaman: new Date(an).toISOString(),
     taranan: 0, gonderilen: 0,
     atlananSaat: 0,      // yerel saat tercihe denk gelmedi (normal, en sık)
-    atlananVadeYok: 0,   // vade null — tekrar kuyruğunda bekleyen alıntı yok
-    atlananVadeIleri: 0, // vade gelecekte
+    atlananVadeYok: 0,   // HİÇBİR tetik hazır değil (v63: eskiden yalnız alıntı vadesiydi)
+    atlananVadeIleri: 0, // (v62 uyumu) — v63'te atlananVadeYok altında toplanır
     atlananGunluk: 0,    // bugün zaten gönderilmiş
+    /* v63 teşhis: hangi tetik seçildi? "0 gönderildi" tek başına arızayı
+       doğru davranıştan ayırmıyordu; tetik dağılımı ayırıyor. */
+    secimTempo: 0, secimOneri: 0, secimOkuma: 0, secimAlinti: 0,
     hataOlu: 0,          // 404/410 → kayıt silindi
     hataGeriCekil: 0,    // 429
     hataDiger: 0,
@@ -316,8 +440,10 @@ async function gonderTuru(env, an) {
         try { saat = yerelSaat(kayit.dilim, an); gun = yerelGun(kayit.dilim, an); }
         catch (e) { o.bozukKayit++; continue; }
         if (saat !== kayit.saat) { o.atlananSaat++; continue; }
-        if (!kayit.vade) { o.atlananVadeYok++; continue; }        // HİÇ gönderme (v61 kararı)
-        if (kayit.vade > gun) { o.atlananVadeIleri++; continue; }
+        /* v63: dört tetikten HİÇBİRİ hazır değilse gönderme (v61 kararının
+           genellemesi — "gönderecek şey yoksa sessiz kal"). */
+        const tetik = secilenTetik(kayit, gun, an);
+        if (!tetik) { o.atlananVadeYok++; continue; }
         const isaret = 'gonderim:' + anahtar.name.slice(6) + ':' + gun;
         if (await env.KV.get(isaret)) { o.atlananGunluk++; continue; }
         const sonuc = await pushGonder(kayit.abonelik, env);
@@ -325,6 +451,7 @@ async function gonderTuru(env, an) {
         if (sonuc === 'geri-cekil') { o.hataGeriCekil++; continue; }  // işaret YOK → sonraki saat yeniden dener
         if (sonuc === 'tamam') {
           o.gonderilen++;
+          o['secim' + tetik.charAt(0).toUpperCase() + tetik.slice(1)]++;
           await env.KV.put(isaret, '1', { expirationTtl: 172800 });
           await env.KV.put('sonGonderim', new Date(an).toISOString());
         } else { o.hataDiger++; }

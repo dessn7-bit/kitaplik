@@ -1,4 +1,4 @@
-const CACHE = 'kitaplik-v75';
+const CACHE = 'kitaplik-v76';
 // OCR paketi kovası (ocr.js yönetir): ~6 MB'lik tesseract paketi kullanıcı
 // ONAYIYLA bir kez iner, buraya alınır. ASSETS'e BİLEREK girmez — ilk PWA
 // kurulumunda 6 MB indirtmek yanlış olurdu. ocr.js dosyasının kendisi (küçük
@@ -63,7 +63,7 @@ self.addEventListener('fetch', e => {
    Özet SAYI değil VADE listesi taşır: "bugün kaç alıntı" sayımı push
    ANINDA yapılır — gece yarısı devrinde bayat sayı gösterilmez. */
 const BILDIRIM_DB = 'kk_bildirim_v1';
-function bildirimOzetOku() {
+function bildirimOzetOku(anahtar) {
   return new Promise(resolve => {
     let bitti = false;
     const son = v => { if (!bitti) { bitti = true; resolve(v); } };
@@ -73,7 +73,7 @@ function bildirimOzetOku() {
       istek.onsuccess = () => {
         const db = istek.result;
         try {
-          const g = db.transaction('ozet', 'readonly').objectStore('ozet').get('guncel');
+          const g = db.transaction('ozet', 'readonly').objectStore('ozet').get(anahtar || 'guncel');
           g.onsuccess = () => { son(g.result || null); try { db.close(); } catch (e) {} };
           g.onerror = () => { son(null); try { db.close(); } catch (e) {} };
         } catch (e) { son(null); try { db.close(); } catch (h) {} }
@@ -87,40 +87,116 @@ function bildirimGunIso() {
   return s.getFullYear() + '-' + String(s.getMonth() + 1).padStart(2, '0') +
     '-' + String(s.getDate()).padStart(2, '0');
 }
+/* ---------- v63: DÖRT TETİK ----------
+   ÖNCELİK worker.js'teki ONCELIK dizisiyle BİREBİR aynı olmalı — statik vaka
+   kilitler. Nadir olan önce: alıntı kuyruğu çoğu gün dolu olduğu için başa
+   konsaydı, günde-1 kuralı yüzünden tempo/öneri HİÇ seçilmezdi (açlık). */
+const ONCELIK = ['tempo', 'oneri', 'okuma', 'alinti'];
+const OKUMA_ESIK = 7;              // worker.js ile aynı — ölçülerek seçildi
+
+function swGunFarki(a, b) {
+  return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+}
+/* Tetik hazır mı? worker.js'teki tetikHazirMi'nin İKİZİ — girdi AYNADIR
+   (sunucuya gönderilen alanlar), taze veri değil. Böylece sunucunun "gönder"
+   kararıyla cihazın "ne göstereyim" kararı ayrışamaz. */
+function swTetikHazir(t, ayna, bugun) {
+  if (!ayna) return false;
+  if (t === 'alinti') return !!ayna.vade && ayna.vade <= bugun;
+  if (t === 'okuma') {
+    if (!ayna.okumaSonGun) return false;
+    const g = swGunFarki(ayna.okumaSonGun, bugun);
+    return g >= OKUMA_ESIK && g % OKUMA_ESIK === 0;
+  }
+  if (t === 'oneri') {
+    if (!ayna.oneriVar || ayna.oneriGun === null || ayna.oneriGun === undefined) return false;
+    return new Date(bugun + 'T00:00:00Z').getUTCDay() === ayna.oneriGun;
+  }
+  if (t === 'tempo') return !!ayna.tempoGeride && parseInt(bugun.slice(8, 10), 10) === 1;
+  return false;
+}
+/* Metni ÖZETTEN (taze yerel veri) üretir. Ayrıntı yoksa aynı tetiğin YUMUŞAK
+   metnine düşer — SESSİZ KALMAZ: userVisibleOnly gereği her push bir bildirim
+   göstermek zorunda; göstermezsek Chrome jenerik bildirim basar ve tekrarında
+   aboneliği düşürebilir. */
+function bildirimIcerik(tetik, ozet, bugun) {
+  if (tetik === 'alinti') {
+    const sayi = (ozet && Array.isArray(ozet.vadeler))
+      ? ozet.vadeler.filter(v => v && v <= bugun).length : 0;
+    return { baslik: sayi === 1 ? '1 alıntı seni bekliyor'
+        : (sayi ? sayi + ' alıntı seni bekliyor' : 'Tekrar vakti'),
+      govde: (ozet && ozet.ornekMetin) || 'Bugünün tekrar kuyruğu hazır.',
+      etiket: 'kitaplik-tekrar', hedef: './index.html?sekme=alinti' };
+  }
+  if (tetik === 'okuma') {
+    const o = ozet && ozet.okuma;
+    if (!o || !o.ad) return { baslik: 'Yarım kalan kitabın var',
+      govde: 'Kaldığın yerden devam etmeye ne dersin?',
+      etiket: 'kitaplik-okuma', hedef: './index.html?sekme=raf' };
+    const gun = o.sonGun ? swGunFarki(o.sonGun, bugun) : 0;
+    const nerede = o.sayfa ? o.sayfa + '. sayfadasın' : 'başlamıştın';
+    return { baslik: o.ad,
+      govde: nerede + ' — ' + (gun > 0 ? gun + ' gündür ara verdin.' : 'ara verdin.'),
+      etiket: 'kitaplik-okuma',
+      hedef: o.id ? './index.html?kitap=' + encodeURIComponent(o.id) : './index.html?sekme=raf' };
+  }
+  if (tetik === 'oneri') {
+    const o = ozet && ozet.oneri;
+    if (!o || !o.ad) return { baslik: 'Sırada ne var?',
+      govde: 'Rafında seni bekleyenlere bak.',
+      etiket: 'kitaplik-oneri', hedef: './index.html?sekme=kesfet' };
+    return { baslik: 'Bu hafta: ' + o.ad, govde: o.neden || 'Rafında seni bekliyor.',
+      etiket: 'kitaplik-oneri', hedef: './index.html?sekme=kesfet' };
+  }
+  if (tetik === 'tempo') {
+    const t = ozet && ozet.tempo;
+    if (!t || !t.hedef) return { baslik: 'Yıl hedefin', govde: 'Tempona göz at.',
+      etiket: 'kitaplik-tempo', hedef: './index.html?sekme=ist' };
+    return { baslik: 'Yıl hedefin geride',
+      govde: 'Bu tempoyla yıl sonunda ~' + t.projeksiyon + ' kitap; hedefin ' + t.hedef + '.',
+      etiket: 'kitaplik-tempo', hedef: './index.html?sekme=ist' };
+  }
+  return null;
+}
 self.addEventListener('push', e => {
-  e.waitUntil(bildirimOzetOku().then(ozet => {
-    /* KARAR: özet yoksa ya da bugün vadesi gelen alıntı yoksa SESSİZ kalınır.
-       Ana kapı sunucuda (vade gelmemişse hiç gönderilmez); burası yalnız
-       savunma dalı. Yanlış "seni bekleyen alıntı var" bildirimi güveni
-       yakar; Chrome'un nadir sessiz-push cezası (jenerik bildirim) bu
-       nadirlikte kabul edilen maliyet. */
-    if (!ozet || !Array.isArray(ozet.vadeler)) return;
+  e.waitUntil(Promise.all([bildirimOzetOku('ayna'), bildirimOzetOku('guncel')]).then(([ayna, ozet]) => {
     const bugun = bildirimGunIso();
-    const sayi = ozet.vadeler.filter(v => v && v <= bugun).length;
-    if (!sayi) return;
-    return self.registration.showNotification(
-      sayi === 1 ? '1 alıntı seni bekliyor' : sayi + ' alıntı seni bekliyor', {
-        body: ozet.ornekMetin || 'Bugünün tekrar kuyruğu hazır.',
-        tag: 'kitaplik-tekrar',           // aynı günkü ikinci push üst üste binmez
-        icon: './icon-192.png',
-        badge: './icon-192.png',
-        data: { hedef: './index.html?sekme=alinti' }
-      });
+    /* HANGİ tetik: aynadan (sunucuyla aynı girdi). NE yazılacağı: özetten.
+       Ayna yoksa/hiçbir tetik hazır değilse GENEL yedek — sessizlik YOK. */
+    const tetik = ONCELIK.find(t => swTetikHazir(t, ayna, bugun));
+    const i = tetik ? bildirimIcerik(tetik, ozet, bugun) : null;
+    const g = i || { baslik: 'Kitaplığın seni bekliyor',
+      govde: 'Bugün için bir hatırlatman var.',
+      etiket: 'kitaplik-genel', hedef: './index.html' };
+    return self.registration.showNotification(g.baslik, {
+      body: g.govde,
+      tag: g.etiket,                    // aynı günkü ikinci push üst üste binmez
+      icon: './icon-192.png',
+      badge: './icon-192.png',
+      data: { hedef: g.hedef }
+    });
   }));
 });
 self.addEventListener('notificationclick', e => {
   e.notification.close();
+  /* v63: hedef artık bildirimin KENDİSİNDE (data.hedef) — her tetik kendi
+     ekranına gider (okuma → kitabın detayı, öneri → Keşfet, tempo → Rakamlar,
+     alıntı → Alıntılar). Eski bildirimlerde data olmayabilir: alıntı hedefi
+     yedek kalır (geriye uyum). */
+  const hedef = (e.notification.data && e.notification.data.hedef) || './index.html?sekme=alinti';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(liste => {
     for (const istemci of liste) {
       let ayni = false;
       try { ayni = new URL(istemci.url).origin === self.location.origin; } catch (h) {}
       if (ayni) {
-        // açık sekme: odakla + sayfaya "Alıntılar sekmesine geç" mesajı yolla
-        istemci.postMessage({ tur: 'tekrar-ac' });
+        /* açık sekme: odakla + sayfaya NEREYE gideceğini söyle. 'tekrar-ac'
+           mesajı korunuyor (mevcut vaka + eski SW/sayfa eşleşmesi). */
+        istemci.postMessage({ tur: 'bildirim-ac', hedef });
+        if (hedef.indexOf('sekme=alinti') !== -1) istemci.postMessage({ tur: 'tekrar-ac' });
         return istemci.focus();
       }
     }
-    // kapalıysa mevcut derin bağlantı deseniyle aç (?sekme= boot'ta işlenir)
-    return self.clients.openWindow('./index.html?sekme=alinti');
+    // kapalıysa derin bağlantı deseniyle aç (?sekme= / ?kitap= boot'ta işlenir)
+    return self.clients.openWindow(hedef);
   }));
 });
