@@ -244,6 +244,18 @@
       .replace(/^http:\/\//i, 'https://')
       .replace(/([?&])edge=curl(&|$)/gi, (m, p1, p2) => p2 === '&' ? p1 : '');
   }
+  /* Sorguda kullanilacak ISBN. Alan doluysa o; DEĞİLSE ölü OpenLibrary kapak
+     URL'sinde gömülü olan ISBN (/b/isbn/<ISBN>-M.jpg).
+     GEREKÇE (ölçüm): tazelemenin asıl hedefi olan 37 kitabın `isbn` ALANI boş,
+     ISBN'leri yalnız kapak URL'sinde duruyor — yalnız alana bakılsaydı `isbn:`
+     sorgusu tam da bu kitaplarda hiç çalışmazdı (canlı uçtan uca koşumda
+     görüldü). URL'den okunan ISBN yalnız SORGUDA kullanılır, kitabın isbn
+     alanına YAZILMAZ (doğrulanmamış veri kaydedilmez). */
+  function sorguIsbn(k){
+    if(k.isbn && String(k.isbn).trim()) return String(k.isbn).replace(/[^0-9Xx]/g, '');
+    const m = String(k.kapak || '').match(/\/b\/isbn\/(\d{9}[\dXx]|\d{13})[-_.]/);
+    return m ? m[1] : '';
+  }
   function kapakAdayBul(liste){
     const a = (liste || []).find(v => v && v.imageLinks && v.imageLinks.thumbnail);
     return a ? kapakTemizle(a.imageLinks.thumbnail) : '';
@@ -342,8 +354,9 @@
        (kota: kitap başına +1). Diğer alanlar mevcut ad+yazar yolundan gelir —
        tür/sayfa/yıl mantığı DEĞİŞMEDİ. */
     let isbnAdaylar = null;
-    if(eksikler.indexOf('kapak') >= 0 && k.isbn && String(k.isbn).trim()){
-      isbnAdaylar = await gbSor('isbn:' + String(k.isbn).replace(/[^0-9Xx]/g, ''));
+    const sIsbn = sorguIsbn(k);
+    if(eksikler.indexOf('kapak') >= 0 && sIsbn){
+      isbnAdaylar = await gbSor('isbn:' + sIsbn);
       await bekle(ARALIK_MS);
     }
     const dar = 'intitle:"' + k.ad + '"' + (k.yazar ? ' inauthor:"' + k.yazar + '"' : '');

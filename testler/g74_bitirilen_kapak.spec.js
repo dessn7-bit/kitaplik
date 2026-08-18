@@ -231,6 +231,29 @@ test.describe('G74 M2 — kapak tazeleme', () => {
     expect(kapak, 'geçerli kapak korunmalı').toBe(SAGLAM);
   });
 
+  /* Ölü kapaklı kitapların isbn ALANI boş; ISBN yalnız kapak URL'sinde gömülü.
+     Bu vaka olmadan isbn: sorgusu tam da hedef kitlede hiç çalışmıyordu
+     (canlı uçtan uca koşumda yakalandı: 5 kitaptan 4'ünde sorgu atılmıyordu). */
+  test('(d4) isbn ALANI boşken ISBN kapak URL\'sinden okunur ve isbn: sorgusu atılır', async ({ page }) => {
+    await tohumla(page, [sahteKitap({ ad: 'URL ISBN', isbn: '', kapak: OLU })]);
+    await rafAc(page);
+    await oluKapakRotasi(page);
+    const sorgular = [];
+    await page.route(u => u.href.includes('googleapis.com/books'), r => {
+      sorgular.push(decodeURIComponent(r.request().url()));
+      return r.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify(gbKapakYanit('https://books.google.com/books/content?id=URLISBN')) });
+    });
+    const b = await page.evaluate(() => window.__zengin.kitapSorgula(
+      { ad: 'URL ISBN', yazar: '', isbn: '',
+        kapak: 'https://covers.openlibrary.org/b/isbn/9789999999999-M.jpg' }));
+    expect(sorgular.some(u => u.includes('q=isbn:9789999999999')),
+      'ISBN kapak URL\'sinden okunup sorgulandı').toBe(true);
+    expect(b && b.kapak).toContain('id=URLISBN');
+    // URL'den okunan ISBN kitabın isbn ALANINA yazılmaz (doğrulanmamış veri)
+    expect(b.isbn, 'isbn alanı uydurulmadı').toBeUndefined();
+  });
+
   test('(e) ölü denetimi AĞ HATASI verirse kapak GEÇERLİ sayılır (ezilmez)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Ağ Hatalı', isbn: '9786053609902', kapak: OLU })]);
     await rafAc(page);
