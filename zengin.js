@@ -356,7 +356,14 @@
     let isbnAdaylar = null;
     const sIsbn = sorguIsbn(k);
     if(eksikler.indexOf('kapak') >= 0 && sIsbn){
-      isbnAdaylar = await gbSor('isbn:' + sIsbn);
+      /* isbn: sorgusu bir EK yol; başarısız olması MEVCUT ad+yazar yolunu
+         ÖLDÜRMEMELİ. Google Books bu uçta aralıklı 503 veriyor (canlı koşumda
+         ölçüldü: sorgu patlayınca kitapSorgula tümden düşüyor ve daha önce
+         kapak BULUNAN kitap bile kapaksız kalıyordu — eklenen yetenek mevcut
+         yeteneği geriletmiş oluyordu). Hata yutulur, akış ad+yazar ile sürer. */
+      try{
+        isbnAdaylar = await gbSor('isbn:' + sIsbn);
+      }catch(e){ isbnAdaylar = null; }
       await bekle(ARALIK_MS);
     }
     const dar = 'intitle:"' + k.ad + '"' + (k.yazar ? ' inauthor:"' + k.yazar + '"' : '');

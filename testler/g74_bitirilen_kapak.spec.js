@@ -254,6 +254,32 @@ test.describe('G74 M2 — kapak tazeleme', () => {
     expect(b.isbn, 'isbn alanı uydurulmadı').toBeUndefined();
   });
 
+  /* CANLI KOŞUM BULGUSU: Google Books isbn: ucunda aralıklı 503 veriyor.
+     gbSor hata fırlatınca kitapSorgula tümden düşüyordu — yani EKLENEN yol,
+     daha önce çalışan ad+yazar yolunu öldürüyordu (canlıda 1/5 → 0/5 gerileme).
+     Bu vaka o gerilemeyi kilitler. */
+  test('(d5) isbn: sorgusu PATLARSA ad+yazar yolu yine kapak bulur', async ({ page }) => {
+    await tohumla(page, [sahteKitap({ ad: 'Dayanikli', yazar: 'Yazar', kapak: OLU })]);
+    await rafAc(page);
+    await oluKapakRotasi(page);
+    await page.route(u => u.href.includes('googleapis.com/books'), r => {
+      const url = decodeURIComponent(r.request().url());
+      if (url.includes('q=isbn:')) {                   // isbn: ucu 503 veriyor
+        return r.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify({ error: { code: 503, message: 'backend' } }) });
+      }
+      return r.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ totalItems: 1, items: [{ volumeInfo: {
+          title: 'Dayanikli', authors: ['Yazar'],
+          imageLinks: { thumbnail: 'https://books.google.com/books/content?id=ADYAZAR' } } }] }) });
+    });
+    const b = await page.evaluate(() => window.__zengin.kitapSorgula(
+      { ad: 'Dayanikli', yazar: 'Yazar', isbn: '',
+        kapak: 'https://covers.openlibrary.org/b/isbn/9789999999999-M.jpg' }));
+    expect(b && b.kapak, 'isbn: patlasa da ad+yazar yolu çalışmalı').toBeTruthy();
+    expect(b.kapak).toContain('id=ADYAZAR');
+  });
+
   test('(e) ölü denetimi AĞ HATASI verirse kapak GEÇERLİ sayılır (ezilmez)', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'Ağ Hatalı', isbn: '9786053609902', kapak: OLU })]);
     await rafAc(page);
