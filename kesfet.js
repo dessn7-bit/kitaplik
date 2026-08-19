@@ -85,7 +85,11 @@
     // Kaynak etiketi: .ks-suz-ad ile AYNI tipografik rol (mikro versal, muted2)
     // — yeni bir görsel dil değil, kurulmuş bir rolün ikinci kullanımı.
     '.ks-b-kaynak{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;' +
-      'color:var(--muted2);margin-bottom:2px}'
+      'color:var(--muted2);margin-bottom:2px}',
+    // Süzgeç sayım satırı (v77): "Rafından" açılış cümlesiyle AYNI rol —
+    // kaç aday vardı / kaçı geçti, sayı uydurmadan.
+    '.ks-b-sayim{font-size:.78rem;color:var(--muted);letter-spacing:.02em;' +
+      'font-variant-numeric:tabular-nums;padding:2px 0 8px}'
   ].join('\n');
 
   function chip(grup, deger, etiket, secili, ipucu){
@@ -178,7 +182,12 @@
      (canliAra ile AYNI kaynak yolu — kopya istemci yok).
      SIRA seri → yazar → tür: motorun kendi ağırlık sırası (seri 35 > yazar 30 >
      tür 20). Tür en zayıf sinyal, listenin sonunda durur. */
-  const B_ONBELLEK = 'kk_kesfet_b_v1';
+  /* v77: anahtar v1 -> v2. Adaylara TÜR MÜHRÜ eklendi (turSinyal/turKaynakAd/
+     seriAd); v1 önbelleğindeki mühürsüz tür adayları yeni süzgeçte "türü
+     bilinmeyen" sayılıp elenirdi. Bir kerelik yeniden sorgu (<=6 Google
+     isteği) 24 saatlik yanlış görünüme yeğlenir; eski kova silinir. */
+  const B_ONBELLEK = 'kk_kesfet_b_v2';
+  try{ localStorage.removeItem('kk_kesfet_b_v1'); }catch(e){}
   /* TTL 24 saat: Google kotası günlük, yazar kataloğu günlük değişmez. Anahtar
      İMZA sorgu setinden (yazar+seri katla'lı) — kütüphane değişip sinyal seti
      değişirse önbellek kendiliğinden düşer. Cihaz-yerel, senkron DIŞI
@@ -539,7 +548,7 @@
         .filter(a => bDilUygun(a) && seriEslesir(s.seri, a.ad) &&
           (!yazarDenetli || yazarEslesir(s.yazar, a.yazar)))
         .slice(0, B_SERI_ADAY)
-        .forEach(a => adaylar.push({ ...a, kaynakTip: 'seri', neden: s.cumle }));
+        .forEach(a => adaylar.push({ ...a, kaynakTip: 'seri', seriAd: s.seri, neden: s.cumle }));
     }
     for(const y of yazarlar){
       (await dene(A.google(y.ad, 'yazar', ctl.signal, 'tr')))
@@ -585,11 +594,108 @@
     paketler.filter(Boolean).forEach(({ s, p }) => {
       (p.sonuclar || []).slice(0, B_TUR_ADAY).forEach(a => adaylar.push({
         ad: a.ad, yazar: a.yazar || '', kapak: a.kapak || null,
-        kaynakTip: 'tur', neden: turCumle(s.sinyal, s.kaynakTur, a) }));
+        // tür MÜHRÜ (v77): adayı getiren kullanıcı türü + kaynağın kendi tür
+        // adı sorgu anında donar; süzgeç sonradan tahmin yürütmez
+        kaynakTip: 'tur', turSinyal: s.sinyal.ad, turKaynakAd: s.kaynakTur.ad,
+        neden: turCumle(s.sinyal, s.kaynakTur, a) }));
     });
     if(!adaylar.length && turHata) throw new Error('tur-kaynagi');
     return adaylar;
   }
+
+  /* ---------- YENİ KİTAPLAR süzgeci (v77) ----------
+     KUSUR (canlı kanıt): Tür süzgeci yalnız "Rafından" listesine
+     uygulanıyordu; "Bilim-Teknoloji-Mühendislik" çipi seçiliyken YENİ
+     KİTAPLAR bölümü "Biyografi türünde 3 kitap bitirdin" gerekçeli
+     önerileri göstermeyi sürdürüyordu. Süzgeç bir GÖRÜNÜM sözleşmesidir:
+     bir çip seçiliyken ekranda o çipe uymayan satır olmamalı; kullanıcı
+     bunu "süzgeç bozuk"tan başka türlü okuyamaz.
+
+     HANGİ SÜZGEÇ UYGULANIR (karar tablosu):
+     - Tür      -> EVET. Süzgecin kendisi budur.
+     - Uzunluk  -> EVET, dosyanın kendi kuralıyla: sayfası BİLİNMEYEN aday
+                   süzgeç açıkken listeye girmez (bilinmeyeni bir kovaya
+                   saymak uydurma olur). 1000Kitap tür kaydı sayfa TAŞIMAZ
+                   (ölçüldü: worker /tur alanları ad, yazar, puan, okuyan,
+                   kapak) -> uzunluk süzgeci açıkken tür kaynağı boşalır.
+                   Bu bir kusur değil, aynı kuralın sonucu.
+     - Bende / İstek listem -> HAYIR. YENİ KİTAPLAR tanımı gereği
+                   kütüphanede OLMAYAN kitaplardır; iki çip de SAHİPLİK
+                   kipidir ve bir aday hiçbirine ait değildir. Uygulamak
+                   bölümü her iki kipte de kalıcı boş bırakırdı. İstek
+                   kipinde bölümü gizlemek de yanlış olurdu: bölümün tek
+                   eylemi zaten "İstek listeme ekle".
+     - Raf      -> HAYIR. Raf, kullanıcının evindeki FİZİKSEL yerdir;
+                   kütüphanede olmayan kitabın rafı olamaz. Uygulamak =
+                   daimî boş bölüm.
+
+     ADAYIN TÜRÜ NEREDEN BİLİNİR (kaynağa göre):
+     - tur   -> kesin: adayı getiren KULLANICI türü (turSinyal) ve kaynağın
+                kendi tür adı (turKaynakAd) sorgu anında adaya mühürlenir.
+     - seri  -> önce KÜTÜPHANEDEKİ ciltlerin türü: aynı eserin ciltleridir,
+                bu kullanıcının KENDİ verisidir ve süzgeç de onun sözcük
+                dağarcığıyla yazılmıştır. Yoksa adayın Google kategorileri.
+     - yazar -> yalnızca adayın KENDİ Google kategorileri. Yazarın öbür
+                kitaplarının türünden çıkarım YAPILMAZ: bir yazar tek türe
+                bağlı değildir (Kafka roman da yazar, mektup da); böyle bir
+                çıkarım, hakkında hiçbir şey bilmediğimiz kitap hakkında
+                iddia olurdu.
+     Kategori -> tür çevirisi zengin.js SÖZLÜĞÜYLE yapılır (turCevirHam):
+     kitabın türünü kütüphaneye yazan motorun aynısı. İkinci, ayrışan bir
+     eşleme tablosu YOK.
+
+     TÜRÜ BİLİNMEYEN ADAY: süzgeç AÇIKKEN elenir. Gerekçe (1) kullanıcı
+     açıkça o türü istedi; bilinmeyeni geçirmek düzeltmeye çalıştığımız
+     kusurun kendisini üretir (çipe uymayan satır). (2) Bu dosyanın kurulmuş
+     iki emsali aynı yönde: sayfası bilinmeyen aday uzunluk süzgecinde,
+     dili bilinmeyen aday dil süzgecinde eleniyor. (3) Hata bedeli
+     asimetrik: yanlış GÖSTERİLEN öneri görünür bir iddia taşır, elenen
+     öneri süzgeç kalkınca aynen geri gelir (kayıp değil, erteleme) ve kaç
+     tanesinin elendiği ekranda YAZAR.
+
+     SERİ MUAFİYETİ YOK: seri devamı en güçlü sinyal olsa da süzgeç bir
+     görünüm sözleşmesidir; "güçlü sinyal" muafiyeti kullanıcının gözünde
+     bozuk süzgeçten ayırt edilemez. Zaten seri adayının türünü kütüphanedeki
+     ciltlerinden okuduğumuz için aynı türdeki seri devamı doğal olarak
+     GEÇER; elenen yalnızca gerçekten başka türdeki adaydır.
+
+     SÜZGEÇ DEĞİŞİMİ SORGU ATMAZ: eleme, çekilmiş aday havuzu üzerinde yerel
+     çalışır (bElenmis'in her çizimde tazelenmesiyle aynı desen). Gerekçe
+     KOTA: bir koşum <=6 Google isteği, Google günlük 1000; çip dokunuşu bir
+     keşif jestidir, art arda onlarca kez yapılır — her dokunuşta yeniden
+     sormak günlük kotayı ~30 dokunuşta bitirirdi. Üstelik yazar/seri
+     dallarının "tür" parametresi yoktur: türe göre yeniden sorgu diye bir
+     şey teknik olarak da yok. */
+  function bSeriTuru(seriAd){
+    if(!seriAd || typeof veri !== 'object') return '';
+    const a = katla(seriAd);
+    const k = (veri.kitaplar || []).find(x => x.seri && katla(x.seri) === a && x.tur);
+    return k ? k.tur : '';
+  }
+  function bAdayTur(a){
+    if(!a) return '';
+    if(a.kaynakTip === 'tur') return a.turSinyal || '';
+    if(a.kaynakTip === 'seri'){
+      const st = bSeriTuru(a.seriAd);
+      if(st) return st;
+    }
+    const Z = window.__zengin;
+    return (Z && typeof Z.turCevirHam === 'function') ? (Z.turCevirHam(a.kategoriler) || '') : '';
+  }
+  function bTurUyar(a){
+    const hedef = turAnahtar(S.tur || '');
+    if(!hedef) return true;
+    /* Tür kaynağında kullanıcı etiketi ile kaynak etiketi FARKLI olabilir
+       (Felsefe -> Felsefe-Düşünce); ikisi de adayın gerçek kimliğidir. */
+    if(a.kaynakTip === 'tur' && turAnahtar(a.turKaynakAd || '') === hedef) return true;
+    return turAnahtar(bAdayTur(a)) === hedef;   // bilinmeyen ('') hiçbir hedefe uymaz
+  }
+  function bUzunlukUyar(a){
+    if(!S.uzunluk) return true;
+    return uzunlukKova(a.sayfa) === S.uzunluk;   // sayfasız aday elenir (dosya kuralı)
+  }
+  function bSuzgecVar(){ return !!(S.tur || S.uzunluk); }
+  function bSuzgectenGecer(a){ return bTurUyar(a) && bUzunlukUyar(a); }
 
   function bSatirHtml(a, i){
     const kaynakAd = B_KAYNAK_AD[a.kaynakTip] || '';
@@ -636,10 +742,23 @@
           'rafından öneriler etkilenmez.</div>' +
           '<button class="btn btn-cerceve ks-b-getir" data-act="ks-b-getir">Yeniden dene</button>';
       }else{
-        B.gorunen = bElenmis();
-        ic = B.gorunen.length
-          ? B.gorunen.map(bSatirHtml).join('')
-          : '<div class="ks-b-not">Kaynaklarda kütüphanende olmayan yeni bir şey bulunamadı.</div>';
+        /* Süzgeç HAM havuzun üzerine biner: bElenmis (kütüphane/gizli/dil)
+           önce, kullanıcı süzgeci sonra. B.gorunen GÖSTERİLEN liste olarak
+           kalır — data-i indisleri ekle/gizle eylemlerinde onunla eşleşir. */
+        const ham = bElenmis();
+        B.gorunen = ham.filter(bSuzgectenGecer);
+        const elenen = ham.length - B.gorunen.length;
+        if(B.gorunen.length)
+          ic = (bSuzgecVar() && elenen
+              ? '<div class="ks-b-sayim">' + ham.length + ' yeni aday · süzgeçten geçen: ' +
+                B.gorunen.length + '</div>'
+              : '') + B.gorunen.map(bSatirHtml).join('');
+        else if(bSuzgecVar() && ham.length)
+          /* DÜRÜST boş durum: uydurma doldurma yok, çıkış yolu yazılı */
+          ic = '<div class="ks-b-not">Bu süzgeçle eşleşen yeni öneri yok — süzgeci kaldırınca ' +
+            ham.length + ' öneri geri gelir.</div>';
+        else
+          ic = '<div class="ks-b-not">Kaynaklarda kütüphanende olmayan yeni bir şey bulunamadı.</div>';
       }
     }
     return '<div class="ks-b" id="ksB">' +

@@ -299,23 +299,39 @@
      tür. Kategori başına sözlük sırayla denenir; kelime sınırı zorunlu; 'tam'
      işaretli anahtar kategorinin tamamını ister. Taksonomi kapısından
      geçemeyen eşleşme aramayı KESMEZ — UYDURMA yine imkânsız (iki kapı). */
-  function turCevir(kategoriler){
-    if(!Array.isArray(kategoriler) || !taksonomi) return '';
+  function turAdaylari(kategoriler){
+    /* Sözlüğe uyan tür adları, GELİŞ SIRASIYLA (kategori × sözlük sırası).
+       turCevir'in iç döngüsü buraya çıkarıldı — davranış AYNI, tek fark
+       taksonomi kapısının dışarıda kalması. Kapısız sürümü (turCevirHam)
+       yalnız KIYAS yapan çağıran kullanır (v77: Keşfet tür süzgeci); oraya
+       çıkan değer hiçbir kayda yazılmadığı için doğrulama gerekmez — dahası,
+       gerekseydi taksonomi henüz yüklenmemişken TÜM adaylar "bilinmeyen"
+       olurdu (süzgeç sessizce her şeyi elerdi). */
+    const sonuc = [];
+    if(!Array.isArray(kategoriler)) return sonuc;
     for(const kat of kategoriler){
       const metin = katla(kat);
       if(!metin) continue;
       for(const es of TUR_ESLEME){
         const uydu = es[2] === 'tam' ? metin === es[0]
           : new RegExp('\\b' + rxKac(es[0]) + '\\b').test(metin);
-        if(!uydu) continue;
-        /* canlı taksonomi doğrulaması: ad ya da seo katlaması eşleşmeli */
-        const hedef = katla(es[1]);
-        const t = taksonomi.find(x => katla(x.ad) === hedef || katla(x.seo) === hedef);
-        if(t) return t.ad;   // İLK güvenli eşleşme kazanır
+        if(uydu) sonuc.push(es[1]);
       }
+    }
+    return sonuc;
+  }
+  function turCevir(kategoriler){
+    if(!taksonomi) return '';
+    for(const hedefAd of turAdaylari(kategoriler)){
+      /* canlı taksonomi doğrulaması: ad ya da seo katlaması eşleşmeli */
+      const hedef = katla(hedefAd);
+      const t = taksonomi.find(x => katla(x.ad) === hedef || katla(x.seo) === hedef);
+      if(t) return t.ad;   // İLK güvenli eşleşme kazanır
     }
     return '';
   }
+  /* KapıSIZ çeviri (v77): yalnız KIYAS için — kitap kaydına ASLA yazılmaz. */
+  function turCevirHam(kategoriler){ return turAdaylari(kategoriler)[0] || ''; }
   /* Başlığı uyan adayların kategorileri — aday sırası korunur, tekrarsız. */
   function kategoriTopla(adaylar, kitapAd){
     const gorulen = {}, sonuc = [];
@@ -1463,7 +1479,7 @@
 
   /* test kancaları + otoTur (v65: ekleme akışlarının kayıt-anı tür motoru)
      + v66: açılış taraması / geri alma yüzeyi */
-  window.__zengin = { eksikSayim, alanBos, turCevir, baslikUyar, kitapSorgula, uygula,
+  window.__zengin = { eksikSayim, alanBos, turCevir, turCevirHam, baslikUyar, kitapSorgula, uygula,
     kuyrukYukle, kuyrukKaydet, kuyrukTemizle, puanlanacaklar, tarihsizler, durumTazele,
     otoTur, otoAdaylar, atananGecerli, taksonomiKur: t => { taksonomi = t; },
     ARALIK_MS, ALANLAR, KUYRUK_ANAHTAR, OTO_DENEME_ANAHTAR, OTO_ATANAN_ANAHTAR };

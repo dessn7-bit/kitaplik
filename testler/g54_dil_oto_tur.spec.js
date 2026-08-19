@@ -125,8 +125,10 @@ test.describe('G54 D1 — Keşfet yalnız Türkçe', () => {
   });
 
   test('BAYAT önbellekteki yabancı aday çizimde düşer (24s penceresi sızdırmaz)', async ({ page }) => {
+    // ANAHTAR v77'de v1 -> v2 (kesfet.js: adaylara tür mührü eklendi). Vakanın
+    // niyeti değişmedi: BAYAT önbellekten gelen yabancı aday çizimde düşer.
     await tohumla(page, [...sevilenYazarVeri()], {
-      kk_kesfet_b_v1: { imza: '[["usta"],[],[]]', t: Date.now(), adaylar: [
+      kk_kesfet_b_v2: { imza: '[["usta"],[],[]]', t: Date.now(), adaylar: [
         { ad: 'Yabancı Bayat', yazar: 'Usta', dil: 'EN', kaynakTip: 'yazar', neden: 'x', kapak: null },
         { ad: 'Türkçe Bayat', yazar: 'Usta', dil: 'TR', kaynakTip: 'yazar', neden: 'x', kapak: null }] } });
     await kesfetAc(page);
