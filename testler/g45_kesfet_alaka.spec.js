@@ -9,11 +9,14 @@
    SÖZLEŞMELER (bu dosyanın koruduğu):
    - Çok sözcüklü ad: adayın SON sözcüğü tam eşleşmeli + sorgunun ≥2 harfli tüm
      sözcükleri adayda geçmeli. Yalnız soyadı eşleşmesi YETMEZ (vaka c).
-   - Tek sözcüklü ad (mononim, v62): adayın İLK sözcüğü tam eşit olmalı ve
-     aday bağlaç ("ve/and/ile") içermemeli. Birebir-tam-eşitlik klasikleri
-     kaybettiriyordu ("Homeros Homer", "Konfüçyüs Confucius" biçimleri);
-     ilk-sözcük kuralı "Ali" → "Sabahattin Ali"yi yine eler (tek ad Türk
-     düzeninde SOYAD olur ve sonda durur), "Homeros ve Hesiodos"u bağlaç eler.
+   - Tek sözcüklü ad (mononim, v62 → M1/v78): ÜÇ kabul biçimi — birebir
+     eşitlik; çift-ad varyantı (İLK sözcük eşit + aday ≤2 sözcük: "Homeros
+     Homer"); Batı tam-ad biçimi (aday ≥3 sözcük + SON sözcük eşit: "Lucius
+     Annaeus Seneca"). "Ali" → "Sabahattin Ali" yine elenir (2 sözcüklüde
+     son-eşitlik BİLİNÇLİ yok — Türk ad+soyad düzeni); bağlaçlı ("ve/and/ile")
+     ve '&'li aday elenir; parantez içi ek AYRI ad varyantıdır ("Homeros
+     (Homer)" ↔ "Homer"); aksanlı Latin harf sözcüğü bölmez, NFD katlanır
+     (Molière ≡ Moliere). Ayrıntılı gerekçe + canlı ölçüm kesfet.js'te.
    - Anlamlı sözcüğü olmayan ad ("Yazar 0", "Anonim", "Kolektif") kaynağa HİÇ
      sorulmaz (vaka d).
    - Seride İKİ denetim: seri adı başlıkta geçmeli VE yazar eşleşmeli (vaka e).
@@ -277,4 +280,77 @@ test.describe('G45 Keşfet-B alaka denetimi', () => {
       await getir(page);
       expect(await adlar(page)).toContain('Yabancı');
     });
+});
+
+/* M1 (v78) — mononim kuralı GERÇEK YEDEK + CANLI GB ölçümüyle yeniden kuruldu.
+   ÖLÇÜM (2026-08-20, kütüphanenin 12 mononim yazarı × gerçek Google Books):
+   önce 5/12 yazardan sonuç (13 aday) → sonra 6/12 (20 aday). Kural ayağı:
+   "Lucius Annaeus Seneca [TR]" ve "Jean Baptiste Molière [TR]" tam-ad
+   biçimleri reddediliyordu; "Molière" è harfinden ikiye bölünüyordu; adla
+   BAŞLAYAN çok-sözcüklü çöp alanlar kabul ediliyordu. Kaynak ayağı
+   (Aristotle/Plato/Plutarch/Euripides/Aeschylus: GB ilk 20'de hiç TR baskı
+   dönmüyor) kuralla çözülemez — bilinen sınır, çeviri sözlüğü uydurulmaz.
+   (Mutasyon M1: mononim dalı eski ilk-sözcük kuralına dönerse bu grubun
+   tam-ad/aksan/çöp-alan vakaları kırmızı.) */
+test.describe('G45-M1 mononim yeniden kuruldu (v78)', () => {
+
+  test('Batı tam-ad biçimi (≥3 sözcük, son eşit) KABUL — canlı Seneca biçimleri', async ({ page }) => {
+    await tohumla(page, sevilen('Seneca'));
+    await kesfetAc(page);
+    page.__agAyar.google = { items: [
+      gItem('Yaşamın Kısalığı Üzerine', 'Lucius Annaeus Seneca'),   // canlı TR baskı biçimi → KABUL
+      gItem('Ahlaki Mektuplar', 'Seneca'),                          // birebir → KABUL
+      gItem('Ters Biçim', 'Seneca, Lucius Annaeus'),                // virgüllü ters biçim → KABUL
+      gItem('Başka Kitap', 'Seneca Falls Yayın Kurulu')] };         // ≥3 sözcük ama SON ≠ → RED
+    await getir(page);
+    expect(await adlar(page)).toEqual(
+      ['Yaşamın Kısalığı Üzerine', 'Ahlaki Mektuplar', 'Ters Biçim']);
+  });
+
+  test('SÖZLEŞME (bilinen sınır): 2 sözcüklü son-eşitlik hâlâ RED — vaka (c) korumasının bedeli', async ({ page }) => {
+    /* "Desiderius Erasmus" gerçek Erasmus'tur ama yapısal olarak "Sabahattin
+       Ali"den ayırt edilemez; vaka (c) sözleşmesi gereği İKİSİ de elenir.
+       Bu vaka ölçülen bedeli BELGELER (canlıda Erasmus'un tek TR baskısı bu
+       biçimde ve kayboluyor) — kural gevşetilirse bilerek kırmızı olur. */
+    await tohumla(page, [...sevilen('Erasmus'), ...sevilen('Ali')]);
+    await kesfetAc(page);
+    page.__agAyar.google = { items: [
+      gItem('Deliliğe Övgü', 'Desiderius Erasmus'),
+      gItem('Kürk Mantolu Madonna', 'Sabahattin Ali')] };
+    await getir(page);
+    expect(await adlar(page)).toEqual([]);
+  });
+
+  test('aksanlı mononim bölünmez; NFD iki yazımı eşitler (Molière)', async ({ page }) => {
+    await tohumla(page, sevilen('Molière'));
+    await kesfetAc(page);
+    page.__agAyar.google = { items: [
+      gItem('Cimri', 'Molière'),                            // birebir → KABUL
+      gItem('Kibarlık Budalası', 'Jean Baptiste Molière'),  // tam-ad → KABUL (è onarımı olmadan imkânsızdı)
+      gItem('Hastalık Hastası', 'Moliere'),                 // aksansız yazım → KABUL (NFD)
+      gItem('Sahte Oyun', 'Ahmet Molière')] };              // 2 sözcük son-eşit = ad+soyad düzeni → RED
+    await getir(page);
+    expect(await adlar(page)).toEqual(['Cimri', 'Kibarlık Budalası', 'Hastalık Hastası']);
+  });
+
+  test('adla BAŞLAYAN çok sözcüklü alan artık ELENİR; & bağlaç sayılır', async ({ page }) => {
+    await tohumla(page, sevilen('Homeros'));
+    await kesfetAc(page);
+    page.__agAyar.google = { items: [
+      gItem('Odysseia', 'Homeros'),                       // gerçek KALIR (v53 dersi: boş liste yanlış sebeple yeşil olmasın)
+      gItem('Denemeler', 'Homeros Üzerine Denemeler'),    // eski kural KABUL ederdi → artık RED
+      gItem('Derleme', 'Homeros & Hesiodos')] };          // v62 ŞÜPHESİ: & split'te kayboluyordu → RED
+    await getir(page);
+    expect(await adlar(page)).toEqual(['Odysseia']);
+  });
+
+  test('parantez içi ek AYRI varyanttır — kütüphane Batı formundayken (gerçek yedek durumu)', async ({ page }) => {
+    await tohumla(page, sevilen('Homer'));   // gerçek yedekte 12/12 mononim Batı formunda kayıtlı
+    await kesfetAc(page);
+    page.__agAyar.google = { items: [
+      gItem('İlyada', 'Homeros (Homer)'),   // parantez varyantı sorguyu tutar → KABUL
+      gItem('Odysseia', 'Homeros')] };      // parantezsiz Türkçe form → RED (bilinen sınır)
+    await getir(page);
+    expect(await adlar(page)).toEqual(['İlyada']);
+  });
 });

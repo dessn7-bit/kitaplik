@@ -82,6 +82,7 @@
       'line-height:1.25;overflow-wrap:break-word}',
     '.ks-b-not{font-size:.85rem;color:var(--muted);line-height:1.5;padding:10px 0}',
     '.ks-b-getir{margin-top:8px}',
+    '.ks-b-daha{margin-top:8px}',
     // Kaynak etiketi: .ks-suz-ad ile AYNI tipografik rol (mikro versal, muted2)
     // — yeni bir görsel dil değil, kurulmuş bir rolün ikinci kullanımı.
     '.ks-b-kaynak{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;' +
@@ -195,16 +196,33 @@
   const B_TTL_MS = 24 * 3600 * 1000;
   /* Kota: koşum başına ≤3 yazar + ≤3 seri sorgusu (≤6 istek). Google 1000/gün;
      24 saatlik önbellekle gün başına tek sorgu seti — kota güvenli. */
-  const B_YAZAR_KOTA = 3, B_SERI_KOTA = 3, B_YAZAR_ADAY = 3, B_SERI_ADAY = 4;
+  const B_YAZAR_KOTA = 3, B_SERI_KOTA = 3, B_YAZAR_ADAY = 8, B_SERI_ADAY = 8;
   /* TÜR KOTASI 2 (3 değil): tür motorun en zayıf sinyali (ağırlık 20 vs yazar
      30 / seri 35) ve 3. sıradaki tür zaten ilk ikisinin altında kalmış bir
      ortalamadır — listeyi uzatır, isabeti artırmaz. Maliyet tarafı bağlayıcı
      değil (worker Cloudflare ücretsiz katmanında, kaynak 1000Kitap'ın kendi
      API'si); bağlayıcı olan 9 sn'lik iptal bütçesi, o da tür dalının Google
      döngüsüyle ÖRTÜŞMESİYLE korunuyor. */
-  const B_TUR_KOTA = 2, B_TUR_ADAY = 4;
+  const B_TUR_KOTA = 2, B_TUR_ADAY = 6;
+  /* ADAY DERİNLİĞİ (M2): kaynak başına saklanan aday 3/4/4 → 8/8/6 ve Google
+     sorgusu B yolunda maxResults 6 → 20. İkisi de İSTEK SAYISINI DEĞİŞTİRMEZ
+     (koşum yine ≤6 istek); değişen, aynı yanıttan kaç adayın saklandığı.
+     Gerekçe (ölçüldü 2026-08-20, gerçek GB, gerçek kütüphanenin 12 mononim
+     yazarı): maxResults=6 ilk 6'da çoğu kez tek TR baskı bile getirmiyordu
+     (Aristophanes 0/6 → 20'de 1); dar dilim v69'da Macbeth/Kral Lear'ı
+     kesmişti. localStorage bedeli: en çok ~60 ham aday ≈ 30 KB. */
+  const B_DERINLIK = 20;
+  /* GÖRÜNEN LİSTE (M2): çizimde ilk B_GOSTER satır; kalanı "N öneri daha
+     göster" düğmesi açar (B.acik). KAYNAK DENGESİ: kısaltılmış listede aktif
+     kaynaklar öncelik sırasıyla (seri > yazar > tür — motorun sinyal-gücü
+     sırası) taban payı alır, hiçbir kaynak diğerini boğamaz. AYNI-YAZAR
+     sınırı B'de BİLİNÇLİ YOK (karar): yazar kaynağının varlık sebebi sevilen
+     yazardan DAHA ÇOK kitap göstermek; çeşitliliği kaynak dengesi sağlar.
+     Rafından'ın yazar≤2 kotası (cesitlilikSec) ELİNDEKİ kitaplar için ayrı
+     karardır ve DEĞİŞMEDİ. */
+  const B_GOSTER = 8;
   const B_KAYNAK_AD = { seri: 'Seri', yazar: 'Yazar', tur: 'Tür' };
-  const B = { durum: 'bekliyor', adaylar: null, gorunen: [] };
+  const B = { durum: 'bekliyor', adaylar: null, gorunen: [], acik: false };
 
   /* ---- kullanıcı türü → 1000Kitap tür slug'ı (v52) ----
      UYDURMA EŞLEME YOK. Dört kademe, ilk isabet kazanır; hiçbiri tutmazsa tür
@@ -266,9 +284,14 @@
   function adSozcukler(s, parantezKalsin){
     // parantezKalsin (M2): cilt-işareti denetimi "(Cilt 2)" gibi parantezli
     // işaretleri görmek zorunda — yazar ekleri için varsayılan söküm sürer.
+    // Latin aksanlı harfler (À-ɏ; × ve ÷ aralık dışı) SÖZCÜĞÜN PARÇASIDIR
+    // (M1, ölçüldü): eski sınıf "Molière"i è'den ikiye bölüyordu (["moli",
+    // "re"]) — mononim yazar çok-sözcüklü sanılıyor, aksansız "Moliere"
+    // yazımıyla hiç eşleşmiyordu. katla sonrası NFD aksan katlaması
+    // ("molière"→"moliere") kaynakların iki yazımını da aynı köke indirir.
     return (parantezKalsin ? String(s || '') : String(s || '').replace(/\([^)]*\)/g, ' '))
-      .split(/[^A-Za-zÇĞİÖŞÜçğıöşüÂÎÛâîû0-9]+/)
-      .map(w => katla(w).replace(/[^a-z0-9]+/g, ''))
+      .split(/[^A-Za-zÇĞİÖŞÜçğıöşüÂÎÛâîûÀ-ÖØ-öø-ɏ0-9]+/)
+      .map(w => katla(w).normalize('NFD').replace(/\p{M}+/gu, '').replace(/[^a-z0-9]+/g, ''))
       .filter(Boolean);
   }
   /* Sorgulanabilirlik: hiç ANLAMLI sözcüğü olmayan ad kaynağa HİÇ sorulmaz —
@@ -290,34 +313,50 @@
          "Fyodor Mihayloviç Dostoyevski" GEÇER (göbek adı, aynı kişi).
        - Baş harfler (J.K.) alt küme şartına girmez: "J.K. Rowling" →
          "Joanne Rowling" geçer.
-     · TEK SÖZCÜKLÜ ad (mononim): adayın TAMAMI o sözcüğe eşit olmalı. Alt küme
-       kuralı burada çöker — "Ali" sorgusu "Sabahattin Ali"yi yakalardı. Uzunluk
-       eşiği yerine tam eşleşme: keyfi bir harf sayısı seçmeden aynı korumayı
-       verir ("Homeros" → "Homeros ve Hesiodos" elenir, "Homeros" geçer).
+     · TEK SÖZCÜKLÜ ad (mononim, M1 — gerçek yedek + canlı GB ölçümüyle
+       yeniden kuruldu; kütüphanedeki 12 mononim yazarın 12'si Batı formunda:
+       Homer, Aristotle, Molière...). ÜÇ kabul biçimi:
+       (1) birebir eşitlik ("Aristoteles");
+       (2) çift-ad varyantı (v62): İLK sözcük eşit VE aday ≤2 sözcük
+           ("Homeros Homer", "Aristotle Aristotle"). Eski hali uzunluk
+           sınırsızdı — "Homeros Üzerine Denemeler" gibi adla BAŞLAYAN
+           çok-sözcüklü çöp alanlar da geçiyordu (v53 vaka d'nin genel hali);
+       (3) Batı tam-ad biçimi: aday ≥3 sözcük VE SON sözcük eşit ("Lucius
+           Annaeus Seneca", "Jean Baptiste Molière" — canlı TR baskıların
+           döndürdüğü biçimler, ölçüldü). İKİ sözcüklüde son-eşitlik BİLİNÇLİ
+           YOK: "Ali" → "Sabahattin Ali" Türk ad+soyad düzenidir, kabulü
+           mononim korumasını yıkardı. Ölçülen bedel: "Desiderius Erasmus"
+           TR baskısı elenir — bilinen sınır, g45'te sözleşme vakası.
+       Bağlaçlı aday ("Homeros ve Hesiodos") birden çok kişidir → elenir;
+       '&' split'te kaybolduğu için HAM parçada denetlenir (v62 ŞÜPHE
+       kapanışı: "Homeros & Hesiodos" da artık elenir).
      Aday alanı çok yazarlı olabilir ("Isaac Asimov, Ali Kaftan") — virgülle
-     ayrılıp her parça ayrı denenir (aramaGoogle bu biçimi üretiyor). */
+     ayrılıp her parça ayrı denenir (aramaGoogle bu biçimi üretiyor).
+     Parçanın PARANTEZ İÇİ eki AYRI AD VARYANTIDIR (M1): kaynak "Homeros
+     (Homer)" yazarken kütüphane "Homer" kayıtlı olabilir (gerçek yedeğin
+     durumu) — parantezi sökülmüş gövde + her parantez içeriği ayrı denenir;
+     "Halil Cibran (Kahlil Gibran)" iki addan da yakalanır. */
   function yazarEslesir(sorguAd, adayAd){
     const s = adSozcukler(sorguAd);
     if(!s.length) return false;
     const soyad = s[s.length - 1];
     const govde = s.filter(w => w.length >= 2);
     for(const p of String(adayAd || '').split(',')){
-      const a = adSozcukler(p);
-      if(!a.length) continue;
-      if(s.length === 1){
-        /* Mononim (tek adlı yazar, v62): birebir-eşitlik klasikleri KAYBETTİRİYORDU —
-           kaynaklar "Homeros Homer", "Konfüçyüs Confucius" gibi çift-ad biçimleri
-           dönüyor (parantezli "Homeros (Homer)" adSozcukler'de zaten soyulur).
-           Kural: adayın İLK sözcüğü eşitse kabul — mononim varyant ekleri SONA
-           gelir; Türk ad-soyad düzeninde tek ad SOYADDIR ve sonda durur
-           ("Ali" → "Sabahattin Ali" ilk sözcükten elenir). Bağlaçlı aday
-           ("Homeros ve Hesiodos") birden çok kişidir → yine elenir. */
-        if(a.length && a[0] === s[0]
-          && a.indexOf('ve') < 0 && a.indexOf('and') < 0 && a.indexOf('ile') < 0) return true;
-        continue;
+      if(s.length === 1 && p.indexOf('&') >= 0) continue;   // çok-kişi işareti (bağlaç dengi)
+      const varyantlar = [adSozcukler(p)];
+      for(const ek of String(p).match(/\(([^)]*)\)/g) || [])
+        varyantlar.push(adSozcukler(ek.slice(1, -1)));
+      for(const a of varyantlar){
+        if(!a.length) continue;
+        if(s.length === 1){
+          if(a.indexOf('ve') >= 0 || a.indexOf('and') >= 0 || a.indexOf('ile') >= 0) continue;
+          if(a[0] === s[0] && a.length <= 2) return true;            // (1) birebir + (2) çift-ad
+          if(a.length >= 3 && a[a.length - 1] === s[0]) return true; // (3) Batı tam-ad biçimi
+          continue;
+        }
+        if(a[a.length - 1] !== soyad) continue;
+        if(govde.every(w => a.indexOf(w) >= 0)) return true;
       }
-      if(a[a.length - 1] !== soyad) continue;
-      if(govde.every(w => a.indexOf(w) >= 0)) return true;
     }
     return false;
   }
@@ -476,7 +515,17 @@
   /* Eleme HER ÇİZİMDE taze: kütüphanede olan (ad+yazar TR-katlamalı VE ISBN),
      gizlenen ve yinelenen adaylar düşer. Önbellek HAM aday saklar — kitap
      eklenince/gizlenince liste sorgusuz güncellenir. */
-  function bElenmis(){
+  /* Kütüphane bağlamı + "kütüphanede var mı" TEK denetimde (M2): aynı denetim
+     hem çizim-anı elemesinde (bElenmis) hem SORGU ANINDA dilimden ÖNCE
+     (bGetir/bTurAdaylari) koşar — v53 ilkesinin ("eleme dilimden önce")
+     kütüphane ayağı. Eskiden yalnız çizimde koşuyordu: sahip olunan kitaplar
+     B_*_ADAY yuvalarını işgal ediyordu (v69 kanıtı: Shakespeare sorgusunda
+     Hamlet+Romeo yuvaları yedi, Macbeth/Kral Lear dilimde kesildi; g58 bunu
+     kota-altı fixture ile kilitlemek zorunda kalmıştı). Belgeli bedel: sorgu
+     anında elenen aday, kitap sonradan kütüphaneden SİLİNİRSE önbellek
+     tazelenene kadar geri gelmez (24 sa TTL); gizli/dil/süzgeç elemeleri
+     çizim anında taze kalmaya devam eder — önbellek o yönlerden HAM. */
+  function bKutuphaneBaglami(){
     const adSet = new Set(), isbnSet = new Set();
     (veri.kitaplar || []).forEach(k => {
       adSet.add(katla(k.ad) + '|' + katla(k.yazar || ''));
@@ -486,8 +535,27 @@
       if(k.isbn){ const t = isbnTemiz(k.isbn); if(t) isbnSet.add(t); }
     });
     // M2 (v69): başlık varyantı elemesi için ad+yazar dolu kütüphane kitapları —
-    // eleme bElenmis'te yaşadığı için yazar/seri/tür ÜÇ kaynağı da tek noktadan kapsar
+    // eleme tek noktada yaşadığı için yazar/seri/tür ÜÇ kaynağı da kapsanır
     const varyantKaynak = (veri.kitaplar || []).filter(k => k.ad && k.yazar);
+    return { adSet, isbnSet, varyantKaynak };
+  }
+  function bKutuphanede(a, bag){
+    if(bag.adSet.has(katla(a.ad) + '|' + katla(a.yazar || ''))) return true;
+    const t = a.isbn ? isbnTemiz(a.isbn) : '';
+    if(t && bag.isbnSet.has(t)) return true;
+    // M2 (v69): aynı yazarın BAŞLIK VARYANTI da kütüphanede-var sayılır
+    // ("Romeo and Juliet" raftayken "Romeo ve Juliet" önerilmez); yazar
+    // eşleşmiyorsa başlık benzerliğine hiç bakılmaz (farklı yazarın aynı
+    // adlı kitabı elenmez). adTr (v73): benzerlik hem ad hem TÜRKÇE AD
+    // üzerinden denenir — "Suç ve Ceza"/"Crime and Punishment" tipi
+    // ÇAPRAZ-DİL çifti (v69'un bilinen sınırı) adTr kayıtlıysa yakalanır.
+    if(a.yazar && bag.varyantKaynak.some(k =>
+      yazarEslesir(k.yazar, a.yazar) &&
+      (adBenzer(k.ad, a.ad) || (k.adTr && adBenzer(k.adTr, a.ad))))) return true;
+    return false;
+  }
+  function bElenmis(){
+    const bag = bKutuphaneBaglami();
     const gorulen = new Set();
     return (B.adaylar || []).filter(a => {
       if(!a || !a.ad) return false;
@@ -495,18 +563,7 @@
       const anah = bAnahtar(a);
       if(gorulen.has(anah)) return false;
       gorulen.add(anah);
-      if(adSet.has(katla(a.ad) + '|' + katla(a.yazar || ''))) return false;
-      const t = a.isbn ? isbnTemiz(a.isbn) : '';
-      if(t && isbnSet.has(t)) return false;
-      // M2 (v69): aynı yazarın BAŞLIK VARYANTI da kütüphanede-var sayılır
-      // ("Romeo and Juliet" raftayken "Romeo ve Juliet" önerilmez); yazar
-      // eşleşmiyorsa başlık benzerliğine hiç bakılmaz (farklı yazarın aynı
-      // adlı kitabı elenmez). adTr (v73): benzerlik hem ad hem TÜRKÇE AD
-      // üzerinden denenir — "Suç ve Ceza"/"Crime and Punishment" tipi
-      // ÇAPRAZ-DİL çifti (v69'un bilinen sınırı) adTr kayıtlıysa yakalanır.
-      if(a.yazar && varyantKaynak.some(k =>
-        yazarEslesir(k.yazar, a.yazar) &&
-        (adBenzer(k.ad, a.ad) || (k.adTr && adBenzer(k.adTr, a.ad))))) return false;
+      if(bKutuphanede(a, bag)) return false;
       if(bGizliMi(anah)) return false;   // v62: geri alınan gizlemeler artık elemez
       return true;
     });
@@ -528,11 +585,14 @@
     let hataOldu = false;
     const dene = p => p.catch(() => { hataOldu = true; return []; });
     const adaylar = [];
+    // Kütüphane elemesi dilimden ÖNCE (M2 — v53 ilkesinin kütüphane ayağı):
+    // bağlam sorgu başında bir kez kurulur, üç dal da kullanır.
+    const bag = bKutuphaneBaglami();
     /* TÜR dalı Google döngülerinden ÖNCE ateşlenir, SONRA toplanır: başka
        kökene giden bağımsız istekler sıradaki ≤6 Google sorgusunun gölgesinde
        koşar, duvar saatine eklediği süre pratikte ~0 (ölçüm: /turler 0,23 sn,
        /tur 0,56 sn; Google döngüsü tipik 1-3 sn). İptal sinyali ORTAK. */
-    const turSozu = (A.turler && A.tur) ? dene(bTurAdaylari(A, ctl.signal)) : Promise.resolve([]);
+    const turSozu = (A.turler && A.tur) ? dene(bTurAdaylari(A, ctl.signal, bag)) : Promise.resolve([]);
     /* ALAKA SÜZGECİ kotadan ÖNCE (v53): eleme slice'tan sonra yapılsaydı ilk 3
        sıradaki çöp, 4. sıradaki gerçek kitabı listeden dışarıda bırakırdı.
        Eşleşen kalmazsa o yazar/seri sessizce ATLANIR — doldurma yok. */
@@ -544,15 +604,15 @@
       // B_SERI_ADAY yuvalarını işgal edip Türkçeleri dışarıda bırakmasın).
       // Yazar denetlenemiyorsa (ad yok ya da "Anonim") yalnız seri adı bağlar.
       const yazarDenetli = !!s.yazar && sorulabilirYazar(s.yazar);
-      (await dene(A.google(q, null, ctl.signal, 'tr')))
+      (await dene(A.google(q, null, ctl.signal, 'tr', B_DERINLIK)))
         .filter(a => bDilUygun(a) && seriEslesir(s.seri, a.ad) &&
-          (!yazarDenetli || yazarEslesir(s.yazar, a.yazar)))
+          (!yazarDenetli || yazarEslesir(s.yazar, a.yazar)) && !bKutuphanede(a, bag))
         .slice(0, B_SERI_ADAY)
         .forEach(a => adaylar.push({ ...a, kaynakTip: 'seri', seriAd: s.seri, neden: s.cumle }));
     }
     for(const y of yazarlar){
-      (await dene(A.google(y.ad, 'yazar', ctl.signal, 'tr')))
-        .filter(a => bDilUygun(a) && yazarEslesir(y.ad, a.yazar))
+      (await dene(A.google(y.ad, 'yazar', ctl.signal, 'tr', B_DERINLIK)))
+        .filter(a => bDilUygun(a) && yazarEslesir(y.ad, a.yazar) && !bKutuphanede(a, bag))
         .slice(0, B_YAZAR_ADAY)
         .forEach(a => adaylar.push({ ...a, kaynakTip: 'yazar', neden: y.cumle }));
     }
@@ -563,6 +623,7 @@
     }else{
       B.adaylar = adaylar;
       B.durum = 'hazir';
+      B.acik = false;   // yeni havuz kısaltılmış başlar (M2)
       try{ localStorage.setItem(B_ONBELLEK,
         JSON.stringify({ imza, t: Date.now(), adaylar })); }catch(e){}
     }
@@ -574,7 +635,7 @@
      iniyor). Eşleşmeyen kullanıcı türü SESSİZCE atlanır; hiç tür eşleşmezse
      tek istek bile atılmaz. Kısmi arıza kısmi sonuç verir; HİÇ sonuç yokken
      arıza varsa dışarı fırlatılır (dış katmanın "dürüst hata" kuralı). */
-  async function bTurAdaylari(A, sinyal){
+  async function bTurAdaylari(A, sinyal, bag){
     const sevilen = bSevilenTurler();
     if(!sevilen.length) return [];
     const kaynakTurler = await A.turler(sinyal);
@@ -592,7 +653,11 @@
       .then(p => ({ s, p })).catch(() => { turHata = true; return null; })));
     const adaylar = [];
     paketler.filter(Boolean).forEach(({ s, p }) => {
-      (p.sonuclar || []).slice(0, B_TUR_ADAY).forEach(a => adaylar.push({
+      // kütüphane elemesi dilimden ÖNCE burada da (M2): sahip olunan kitap
+      // B_TUR_ADAY yuvası işgal etmesin (Google dallarıyla aynı ilke)
+      (p.sonuclar || [])
+        .filter(a => a && a.ad && !bKutuphanede({ ad: a.ad, yazar: a.yazar || '' }, bag))
+        .slice(0, B_TUR_ADAY).forEach(a => adaylar.push({
         ad: a.ad, yazar: a.yazar || '', kapak: a.kapak || null,
         // tür MÜHRÜ (v77): adayı getiren kullanıcı türü + kaynağın kendi tür
         // adı sorgu anında donar; süzgeç sonradan tahmin yürütmez
@@ -697,6 +762,34 @@
   function bSuzgecVar(){ return !!(S.tur || S.uzunluk); }
   function bSuzgectenGecer(a){ return bTurUyar(a) && bUzunlukUyar(a); }
 
+  /* Görünen alt-küme (M2): B.acik ya da liste ≤ B_GOSTER ise hepsi iner.
+     Aksi hâlde KAYNAK DENGESİ: aktif kaynaklar öncelik sırasıyla (seri >
+     yazar > tür — motorun sinyal-gücü sırası) taban payı floor(B_GOSTER/n)
+     alır; kalan yuvalar öncelik sırasıyla, az adaylı kaynağın artığı da
+     sıradaki kaynaklara dağıtılır. Blok düzeni (seri, yazar, tür) ve blok
+     içi sıra DEĞİŞMEZ — dönen değer B.gorunen İNDİSLERİDİR (artan sırada),
+     satırların data-i'si bu yüzden hep doğru adaya işaret eder. */
+  function bSecilenIdx(liste){
+    if(B.acik || liste.length <= B_GOSTER) return liste.map((a, i) => i);
+    const gruplar = ['seri', 'yazar', 'tur']
+      .map(tip => liste.map((a, i) => (a && a.kaynakTip === tip) ? i : -1).filter(i => i >= 0))
+      .filter(g => g.length);
+    if(!gruplar.length) return liste.map((a, i) => i);   // emniyet: bilinmeyen kaynak tipi
+    const pay = gruplar.map(() => Math.floor(B_GOSTER / gruplar.length));
+    let kalan = B_GOSTER - pay.reduce((t, x) => t + x, 0);
+    for(let i = 0; kalan > 0 && i < pay.length; i++){ pay[i]++; kalan--; }
+    let artik = 0;
+    gruplar.forEach((g, i) => {
+      if(g.length < pay[i]){ artik += pay[i] - g.length; pay[i] = g.length; }
+    });
+    for(let i = 0; artik > 0 && i < gruplar.length; i++){
+      const bos = gruplar[i].length - pay[i];
+      const ek = Math.min(bos, artik); pay[i] += ek; artik -= ek;
+    }
+    const idx = [];
+    gruplar.forEach((g, i) => idx.push(...g.slice(0, pay[i])));
+    return idx.sort((x, y) => x - y);
+  }
   function bSatirHtml(a, i){
     const kaynakAd = B_KAYNAK_AD[a.kaynakTip] || '';
     return '<div class="ks-b-item">' +
@@ -743,16 +836,22 @@
           '<button class="btn btn-cerceve ks-b-getir" data-act="ks-b-getir">Yeniden dene</button>';
       }else{
         /* Süzgeç HAM havuzun üzerine biner: bElenmis (kütüphane/gizli/dil)
-           önce, kullanıcı süzgeci sonra. B.gorunen GÖSTERİLEN liste olarak
-           kalır — data-i indisleri ekle/gizle eylemlerinde onunla eşleşir. */
+           önce, kullanıcı süzgeci sonra. B.gorunen süzgeçten geçen havuzun
+           TAMAMI olarak kalır — data-i indisleri ekle/gizle eylemlerinde
+           onunla eşleşir; ekrana inen alt-küme bSecilenIdx'ten gelir ama
+           İNDİS B.gorunen'e göre yazılır (kayma imkânsız, g75 sözleşmesi). */
         const ham = bElenmis();
         B.gorunen = ham.filter(bSuzgectenGecer);
         const elenen = ham.length - B.gorunen.length;
+        const secilen = bSecilenIdx(B.gorunen);
+        const kalanN = B.gorunen.length - secilen.length;
         if(B.gorunen.length)
           ic = (bSuzgecVar() && elenen
               ? '<div class="ks-b-sayim">' + ham.length + ' yeni aday · süzgeçten geçen: ' +
                 B.gorunen.length + '</div>'
-              : '') + B.gorunen.map(bSatirHtml).join('');
+              : '') + secilen.map(i => bSatirHtml(B.gorunen[i], i)).join('') +
+            (kalanN ? '<button class="btn btn-cerceve ks-b-daha" data-act="ks-b-daha">' +
+              kalanN + ' öneri daha göster</button>' : '');
         else if(bSuzgecVar() && ham.length)
           /* DÜRÜST boş durum: uydurma doldurma yok, çıkış yolu yazılı */
           ic = '<div class="ks-b-not">Bu süzgeçle eşleşen yeni öneri yok — süzgeci kaldırınca ' +
@@ -1005,6 +1104,7 @@
              typeof hepsiniCiz === 'function') hepsiniCiz();
           ciz(); break;
         case 'ks-b-getir': bGetir(); break;
+        case 'ks-b-daha': B.acik = true; ciz(); break;
         case 'ks-b-ekle': bEkle(el.dataset.i); break;
         case 'ks-b-gizle': bGizle(el.dataset.i); break;
       }

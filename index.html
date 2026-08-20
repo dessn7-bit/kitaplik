@@ -2133,10 +2133,13 @@ function canliAraTetikle(){
    Canlı arama dilKisit GEÇMEZ: kullanıcı kendi rafındaki yabancı kitabı da
    arayabilmeli. kategoriler (v65): otomatik tür çıkarımı (zengin.js otoTur)
    seçilen adayın kendi kategorilerini ek istek atmadan kullanabilsin diye. */
-function aramaGoogle(q, tip, sinyal, dilKisit){
+function aramaGoogle(q, tip, sinyal, dilKisit, maxN){
+  // maxN (M2): Keşfet YENİ KİTAPLAR derin havuz ister (20 — istek sayısı
+  // değişmez, aynı yanıttan daha çok aday gelir; ölçüm: mononim yazarlarda
+  // ilk 6 çoğu kez tek TR baskı bile taşımıyor). Canlı arama 6'da kalır.
   const gbSorgu = tip === 'yazar' ? 'inauthor:' + q
     : tip === 'yayinevi' ? 'inpublisher:' + q : q;
-  return fetch('https://www.googleapis.com/books/v1/volumes?key=AIzaSyCjjwU2NcpAgTVVSop0YNhIaQPmWWpHc04&country=TR&maxResults=6&printType=books'
+  return fetch('https://www.googleapis.com/books/v1/volumes?key=AIzaSyCjjwU2NcpAgTVVSop0YNhIaQPmWWpHc04&country=TR&maxResults=' + (maxN || 6) + '&printType=books'
       + (dilKisit ? '&langRestrict=' + encodeURIComponent(dilKisit) : '') + '&q='
       + encodeURIComponent(gbSorgu), sinyal ? { signal: sinyal } : undefined)
     .then(r => r.json())
