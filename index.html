@@ -656,6 +656,19 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .d-durum-sec{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-top:8px}
 .d-sessiz{font-size:.8rem;color:var(--muted);padding:10px 10px;border-radius:var(--r-ic);
   text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--muted2)}
+/* ÖZET bölümü (M2, oz- ad alanı — d-ghost/d-sessiz reçeteleri kopya, sınıf
+   yeniden kullanılmaz kuralı). Metin: düz serif, KUTUSUZ, italiksiz (italik =
+   alıntı imzası); pre-wrap satır sonlarını korur. */
+.oz-bos{padding-top:2px}
+.oz-ghost{background:none;border:none;color:var(--brass);font-family:var(--sans);
+  font-size:.72rem;font-weight:600;letter-spacing:.06em;padding:0;position:relative}
+.oz-ghost::after{content:'';position:absolute;inset:-8px}
+.oz-metin{white-space:pre-wrap;line-height:1.62;font-size:.95rem;overflow-wrap:anywhere}
+.oz-eylem{display:flex;gap:16px;align-items:center;margin-top:10px}
+.oz-sessiz{background:none;border:none;font-size:.8rem;color:var(--muted);padding:0;
+  position:relative;text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--muted2)}
+.oz-sessiz::after{content:'';position:absolute;inset:-8px}
 .d-katla{margin-top:12px;border:1px solid var(--kontur);border-radius:var(--r-md);
   background:transparent;box-shadow:none}
 .d-katla summary{list-style:none;cursor:pointer;padding:12px 14px;font-size:.85rem;
@@ -994,6 +1007,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
          "Yarım kaldı" olarak yaşar — yalnız süzgeç yüzeyi kısaldı. -->
     <button class="chip" data-act="filtre" data-v="yarim">Yarım</button>
     <button class="chip" data-act="filtre" data-v="puansiz">Puansız</button>
+  <button class="chip" data-act="filtre" data-v="ozetsiz">Özetsiz</button>
     <div class="vm-chips" id="vmSahiplikChips">
       <button class="vm-chip" data-act="vm-sahiplik" data-v="hepsi">Tüm raf</button>
       <button class="vm-chip vm-secili" data-act="vm-sahiplik" data-v="sahip">Bende olanlar</button>
@@ -1593,7 +1607,16 @@ function kitapNormalize(k){
     raf: String(k.raf || ''), isbn: String(k.isbn || ''),
     cevirmen: String(k.cevirmen || ''), dil: String(k.dil || '').trim().toLowerCase().slice(0, 8),
     seri: String(k.seri || ''), ciltNo: parseInt(k.ciltNo) || null,
-    sahiplik: k.sahiplik === 'istek' ? 'istek' : 'sahip',   // eski kayıt = sahip (varsayılan)
+    sahiplik: k.sahiplik === 'istek' ? 'istek' : 'sahip',
+    /* ozet (M1): kitabın BÜTÜNÜNE dair kullanıcının kendi değerlendirmesi —
+       alıntı/nottan AYRI kavram (onlar sayfa düzeyinde ve parçalı; bu tek
+       metin, tek kitap = tek özet). ozetG = alan damgası (gsG sınıfı): yalnız
+       kullanıcı yazımı basar; senkron birleşiminde kitap-LWW değil alan-LWW +
+       çakışma eki (kitapCiftiBirlestir). Kırpma YOK: içe aktarılan uzun metin
+       veri katmanında budanmaz, 10.000 karakter sınırı yalnız yazım arayüzünde.
+       Şema değişti → ANLIK_SURUM 11, SEMA_SURUM 3 (senkron.js). */
+    ozet: String(k.ozet || ''),
+    ozetG: parseInt(k.ozetG) || 0,   // eski kayıt = sahip (varsayılan)
     /* silinenNotlar: NOT mezar taşları {notId: silmeZamani}. Senkron dizileri
        birleştirdiği için mezar olmadan silinen not karşı cihazın kopyasından
        geri dirilirdi. Kitap mezarı (silinenler) deseninin not düzeyi eşi.
@@ -2008,10 +2031,14 @@ function listeCiz(){
   let ks = veri.kitaplar.filter(k => {
     const durumUy = durum.filtre === 'hepsi' ? true
       : durum.filtre === 'puansiz' ? (k.durum === 'bitti' && !k.puan && !k.puanYok)
+      : durum.filtre === 'ozetsiz' ? (k.durum === 'bitti' && !k.ozet)   // sanal süzgeç (puansiz emsali)
       : k.durum === durum.filtre;
     const etiketUy = !durum.etiket || (k.etiketler||[]).includes(durum.etiket);
+    /* ozet aramada (M3): "varoluş" yazınca özetinde geçen kitap da çıkar.
+       Sıralama/ağırlık ETKİLENMEZ — bu saf bir alt-dize süzgecidir, sıralama
+       ayrı cmp tablosunda yaşar (özet eşleşmesi sıra değiştirmez). */
     const metin = katla(k.ad + ' ' + (k.adTr||'') + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.raf||'')
-      + ' ' + (k.cevirmen||'') + ' ' + (k.seri||'') + ' ' + (k.etiketler||[]).join(' '));
+      + ' ' + (k.cevirmen||'') + ' ' + (k.seri||'') + ' ' + (k.etiketler||[]).join(' ') + ' ' + (k.ozet||''));
     const sahiplikUy = durum.sahiplikFiltre === 'hepsi' || (k.sahiplik || 'sahip') === durum.sahiplikFiltre;
     return durumUy && etiketUy && sahiplikUy && (!q || metin.includes(q));
   });
@@ -2449,6 +2476,8 @@ function formKaydet(){
 function detayAc(id){
   const k = kitapBul(id);
   if(!k) return;
+  // özet bölümü geçici durumları kitaba bağlı: başka kitaba geçişte sıfırlanır
+  if(durum.detayId !== id){ durum.ozetDuzenle = null; durum.ozetAcik = false; }
   durum.detayId = id;
   const kap = document.getElementById('detayIcerik');
   const rSinif = { okunuyor:'r-okunuyor', bitti:'r-bitti', okunacak:'r-okunacak', yarim:'r-yarim' }[k.durum];
@@ -2467,6 +2496,41 @@ function detayAc(id){
         `<button class="puan-btn ${k.puan === i+1 ? 'secili' : ''}" data-act="d-puan" data-v="${i+1}">${i+1}</button>`).join('')}</div>
       ${k.puan ? `<button class="d-sessiz" data-act="d-puan-sil">Puanı kaldır</button>` : ''}
     </div>`;
+
+  /* ÖZET bölümü (M2) — kitabın bütününe dair kullanıcı değerlendirmesi; alıntı/
+     nottan görsel olarak da AYRI: kutu yok, italik yok (italik = alıntı imzası),
+     düz serif metin + kıl payı düzen. Doğrudan-puanlama deseninin metin hali:
+     form AÇILMAZ, detay içinde yazılır. Adlandırma KARARI: "Özetin" — Kaan'ın
+     kendi sözcüğü ("bütün kitapların özeti") + uygulamanın kişisel-ton dili
+     (Puanın, Defterin, Rafından emsalleri); "Değerlendirmen" puanla karışırdı.
+     BOŞKEN kicker'lı bölüm ÜRETİLMEZ (boş bölüm kuralı) — tek ince ghost satır.
+     UZUN metin KARARI: >600 karakter katlanır ("Devamını göster") — özet alt
+     bölümleri (notlar, seri) sayfanın dibine gömmesin; 600, iki dolgun
+     paragraf ≈ ekranda ~yarım sayfa. Sınır 10.000 karakter YALNIZ arayüzde
+     (maxlength) — depo bütçesi ölçümü: 240×10.000 uçta bile kota %56. */
+  const ozetHtml = () => {
+    if(durum.ozetDuzenle === k.id){
+      return `<div class="detay-satir" id="dOzetBlok">
+        <div class="d-bolum-bas"><span class="kicker">Özetin</span></div>
+        <textarea id="ozMetin" rows="7" maxlength="10000" style="min-height:140px"
+          placeholder="Bu kitap sana ne bıraktı? Ana fikri, kendi değerlendirmen…">${esc(k.ozet || '')}</textarea>
+        <div class="oz-eylem">
+          <button class="btn btn-cerceve btn-kucuk" data-act="oz-kaydet">Kaydet</button>
+          <button class="oz-sessiz" data-act="oz-vazgec">Vazgeç</button>
+        </div>
+        ${k.ozet ? '<div class="mini-not">Metni boşaltıp kaydedersen özet silinir.</div>' : ''}
+      </div>`;
+    }
+    if(!k.ozet)
+      return `<div class="detay-satir oz-bos"><button class="oz-ghost" data-act="oz-ac">+ Özetini yaz</button></div>`;
+    const uzun = k.ozet.length > 600 && !durum.ozetAcik;
+    return `<div class="detay-satir" id="dOzetBlok">
+      <div class="d-bolum-bas"><span class="kicker">Özetin</span>
+        <button class="oz-ghost" data-act="oz-ac">Düzenle</button></div>
+      <div class="oz-metin">${esc(uzun ? k.ozet.slice(0, 600) : k.ozet)}${uzun ? '…' : ''}</div>
+      ${uzun ? '<button class="oz-sessiz" data-act="oz-devam">Devamını göster</button>' : ''}
+    </div>`;
+  };
 
   /* BİRİNCİL EYLEM TABLOSU (v45 Ciltli): duruma göre TEK altın kontur —
      okunuyor → "Sayfa işaretle" (ilerleme-kaydet) · okunacak → "Okumaya başla"
@@ -2647,6 +2711,7 @@ function detayAc(id){
     ${eylemHtml}
     ${kunyeHtml}
     ${etiketHtml}
+    ${ozetHtml()}
     <div class="detay-satir">
       <div class="d-bolum-bas"><span class="kicker">Notlar &amp; alıntılar</span><button class="oc-ghost" data-act="oc-baslat">${ikon('kamera')} Fotoğraftan</button></div>
       <div class="not-tip-sec">
@@ -2886,6 +2951,18 @@ function istCiz(){
       html += `<div class="mini-not" id="istPuansiz">${puanYokSay} bitmiş kitabı “hatırlamıyorum” işaretledin —
         <button class="d-link" data-act="zg-puanla">gözden geçir / geri al</button></div>`;
   }
+  /* Özet köprüsü (M3) — puansız köprüsünün eşi: sayım + rafa süzgeçli geçiş +
+     sırayla yazma akışı (zg-ozetle'yi zengin.js yakalar, data-act sözleşmesi). */
+  {
+    const ozetliSay = bittiler.filter(k => k.ozet).length;
+    const ozetsizSay = bittiler.length - ozetliSay;
+    if(ozetsizSay)
+      html += `<div class="mini-not" id="istOzet">${ozetliSay ? ozetliSay + ' bitmiş kitabında özetin var; ' : ''}${ozetsizSay} kitabın özeti yok —
+        <button class="d-link" data-act="ozetsiz-git">rafta göster</button> ·
+        <button class="d-link" data-act="zg-ozetle">sırayla yaz</button></div>`;
+    else if(ozetliSay)
+      html += `<div class="mini-not" id="istOzet">${ozetliSay} bitmiş kitabının hepsinde özetin var.</div>`;
+  }
   html += `</section>`;
 
   /* ---- 1) HEDEFLER: kitap hedefi burada, sayfa hedefi (zeka.js) yuvada ---- */
@@ -3029,15 +3106,19 @@ function disaAktar(){
 }
 function csvAktar(){
   const b = s => `"${String(s ?? '').replace(/"/g,'""')}"`;
+  /* Özet sütunu (M3 KARARI): TAM metin, kırpma YOK — hücre zaten b() ile
+     tırnaklanıyor, içteki " ikilenir; tırnaklı hücrede ; ve satır sonu RFC 4180
+     gereği güvenlidir, Excel (BOM+CRLF) çok satırlı hücreyi doğru açar.
+     Kırpmak "yazı çalışması" amacını baltalardı. */
   const sat = [['Ad','Türkçe Ad','Yazar','Çevirmen','Dil','Yayınevi','Yıl','Tür','Seri','Cilt','ISBN','Sahiplik',
-    'Durum','Puan','Sayfa','Güncel Sayfa','Başlama','Bitiş','Okuma Sayısı','Etiketler','Not Sayısı'].join(';')];
+    'Durum','Puan','Sayfa','Güncel Sayfa','Başlama','Bitiş','Okuma Sayısı','Etiketler','Not Sayısı','Özet'].join(';')];
   veri.kitaplar.forEach(k => sat.push([
     b(k.ad), b(k.adTr), b(k.yazar), b(k.cevirmen), b(k.dil), b(k.yayinevi), k.yil ?? '', b(k.tur),
     b(k.seri), k.ciltNo ?? '', b(k.isbn), b(k.sahiplik === 'istek' ? 'İstek listesi' : 'Bende var'),
     b(DURUM_AD[k.durum]), k.puan ?? '', k.sayfa ?? '',
     k.guncelSayfa ?? '', k.baslamaTarihi ?? '', k.bitisTarihi ?? '',
     (k.okumalar||[]).length + 1,
-    b((k.etiketler||[]).join(', ')), (k.notlar||[]).length
+    b((k.etiketler||[]).join(', ')), (k.notlar||[]).length, b(k.ozet)
   ].join(';')));
   dosyaIndir('\uFEFF' + sat.join('\r\n'), `kitaplik-${bugun()}.csv`, 'text/csv;charset=utf-8');
   toast('CSV indirildi');
@@ -3049,14 +3130,26 @@ function csvAktar(){
 function notlariMdUret(sadeceAlinti){
   const aylar = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
   const bl = [], simdi = new Date();
-  let alintiSay = 0, notSay = 0, kitapSay = 0;
+  let alintiSay = 0, notSay = 0, kitapSay = 0, ozetSay = 0;
   const siraliKitaplar = veri.kitaplar.slice().sort((a,b) => a.ad.localeCompare(b.ad,'tr'));
   for(const k of siraliKitaplar){
     const notlar = (k.notlar||[]).filter(n => sadeceAlinti ? n.tip === 'alinti' : true);
-    if(!notlar.length) continue;
+    /* ÖZET md'de (M3 KARARI): ayrı dosya DEĞİL, aynı dosyada kitap başlığının
+       altında "### Özet" bölümü — yazı çalışmasında tek kaynak dosya; ayrı
+       seçenek düğme enflasyonu olurdu. Sadece-alıntılar dosyası SAF kalır
+       (özet girmez). Özeti olan ama notu olmayan kitap da artık dosyaya girer. */
+    const ozet = sadeceAlinti ? '' : String(k.ozet || '');
+    if(!notlar.length && !ozet) continue;
     kitapSay++;
     bl.push('## ' + k.ad + (k.yazar ? ' — ' + k.yazar : ''));
     bl.push('');
+    if(ozet){
+      ozetSay++;
+      bl.push('### Özet');
+      bl.push('');
+      bl.push(ozet);
+      bl.push('');
+    }
     for(const n of notlar){
       if(n.tip === 'alinti') alintiSay++; else notSay++;
       const govde = String(n.metin).split('\n');
@@ -3070,10 +3163,10 @@ function notlariMdUret(sadeceAlinti){
   }
   if(!kitapSay) return null;
   const tarih = simdi.getDate() + ' ' + aylar[simdi.getMonth()] + ' ' + simdi.getFullYear();
-  const ozet = [kitapSay + ' kitap', alintiSay + ' alıntı'];
-  if(!sadeceAlinti) ozet.push(notSay + ' not');
+  const sayim = [kitapSay + ' kitap', alintiSay + ' alıntı'];
+  if(!sadeceAlinti){ sayim.push(notSay + ' not'); if(ozetSay) sayim.push(ozetSay + ' özet'); }
   const bas = ['# Kitaplık — ' + (sadeceAlinti ? 'Alıntılar' : 'Alıntılar ve notlar'),
-    '', tarih + ' · ' + ozet.join(', '), ''];
+    '', tarih + ' · ' + sayim.join(', '), ''];
   return bas.concat(bl).join('\n');
 }
 function notlariMdAktar(sadeceAlinti){
@@ -3612,6 +3705,12 @@ document.addEventListener('click', e => {
       document.querySelectorAll('#durumChips .chip').forEach(c =>
         c.classList.toggle('active', c.dataset.v === 'puansiz'));
       sekmeGec('raf'); listeCiz(); break;
+    case 'ozetsiz-git':
+      // istatistikteki "özetsiz bitmişler" köprüsü: puansiz-git deseninin eşi
+      durum.filtre = 'ozetsiz';
+      document.querySelectorAll('#durumChips .chip').forEach(c =>
+        c.classList.toggle('active', c.dataset.v === 'ozetsiz'));
+      sekmeGec('raf'); listeCiz(); break;
     case 'zar': {
       const adaylar = veri.kitaplar.filter(k => k.durum === 'okunacak');
       if(!adaylar.length){ toast('Okunacak listen boş — önce kitap ekle'); break; }
@@ -3824,6 +3923,32 @@ document.addEventListener('click', e => {
       if(k && k.puan){
         k.puan = null; k.g = Date.now();
         depoKaydet(); hepsiniCiz(); detayAc(k.id); toast('Puan kaldırıldı');
+      }
+      break; }
+    /* Özet eylemleri (M2) — doğrudan-puanlama kalıbı: form AÇILMAZ, damga
+       YALNIZ değer değiştiyse basılır (hedef-kaydet dersi: yalnız-eksikse-bas
+       başka cihazın eskisini yenemiyordu). ozetG = alan damgası (senkron). */
+    case 'oz-ac': {
+      durum.ozetDuzenle = durum.detayId; detayAc(durum.detayId);
+      const ta = document.getElementById('ozMetin');
+      if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+      break; }
+    case 'oz-vazgec': durum.ozetDuzenle = null; detayAc(durum.detayId); break;
+    case 'oz-devam': durum.ozetAcik = true; detayAc(durum.detayId); break;
+    case 'oz-kaydet': {
+      const k = kitapBul(durum.detayId);
+      const ta = document.getElementById('ozMetin');
+      if(k && ta){
+        const metin = ta.value.trim();
+        if(metin !== (k.ozet || '')){
+          k.ozet = metin;
+          k.ozetG = Date.now();   // alan damgası: kullanıcı yazımı (gsG kalıbı)
+          k.g = Date.now();
+          depoKaydet(); listeCiz();   // özetsiz çipi/araması tazelensin; raf kartı etkilenmez
+          toast(metin ? 'Özetin kaydedildi' : 'Özet silindi');
+        }
+        durum.ozetDuzenle = null;
+        detayAc(k.id);
       }
       break; }
     case 'ilerleme-kaydet': {

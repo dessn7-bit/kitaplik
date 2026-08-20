@@ -1294,6 +1294,100 @@
     puanCiz_();
   }
 
+  /* ---------- Sırayla özet yazma (v79 M4) ----------
+     Hızlı puanlamanın (v72) METİN hali. DEĞERLENDİRME: puan tek dokunuş, özet
+     düşünmek + yazmak ister — aynı RİTİM kurulamaz; ama akışın değeri ritim
+     değil GEZİNME maliyetini sıfırlamak: 239 bitmiş kitapta "listeden kitap
+     seç + detay aç + bölüme in + kapat" döngüsü asıl işkence. Burada kitap
+     kartı + tek metin kutusu + "Kaydet ve sonraki". Bu yüzden KURULDU.
+     Farklar: 1-10 şeridi yerine textarea; "Hatırlamıyorum" muadili YOK —
+     kalıcı "özet yazmayacağım" işareti kanıtlanmamış ihtiyaç, Atla geçicidir
+     (kitap sonraki oturumda kuyruğa döner). Sınıflar zg- ailesinde: aynı
+     eklentinin kardeş ekranı; zgOzetOrtu tembel kurulur (ortuKur), puan
+     paneli açık değilken DOM'da yoktur — test seçicileri çakışmaz. */
+  let ozKuyruk = null, ozSira = 0, ozBasi = 0;
+  let ozYazdigim = new Set();   // bu oturumda yazdıklarım — geri dönüşte düzeltme izni
+  function ozetsizler(){
+    return (veri.kitaplar || []).filter(k => k.durum === 'bitti' && !k.ozet)
+      .sort((a, b) => String(b.bitisTarihi || '').localeCompare(String(a.bitisTarihi || '')));
+  }
+  function ozetBaslat(){
+    ozKuyruk = ozetsizler();
+    ozSira = 0; ozBasi = ozKuyruk.length;
+    ozYazdigim = new Set();
+    if(!ozBasi){ bildir('Özetsiz bitmiş kitap kalmadı'); return; }
+    ortuKur('zgOzetOrtu', 'Sırayla özet');
+    ozetCiz_();
+    ac('zgOzetOrtu');
+  }
+  function ozetOnayHtml_(){
+    if(!ozSira) return '';
+    const onceki = ozKuyruk[ozSira - 1];
+    const canli = (veri.kitaplar || []).find(x => x.id === onceki.id) || onceki;
+    const yazdim = canli.ozet && ozYazdigim.has(canli.id);
+    return '<div class="zg-onay"><span class="zg-onay-metin">' +
+      (yazdim ? '✓ ' : '') + esc(canli.ad) + ' → ' + (yazdim ? 'kaydedildi' : 'atlandı') + '</span>' +
+      '<button class="d-link" data-act="zg-oz-geri">Geri</button></div>';
+  }
+  function ozetCiz_(){
+    const g = document.getElementById('zgOzetOrtuGovde');
+    if(!g) return;
+    if(ozSira >= ozKuyruk.length){
+      g.innerHTML = ozetOnayHtml_() +
+        '<div class="zg-satir">Bitti — bu oturumda ' + ozBasi + ' kitap gözden geçirildi.</div>' +
+        '<div class="form-alt"><button class="btn btn-cerceve" data-act="zg-kapat" data-ortu="zgOzetOrtu" style="flex:1">Kapat</button></div>';
+      return;
+    }
+    const k = ozKuyruk[ozSira];
+    const canli = (veri.kitaplar || []).find(x => x.id === k.id) || k;
+    const alt = [
+      k.bitisTarihi ? String(k.bitisTarihi).slice(0, 4) + ' yılında bitti' : '',
+      k.sayfa > 0 ? k.sayfa + ' sayfa' : '',
+      k.tur || ''
+    ].filter(Boolean).join(' · ');
+    g.innerHTML = ozetOnayHtml_() +
+      '<div class="zg-sayac-satir"><span class="zg-sayac">' + (ozSira + 1) + ' / ' + ozBasi + '</span>' +
+        '<span class="zg-kalan">kalan ' + (ozKuyruk.length - ozSira) + '</span></div>' +
+      '<div class="zg-kitap">' + (typeof ktPlate === 'function' ? ktPlate(k, 'iz-plate zg-pkapak') : '') +
+        '<div class="zg-kitap-ic"><span class="zg-kitap-ad">' + esc(k.ad) + '</span>' +
+        (k.yazar ? '<span class="zg-kitap-yazar">' + esc(k.yazar) + '</span>' : '') +
+        (alt ? '<span class="zg-kitap-alt">' + esc(alt) + '</span>' : '') +
+        '</div></div>' +
+      '<textarea class="zg-oz-metin" id="zgOzMetin" rows="7" maxlength="10000"' +
+        ' placeholder="Bu kitap sana ne bıraktı? Ana fikri, kendi değerlendirmen…"></textarea>' +
+      '<div class="zg-eylem"><button class="btn btn-cerceve btn-kucuk" data-act="zg-oz-kaydet">Kaydet ve sonraki</button>' +
+        '<button class="zg-sessiz" data-act="zg-oz-atla">Atla</button></div>';
+    if(typeof ktPlateHata === 'function') ktPlateHata(g);
+    const ta = document.getElementById('zgOzMetin');
+    if(ta){
+      if(ozYazdigim.has(k.id)) ta.value = canli.ozet || '';   // geri dönüşte düzeltme
+      ta.focus();
+    }
+  }
+  function ozetYaz(){
+    const k = ozKuyruk && ozKuyruk[ozSira];
+    if(!k) return;
+    const ta = document.getElementById('zgOzMetin');
+    const metin = ta ? ta.value.trim() : '';
+    const canli = (veri.kitaplar || []).find(x => x.id === k.id);
+    /* boş metinle "Kaydet" = Atla (yazmadan geç); üzerine yazma yalnız BU
+       oturumda benim yazdığım özette — dışarıdan (detay, başka cihaz) gelen
+       özet ezilmez (puanVer bayat-kuyruk koruması kalıbı) */
+    if(canli && metin && (!canli.ozet || ozYazdigim.has(canli.id))){
+      canli.ozet = metin;
+      canli.ozetG = Date.now();   // alan damgası (senkron birleşimi, gsG sınıfı)
+      canli.g = Date.now();       // kullanıcı eylemi — açık damga
+      ozYazdigim.add(canli.id);
+      if(typeof depoKaydet === 'function') depoKaydet();
+    }
+    ozSira++;
+    ozetCiz_();
+  }
+  function ozetGeri(){
+    // salt konum: veri değişmez (puanGeri kalıbı)
+    if(ozSira > 0){ ozSira--; ozetCiz_(); }
+  }
+
   /* ---------- M3: bitiş yılı atama ---------- */
   function tarihsizler(){
     return (veri.kitaplar || []).filter(k => k.durum === 'bitti' && !k.bitisTarihi);
@@ -1398,6 +1492,8 @@
       'background:transparent;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}',
     '.zg-puan-btn:active,.zg-yil-btn:active{background:color-mix(in srgb,var(--brass) 12%,transparent)}',
     '.zg-eylem{display:flex;gap:16px;margin-top:14px}',
+    // sırayla özet (v79): metin kutusu panel genişliğinde, dikey büyür
+    '.zg-oz-metin{width:100%;min-height:150px;margin-top:12px;line-height:1.55}',
     '.zg-sessiz{font-size:.8rem;color:var(--muted);text-decoration:underline;text-underline-offset:3px;' +
       'text-decoration-color:var(--muted2);padding:2px 0;background:transparent;border:none;position:relative}',
     '.zg-sessiz::after{content:"";position:absolute;inset:-10px}'
@@ -1459,6 +1555,10 @@
         case 'zg-atla': puanSira++; puanCiz_(); break;   // GEÇİCİ: puan yazılmaz, sonraki turda döner
         case 'zg-puan-yok': puanYokVer(); break;
         case 'zg-puan-geri': puanGeri(); break;
+    case 'zg-ozetle': ozetBaslat(); break;
+    case 'zg-oz-kaydet': ozetYaz(); break;
+    case 'zg-oz-atla': ozSira++; ozetCiz_(); break;   // geçici: yazılmaz, sonraki oturumda döner
+    case 'zg-oz-geri': ozetGeri(); break;
         case 'zg-puanyok-geri': puanYokGeri(el.dataset.id); break;
         case 'zg-tarih': tarihBaslat(); break;
         case 'zg-yil': yilVer(parseInt(el.dataset.v)); break;

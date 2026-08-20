@@ -30,13 +30,13 @@
   function bildir(m){ if(typeof toast === 'function') toast(m); }
 
   /* ---------- damgalama: depoKaydet sarmalayıcısı ---------- */
-  const ANLIK_SURUM = 10;
+  const ANLIK_SURUM = 11;
   /* SEMA_SURUM: PUT gövdesine yazılan VERİ şeması numarası (parmak izi deposu
      sürümü olan ANLIK_SURUM'dan ayrı — o iz biçimi için de artar). Odadaki sema
      yerelden BÜYÜKSE bu istemci eskidir: birleştirme + yazma tümüyle durur.
      "Salt-okur birleşme" bile güvensizdi — eski normalize bilmediği alanları
      budar, budanmış yerel kopya eşit damgada sonraki turda odayı ezerdi. */
-  const SEMA_SURUM = 2;   // 2: gsG eklendi — v32 ve öncesi normalize gsG'yi budar
+  const SEMA_SURUM = 3;   // 3: ozet eklendi (bkz. v11 notu) · 2: gsG — v32 öncesi budar
   /* v1'de her kitabın TAM JSON'u parmak izi olarak saklanıyordu: kütüphanenin
      ikinci bir kopyası kadar yer tutuyor, localStorage kotasını iki katına
      yakın hızda dolduruyordu. v2 kısa çift-hash tutar (~20 karakter/kitap).
@@ -60,7 +60,14 @@
      yerleşik 88 kayıt budama kaybında tek dokunuşla geri gelir; ELLE girilen
      adTr içinse kayıp v9 sınıfının genel kabulüne tabidir (eski istemcinin
      gerçek düzenlemesi ezebilir — tek kullanıcı + hızlı SW güncellemesi
-     penceresinde kabul edilen risk). */
+     penceresinde kabul edilen risk).
+     v11: kitaba ozet + ozetG eklendi (kitabın bütününe dair kullanıcı
+     değerlendirmesi — alıntı/nottan ayrı kavram). SEMA_SURUM 2→3 (v9/v10'un
+     aksine): ozet ELLE yazılan uzun metindir, eski istemcinin budaması KALICI
+     emek kaybı olur (adTr'nin "yerleşik listeden geri gelir" güvencesi yok,
+     puanYok'un "yeniden kuyruğa girer" düşük-zararı yok) — gsG'yle aynı
+     veri-kaybı sınıfı. Bedeli: güncellenmemiş cihazın senkronu güncellenene
+     dek donar (durum ekranı bunu söylüyor; SW network-first hızla günceller). */
   function anlikYukle(){
     try{
       const h = JSON.parse(localStorage.getItem(ANLIK_ANAHTAR));
@@ -251,6 +258,30 @@
         : (parseInt(kazanan.guncelSayfa) || 0);
     }
     k.gsG = Math.max(kGs, yGs);
+    /* ozet: ozetG alan damgası (gsG sınıfı — elle yazılan uzun metin). Kitap-LWW
+       yeterli değildi: A'da özet yazılır, B'de SONRA puan verilirse kitap
+       kazananı B olur ve spread kopya özeti sessizce düşürürdü. Kurallar:
+       1) İki tarafta da FARKLI dolu metin varsa (ikisi de gerçek yazım) yeni
+          damgalı önde, eski metin ÇAKIŞMA EKİ olarak sona — uzun emek ürünü
+          sessizce kaybolmaz (görev sözleşmesi). Ek üretilince ozetG=Date.now():
+          birleşik metin alan-LWW'de her iki cihaza da yayılır (max'ta kalsaydı
+          karşı cihaz kendi kısa kopyasını eşit damgayla dayatır, yakınsama
+          bozulurdu). İki cihaz aynı anda birleştirse de içerik deterministik
+          (kazanan-önce + ek) — metinler aynı olur, damga farkı zararsız.
+       2) Yeni damgalı taraf BOŞ + damgası >0 = KASITLI silme → silme kazanır
+          (kayıp değil, kullanıcı eylemi).
+       3) İki taraf da damgasız (dış yedek/elle JSON) → dolu metin taşınır. */
+    const kOz = parseInt(kazanan.ozetG) || 0, yOz = parseInt(kaybeden.ozetG) || 0;
+    const ozYeni = String(((kOz >= yOz) ? kazanan : kaybeden).ozet || '');
+    const ozEski = String(((kOz >= yOz) ? kaybeden : kazanan).ozet || '');
+    if(ozYeni && ozEski && ozYeni.indexOf(ozEski) < 0){
+      k.ozet = ozYeni + '\n\n— · —\nÇakışan özet (diğer cihazdan):\n\n' + ozEski;
+      k.ozetG = Date.now();
+    }else if(!ozYeni && ozEski && Math.max(kOz, yOz) === 0){
+      k.ozet = ozEski; k.ozetG = 0;
+    }else{
+      k.ozet = ozYeni; k.ozetG = Math.max(kOz, yOz);
+    }
     const nb = notlariBirlestir(kazanan, kaybeden);
     k.notlar = nb.notlar;
     k.silinenNotlar = nb.silinenNotlar;
