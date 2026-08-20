@@ -30,13 +30,13 @@
   function bildir(m){ if(typeof toast === 'function') toast(m); }
 
   /* ---------- damgalama: depoKaydet sarmalayıcısı ---------- */
-  const ANLIK_SURUM = 11;
+  const ANLIK_SURUM = 12;
   /* SEMA_SURUM: PUT gövdesine yazılan VERİ şeması numarası (parmak izi deposu
      sürümü olan ANLIK_SURUM'dan ayrı — o iz biçimi için de artar). Odadaki sema
      yerelden BÜYÜKSE bu istemci eskidir: birleştirme + yazma tümüyle durur.
      "Salt-okur birleşme" bile güvensizdi — eski normalize bilmediği alanları
      budar, budanmış yerel kopya eşit damgada sonraki turda odayı ezerdi. */
-  const SEMA_SURUM = 3;   // 3: ozet eklendi (bkz. v11 notu) · 2: gsG — v32 öncesi budar
+  const SEMA_SURUM = 4;   // 4: ozet metni AYRI düğüme taşındı (v12 notu) · 3: ozet · 2: gsG
   /* v1'de her kitabın TAM JSON'u parmak izi olarak saklanıyordu: kütüphanenin
      ikinci bir kopyası kadar yer tutuyor, localStorage kotasını iki katına
      yakın hızda dolduruyordu. v2 kısa çift-hash tutar (~20 karakter/kitap).
@@ -67,7 +67,14 @@
      emek kaybı olur (adTr'nin "yerleşik listeden geri gelir" güvencesi yok,
      puanYok'un "yeniden kuyruğa girer" düşük-zararı yok) — gsG'yle aynı
      veri-kaybı sınıfı. Bedeli: güncellenmemiş cihazın senkronu güncellenene
-     dek donar (durum ekranı bunu söylüyor; SW network-first hızla günceller). */
+     dek donar (durum ekranı bunu söylüyor; SW network-first hızla günceller).
+     v12: ozet METNİ kitap kaydından çıktı (IndexedDB + AYRI senkron düğümü —
+     ölçüm: 242 uzun özet ana PUT gövdesini 3,2 MB yapardı, işaretlerle 148 KB).
+     Kitapta yalnız ozetVar/ozetUzunluk/ozetG işaretleri. kitapParmak ozet*
+     alanlarını DIŞLAR (ayrı kanalın kendi damgası var; işaret değişimi kitap
+     damgası üretmesin — tekrar* emsali). SEMA_SURUM 3→4: v79 istemcisi kitap
+     gövdesinde metin bekler/yazar, karışık sürüm ödünleşemez → eski cihaz
+     donar (v11 kararının devamı). */
   function anlikYukle(){
     try{
       const h = JSON.parse(localStorage.getItem(ANLIK_ANAHTAR));
@@ -81,6 +88,12 @@
   }
   function kitapParmak(k){
     const kopya = { ...k }; delete kopya.g;
+    /* ozet* parmak izine GİRMEZ (v12): özet ayrı kanaldan, kendi damgasıyla
+       (ozetG) senkronlanır — işaret değişimi kitap damgası üretseydi özet
+       yazan cihaz kitabı LWW'de taze yapıp İLGİSİZ alan çakışmalarını
+       etkilerdi; ayrıca v79 göçü tüm kütüphaneyi yeniden damgalardı. */
+    delete kopya.ozet; delete kopya.ozetVar;
+    delete kopya.ozetUzunluk; delete kopya.ozetG;
     /* Notların tekrar* alanları parmak izine GİRMEZ: yayılma zamanlaması
        (tekrar.js planlamaYap) her cihazda kendi kendine koşan türetilmiş bir
        defter kaydıdır — parmak izini değiştirseydi salt-render yapan cihaz
@@ -258,30 +271,18 @@
         : (parseInt(kazanan.guncelSayfa) || 0);
     }
     k.gsG = Math.max(kGs, yGs);
-    /* ozet: ozetG alan damgası (gsG sınıfı — elle yazılan uzun metin). Kitap-LWW
-       yeterli değildi: A'da özet yazılır, B'de SONRA puan verilirse kitap
-       kazananı B olur ve spread kopya özeti sessizce düşürürdü. Kurallar:
-       1) İki tarafta da FARKLI dolu metin varsa (ikisi de gerçek yazım) yeni
-          damgalı önde, eski metin ÇAKIŞMA EKİ olarak sona — uzun emek ürünü
-          sessizce kaybolmaz (görev sözleşmesi). Ek üretilince ozetG=Date.now():
-          birleşik metin alan-LWW'de her iki cihaza da yayılır (max'ta kalsaydı
-          karşı cihaz kendi kısa kopyasını eşit damgayla dayatır, yakınsama
-          bozulurdu). İki cihaz aynı anda birleştirse de içerik deterministik
-          (kazanan-önce + ek) — metinler aynı olur, damga farkı zararsız.
-       2) Yeni damgalı taraf BOŞ + damgası >0 = KASITLI silme → silme kazanır
-          (kayıp değil, kullanıcı eylemi).
-       3) İki taraf da damgasız (dış yedek/elle JSON) → dolu metin taşınır. */
+    /* ozet İŞARETLERİ (v12): metin artık kitap gövdesinde değil (ayrı düğüm,
+       ozetBirlesim). Burada yalnız işaret alan-LWW'si: yeni ozetG'li tarafın
+       ozetVar/ozetUzunluk'u kazanır — kitap-LWW kazananı işareti ezemez
+       (v79 alan-damgası ilkesinin işaret hali). Göç penceresinden kalmış
+       k.ozet miras alanı varsa yeni damgalı taraftan aynen taşınır (normalize
+       koşullu geçiriyor; hedef cihaz kendi göçünde IDB'ye alır). */
     const kOz = parseInt(kazanan.ozetG) || 0, yOz = parseInt(kaybeden.ozetG) || 0;
-    const ozYeni = String(((kOz >= yOz) ? kazanan : kaybeden).ozet || '');
-    const ozEski = String(((kOz >= yOz) ? kaybeden : kazanan).ozet || '');
-    if(ozYeni && ozEski && ozYeni.indexOf(ozEski) < 0){
-      k.ozet = ozYeni + '\n\n— · —\nÇakışan özet (diğer cihazdan):\n\n' + ozEski;
-      k.ozetG = Date.now();
-    }else if(!ozYeni && ozEski && Math.max(kOz, yOz) === 0){
-      k.ozet = ozEski; k.ozetG = 0;
-    }else{
-      k.ozet = ozYeni; k.ozetG = Math.max(kOz, yOz);
-    }
+    const ozIsaret = (kOz >= yOz) ? kazanan : kaybeden;
+    k.ozetVar = ozIsaret.ozetVar === true || !!ozIsaret.ozet;
+    k.ozetUzunluk = parseInt(ozIsaret.ozetUzunluk) || 0;
+    k.ozetG = Math.max(kOz, yOz);
+    if(ozIsaret.ozet) k.ozet = String(ozIsaret.ozet); else delete k.ozet;
     const nb = notlariBirlestir(kazanan, kaybeden);
     k.notlar = nb.notlar;
     k.silinenNotlar = nb.silinenNotlar;
@@ -310,6 +311,81 @@
     k.odunc.sort((x, y) => String(x.verilis || '').localeCompare(String(y.verilis || '')));
     return k;
   }
+  /* ---------- ÖZET DÜĞÜMÜ SENKRONU (v12) ----------
+     Metin ana gövdeye GİRMEZ (ölçüm: girseydi her PUT 3,2 MB olurdu).
+     Düğüm: /odalar/<oda>--ozet — ana odanın KARDEŞİ. Alt yol OLAMAZDI:
+     ana senkron /odalar/<oda>.json'a TAM GÖVDE PUT atar, RTDB'de PUT verilen
+     yolun tamamını değiştirir — alt düğüm her turda silinirdi. Kardeş anahtar
+     RTDB kurallarına da uyar (odalar/$oda kapsamı, ad ≥6 harf).
+     Yapı: izler/{id: g} (küçük fihrist, ~4 KB) + k/{id: {m, g}}.
+     Akış: izler GET → damga farkı olan id'ler için tekil GET + ozetBirlesim →
+     yerel yeni olanlar tekil PATCH (k/<id> + izler/<id> tek istekte, atomik).
+     Böylece YALNIZ DEĞİŞEN özet gider (~14 KB/kayıt), tüm kütüphane değil.
+     ETag KARARI: özet düğümünde if-match YOK. Gerekçe: (1) yazım per-kitap,
+     ana gövdenin "tam-gövde ezme" riski burada yok; (2) ozetBirlesim
+     deterministik ve idempotent — eş-zamanlı yazımda geç kalan taraf sonraki
+     turda uzağı indirir, ÇAKIŞMA EKİ metni korur, yakınsar (kayıp penceresi
+     yok, yalnız bir tur gecikme); (3) 242 kayıt için ayrı ETag defteri
+     karmaşıklık/kazanç oranıyla savunulamaz. */
+  function ozetBirlesim(a, b){
+    const aG = parseInt(a && a.g) || 0, bG = parseInt(b && b.g) || 0;
+    let mY = String(((aG >= bG) ? a && a.m : b && b.m) || '');
+    let mE = String(((aG >= bG) ? b && b.m : a && a.m) || '');
+    /* eşit damga + farklı metin: sıra LEKSİKOGRAFİK — iki cihaz simetrik
+       birleştirse de aynı birleşiği üretir (yakınsama) */
+    if(aG === bG && mY && mE && mY !== mE){ const s = [mY, mE].sort(); mY = s[0]; mE = s[1]; }
+    if(mY && mE && mY.indexOf(mE) < 0)
+      return { m: mY + '\n\n— · —\nÇakışan özet (diğer cihazdan):\n\n' + mE, g: Date.now() };
+    if(!mY && mE && Math.max(aG, bG) === 0) return { m: mE, g: 0 };   // dış yedek: damgasız metin taşınır
+    return { m: mY, g: Math.max(aG, bG) };   // yeni metin YA DA kasıtlı silme (boş + damga) kazanır
+  }
+  let ozCalisiyor = false;
+  async function ozetSenkronEt(){
+    if(!ayar || !ayar.oda || !kurulu() || eskiSurum || !window.__ozet) return false;
+    if(ozCalisiyor) return false;
+    ozCalisiyor = true;
+    try{
+      await window.__ozet.hazirBekle();
+      const tok = await kimlikAl();
+      const kok = SENKRON_URL.replace(/\/+$/, '') + '/odalar/' + encodeURIComponent(ayar.oda + '--ozet');
+      const r = await fetch(kok + '/izler.json?auth=' + tok);
+      if(!r.ok) throw new Error('özet izleri ' + r.status);
+      const uzakIzler = (await r.json()) || {};
+      const idler = new Set(Object.keys(uzakIzler));
+      for(const k of (veri.kitaplar || []))
+        if(k && k.id && (parseInt(k.ozetG) || window.__ozet.damga(k.id))) idler.add(String(k.id));
+      const gonder = [];
+      let indirilen = 0;
+      for(const id of idler){
+        const yerelG = window.__ozet.damga(id);
+        const uzakG = parseInt(uzakIzler[id]) || 0;
+        if(uzakG > yerelG){
+          const rr = await fetch(kok + '/k/' + encodeURIComponent(id) + '.json?auth=' + tok);
+          if(!rr.ok) continue;   // fihristte var ama kayıt okunamadı: bu turu atla, gelecek tur dener
+          const uzak = (await rr.json()) || {};
+          const b = ozetBirlesim({ m: uzak.m, g: uzak.g }, { m: window.__ozet.oku(id), g: yerelG });
+          await window.__ozet.kaydetHam(id, b.m, b.g);
+          indirilen++;
+          // birleşim uzaktan farklıysa (çakışma eki üretti) uzağa da yazılmalı
+          if(b.m !== String(uzak.m || '') || b.g !== (parseInt(uzak.g) || 0)) gonder.push(id);
+        }else if(yerelG > uzakG) gonder.push(id);
+      }
+      for(const id of gonder){
+        const m = window.__ozet.oku(id), g = window.__ozet.damga(id);
+        const y = await fetch(kok + '/.json?auth=' + tok, { method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ['k/' + id]: { m, g }, ['izler/' + id]: g }) });
+        if(!y.ok) throw new Error('özet yazma ' + y.status);
+      }
+      if(indirilen){
+        if(typeof depoKaydet === 'function') depoKaydet();   // işaretler kalıcılaşsın
+        if(typeof hepsiniCiz === 'function') hepsiniCiz();
+      }
+      return true;
+    }catch(e){ return false; }
+    finally{ ozCalisiyor = false; }
+  }
+
   function birlestir(yerel, uzak){
     const silinenler = { ...((uzak && uzak.silinenler) || {}) };
     for(const [id, t] of Object.entries((yerel && yerel.silinenler) || {}))
@@ -473,6 +549,7 @@
         if(typeof hepsiniCiz === 'function') hepsiniCiz();
         durumCiz();
         if(!sessiz) bildir('Senkron tamam — ' + veri.kitaplar.length + ' kitap');
+        ozetSenkronEt().catch(() => {});   // v12: özet düğümü ayrı kanaldan, ana turu bloklamaz
         return true;
       }
       // 3 denemede de çakışma: veri yerelde güvende, dürüstçe söyle, yeniden dene
@@ -615,5 +692,5 @@
 
   // test kancaları
   window.__senkron = { birlestir, damgala, senkronEt, durumCiz, ayarKaydet, kurulu,
-    ANLIK_SURUM, SEMA_SURUM };
+    ozetBirlesim, ozetSenkronEt, ANLIK_SURUM, SEMA_SURUM };
 })();

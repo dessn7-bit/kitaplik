@@ -1,26 +1,19 @@
 'use strict';
-/* G78 — KİTAP ÖZETİ alanı (v79).
+/* G78 — KİTAP ÖZETİ alanı (v79, depo mimarisi v80'de revize).
 
-   KAVRAM: özet, alıntı/nottan AYRI — onlar sayfa düzeyinde ve parçalı, özet
-   kitabın BÜTÜNÜNE dair kullanıcı değerlendirmesi; tek kitap = tek özet.
+   KAVRAM: özet, alıntı/nottan AYRI — kitabın BÜTÜNÜNE dair kullanıcı
+   değerlendirmesi; tek kitap = tek özet.
 
-   BU DOSYANIN KİLİTLEDİĞİ KARARLAR (gerekçeler index.html/senkron.js'te):
-   - Veri: kitapNormalize.ozet + ozetG (alan damgası, gsG sınıfı);
-     ANLIK_SURUM 11 (göç turu damga BASMAZ), SEMA_SURUM 3 (elle yazılan uzun
-     metin — eski istemci budaması kalıcı emek kaybı olurdu).
-   - Senkron: alan-LWW (kitap-LWW özeti ezemez) + ÇAKIŞMA EKİ (iki cihazda
-     aynı kitaba yazılan iki özetten biri sessizce kaybolmaz) + kasıtlı silme
-     (yeni damgalı boş) eski metni diriltmez.
-   - Arayüz: detaydan DOĞRUDAN yazım (form açılmaz), "Özetin" kicker'ı,
-     boşken bölüm yer kaplamaz (ince "+ Özetini yaz" ghost), >600 karakterde
-     katlama; yazım k.g + k.ozetG damgası basar (yalnız değer değiştiyse).
-   - Erişim: raf araması özet metninde de çalışır (saf süzgeç, sıralama
-     etkilenmez); "Özetsiz" sanal çipi (puansiz emsali); istatistik köprüsü;
-     md-hepsi'de "### Özet" bölümü (sadece-alıntılar SAF kalır); CSV "Özet"
-     sütunu tam metin (RFC 4180 kaçışı, kırpma yok).
-   - M4: "Sırayla özet" akışı (hızlı puanlamanın metin hali, zengin.js).
-   (Mutasyon: ozet normalize'dan çıkar → kalıcılık vakaları kırmızı;
-    md'den özet bloğu çıkar → markdown vakası kırmızı.) */
+   v80 DEPO REVİZYONU (bu dosya birlikte güncellendi): özet METNİ artık kitap
+   kaydında değil — IndexedDB (kk_ozet_v1) + bellek dizini (window.__ozet).
+   Kitapta yalnız İŞARET: ozetVar / ozetUzunluk / ozetG (alan damgası).
+   - Kullanıcı yazımı k.g BASMAZ (v80 kararı): özet ayrı kanalın damgasını
+     taşır; kitapParmak ozet* alanlarını dışlar.
+   - Metin birleşimi kitap çiftinden çıktı → ozetBirlesim saf fonksiyonu
+     (v79 çakışma-eki/silme/damgasız kuralları AYNEN, g79'da düğüm testleri).
+   - ANLIK_SURUM 12, SEMA_SURUM 4.
+   (Mutasyon: ozet işaretleri normalize'dan çıkar → kalıcılık vakaları
+    kırmızı; md'den özet bloğu çıkar → markdown vakası kırmızı.) */
 const { test, expect, tohumla, sahteKitap, bugunISO, rafAc, rafaGec, ayarlarAc } = require('./yardim');
 
 function bitmis(ek) {
@@ -30,7 +23,10 @@ async function detayAc(page, ad) {
   await page.click('#liste .kart:has-text("' + ad + '")');
   await expect(page.locator('#ortuDetay')).toHaveClass(/acik/);
 }
-/* birlestir SAF çağrı (g26 deseni) */
+async function ozetHazir(page) {
+  await page.evaluate(() => window.__ozet.hazirBekle());
+}
+/* birlestir SAF çağrı (g26 deseni) — v80'de kitap çifti yalnız İŞARET birleştirir */
 async function birlestirilmis(page, yerelK, uzakK) {
   return page.evaluate(([y, u]) => {
     const b = window.__senkron.birlestir(
@@ -38,7 +34,6 @@ async function birlestirilmis(page, yerelK, uzakK) {
     return b.kitaplar[0];
   }, [yerelK, uzakK]);
 }
-/* dosyaIndir monkeypatch ile içerik yakalama (g62 CSV deseni) */
 async function aktarimYakala(page, cagri) {
   return page.evaluate(fn => {
     const asil = window.dosyaIndir; let yakalanan = null;
@@ -50,80 +45,89 @@ async function aktarimYakala(page, cagri) {
 
 test.describe('G78 özet — veri modeli + senkron', () => {
 
-  test('(a) KALICILIK: ozet + ozetG yenilemede korunur (normalize budamaz)', async ({ page }) => {
+  test('(a) KALICILIK: v79 metni GÖÇLE IDB\'ye iner, yenilemede korunur, kitapta yalnız işaret kalır', async ({ page }) => {
     await tohumla(page, [bitmis({ ad: 'Varlık ve Zaman', ozet: 'Varoluş üzerine ana fikir.', ozetG: 1754000000123 })]);
     await rafAc(page);
+    await ozetHazir(page);
     await page.reload();
     await rafaGec(page);
-    const k = await page.evaluate(() => veri.kitaplar[0]);
-    expect(k.ozet).toBe('Varoluş üzerine ana fikir.');
-    expect(k.ozetG).toBe(1754000000123);
+    await ozetHazir(page);
+    const s = await page.evaluate(() => {
+      const k = veri.kitaplar[0];
+      return { metin: window.__ozet.oku(k.id), ozetVar: k.ozetVar, ozetG: k.ozetG,
+        mirasAlan: 'ozet' in k,
+        hamAlan: JSON.parse(localStorage.getItem('kk_kitaplik_v1')).kitaplar[0].ozet };
+    });
+    expect(s.metin, 'metin IDB/bellekte').toBe('Varoluş üzerine ana fikir.');
+    expect(s.ozetVar).toBe(true);
+    expect(s.ozetG, 'damga korunur').toBe(1754000000123);
+    expect(s.mirasAlan, 'kitap nesnesinde metin alanı kalmaz').toBe(false);
+    expect(s.hamAlan, 'localStorage kaydında metin kalmaz').toBeUndefined();
   });
 
-  test('(b) GÖÇ: eski ANLIK sürümüyle açılış damga BASMAZ; sürüm 11', async ({ page }) => {
+  test('(b) GÖÇ: eski ANLIK sürümüyle açılış damga BASMAZ; sürümler 12/4', async ({ page }) => {
     await tohumla(page, [bitmis({ ad: 'Göç Kitabı', g: 777, ozet: 'eski özet' })],
-      { kk_senkron_anlik_v1: { s: 10, p: {} } });   // eski sürümlü iz deposu → göç turu
+      { kk_senkron_anlik_v1: { s: 11, p: {} } });
     await rafAc(page);
+    await ozetHazir(page);
     const sonuc = await page.evaluate(() => {
-      depoKaydet();   // sarmalanmış: damgala koşar; göç turunda yeniden damgalama YOK
+      depoKaydet();
       return { g: veri.kitaplar[0].g, surum: window.__senkron.ANLIK_SURUM,
         sema: window.__senkron.SEMA_SURUM };
     });
-    expect(sonuc.g, 'göç turu tüm kütüphaneyi taze damgalamaz').toBe(777);
-    expect(sonuc.surum).toBe(11);
-    expect(sonuc.sema).toBe(3);
+    expect(sonuc.g, 'göç turu yeniden damgalamaz').toBe(777);
+    expect(sonuc.surum).toBe(12);
+    expect(sonuc.sema).toBe(4);
   });
 
-  test('(c) SENKRON: kitap-LWW kazananı özetsiz olsa da yeni ozetG kazanır (alan damgası)', async ({ page }) => {
+  test('(c) SENKRON İŞARETİ: kitap-LWW kazananı özetsiz olsa da yeni ozetG\'nin işareti kazanır', async ({ page }) => {
     await rafAc(page);
-    // B cihazı SONRA puan verdi (kitap g=200 kazanır) ama özeti yok;
-    // A'nın özeti alan damgasıyla yaşar — eski davranış spread ile ezerdi.
     const k = await birlestirilmis(page,
-      { id: 'x', ad: 'K', g: 200, puan: 9, ozet: '', ozetG: 0 },
-      { id: 'x', ad: 'K', g: 100, ozet: 'Emek ürünü özetim', ozetG: 150 });
+      { id: 'x', ad: 'K', g: 200, puan: 9, ozetVar: false, ozetUzunluk: 0, ozetG: 0 },
+      { id: 'x', ad: 'K', g: 100, ozetVar: true, ozetUzunluk: 17, ozetG: 150 });
     expect(k.puan).toBe(9);
-    expect(k.ozet).toBe('Emek ürünü özetim');
+    expect(k.ozetVar, 'işaret alan damgasıyla yaşar').toBe(true);
+    expect(k.ozetUzunluk).toBe(17);
     expect(k.ozetG).toBe(150);
   });
 
-  test('(d) ÇAKIŞMA EKİ: iki cihazda iki FARKLI özet → ikisi de birleşik metinde, kayıp YOK', async ({ page }) => {
+  test('(d) ÇAKIŞMA EKİ (ozetBirlesim): iki FARKLI metin → ikisi de birleşikte, kayıp YOK, ikinci tur idempotent', async ({ page }) => {
     await rafAc(page);
-    const k = await birlestirilmis(page,
-      { id: 'x', ad: 'K', g: 200, ozet: 'Yeni cihazın özeti', ozetG: 300 },
-      { id: 'x', ad: 'K', g: 100, ozet: 'Eski cihazın özeti', ozetG: 250 });
-    expect(k.ozet).toContain('Yeni cihazın özeti');
-    expect(k.ozet).toContain('Eski cihazın özeti');
-    expect(k.ozet.indexOf('Yeni cihazın özeti'), 'yeni damgalı önde').toBeLessThan(
-      k.ozet.indexOf('Eski cihazın özeti'));
-    expect(k.ozetG, 'ek üretilince taze damga (yakınsama)').toBeGreaterThan(300);
-    // yakınsama: birleşik metinle ikinci tur EK ÜRETMEZ (metin alt-dize)
-    const k2 = await birlestirilmis(page,
-      { id: 'x', ad: 'K', g: 200, ozet: k.ozet, ozetG: k.ozetG },
-      { id: 'x', ad: 'K', g: 100, ozet: 'Eski cihazın özeti', ozetG: 250 });
-    expect(k2.ozet).toBe(k.ozet);
+    const b = await page.evaluate(() => window.__senkron.ozetBirlesim(
+      { m: 'Yeni cihazın özeti', g: 300 }, { m: 'Eski cihazın özeti', g: 250 }));
+    expect(b.m).toContain('Yeni cihazın özeti');
+    expect(b.m).toContain('Eski cihazın özeti');
+    expect(b.m.indexOf('Yeni cihazın özeti'), 'yeni damgalı önde').toBeLessThan(
+      b.m.indexOf('Eski cihazın özeti'));
+    expect(b.g, 'ek üretilince taze damga (yakınsama)').toBeGreaterThan(300);
+    const b2 = await page.evaluate(x => window.__senkron.ozetBirlesim(
+      { m: x.m, g: x.g }, { m: 'Eski cihazın özeti', g: 250 }), b);
+    expect(b2.m, 'ikinci tur ek üretmez').toBe(b.m);
   });
 
-  test('(e) KASITLI SİLME: yeni damgalı boş özet eski metni DİRİLTMEZ', async ({ page }) => {
+  test('(e) KASITLI SİLME kazanır; damgasız dış-yedek metni taşınır; eşit damga deterministik', async ({ page }) => {
     await rafAc(page);
-    const k = await birlestirilmis(page,
-      { id: 'x', ad: 'K', g: 200, ozet: '', ozetG: 300 },        // silme daha yeni
-      { id: 'x', ad: 'K', g: 100, ozet: 'Silinen özet', ozetG: 250 });
-    expect(k.ozet).toBe('');
-    // iki taraf da DAMGASIZ (dış yedek) → dolu metin taşınır, silme iddiası yok
-    const k2 = await birlestirilmis(page,
-      { id: 'y', ad: 'K2', g: 200, ozet: '', ozetG: 0 },
-      { id: 'y', ad: 'K2', g: 100, ozet: 'Dış yedekten metin', ozetG: 0 });
-    expect(k2.ozet).toBe('Dış yedekten metin');
+    const s = await page.evaluate(() => ({
+      silme: window.__senkron.ozetBirlesim({ m: '', g: 300 }, { m: 'Silinen özet', g: 250 }),
+      yedek: window.__senkron.ozetBirlesim({ m: '', g: 0 }, { m: 'Dış yedekten metin', g: 0 }),
+      esitA: window.__senkron.ozetBirlesim({ m: 'AAA metni', g: 100 }, { m: 'BBB metni', g: 100 }),
+      esitB: window.__senkron.ozetBirlesim({ m: 'BBB metni', g: 100 }, { m: 'AAA metni', g: 100 })
+    }));
+    expect(s.silme.m).toBe('');
+    expect(s.yedek.m).toBe('Dış yedekten metin');
+    expect(s.esitA.m, 'eşit damgada iki cihaz aynı birleşiği üretir').toBe(s.esitB.m);
   });
 });
 
 test.describe('G78 özet — detay arayüzü', () => {
 
-  test('(f) detaydan yazılır: form AÇILMAZ, kicker gelir, k.g + k.ozetG damgalanır', async ({ page }) => {
-    await tohumla(page, [bitmis({ ad: 'Denemeler', g: 500 })]);
+  test('(f) detaydan yazılır: form AÇILMAZ, kicker gelir, ozetG basılır, k.g DEĞİŞMEZ (v80 kanal kararı)', async ({ page }) => {
+    await tohumla(page, [bitmis({ ad: 'Denemeler' })]);
     await rafAc(page);
+    await ozetHazir(page);
+    // taze cihazın İLK damgalaması otursun — "k.g değişmez" iddiası ondan sonra
+    const gIlk = await page.evaluate(() => { depoKaydet(); return veri.kitaplar[0].g; });
     await detayAc(page, 'Denemeler');
-    // boşken: kicker YOK, ince ghost VAR
     await expect(page.locator('#dOzetBlok')).toHaveCount(0);
     await expect(page.locator('.oz-bos .oz-ghost')).toHaveText('+ Özetini yaz');
     await page.click('[data-act="oz-ac"]');
@@ -132,15 +136,22 @@ test.describe('G78 özet — detay arayüzü', () => {
     await expect(page.locator('#dOzetBlok .kicker')).toHaveText('Özetin');
     await expect(page.locator('.oz-metin')).toContainText('İnsan doğası üzerine');
     await expect(page.locator('#ortuForm'), 'form hiç açılmadı').not.toHaveClass(/acik/);
-    const k = await page.evaluate(() => veri.kitaplar[0]);
-    expect(k.ozet).toBe('İnsan doğası üzerine kalıcı gözlemler.');
+    const k = await page.evaluate(() => {
+      const x = veri.kitaplar[0];
+      return { metin: window.__ozet.oku(x.id), ozetVar: x.ozetVar, ozetG: x.ozetG,
+        g: x.g, uzunluk: x.ozetUzunluk };
+    });
+    expect(k.metin).toBe('İnsan doğası üzerine kalıcı gözlemler.');
+    expect(k.ozetVar).toBe(true);
     expect(k.ozetG, 'alan damgası basıldı').toBeGreaterThan(0);
-    expect(k.g, 'kitap damgası tazelendi').toBeGreaterThan(500);
+    expect(k.uzunluk).toBe(38);
+    expect(k.g, 'kitap damgası DEĞİŞMEZ — özet ayrı kanal').toBe(gIlk);
   });
 
-  test('(g) düzenle + boşaltıp kaydet = silinir; bölüm ince ghost hâline döner', async ({ page }) => {
+  test('(g) düzenle + boşaltıp kaydet = silinir; IDB\'de mezar (boş + taze damga) kalır', async ({ page }) => {
     await tohumla(page, [bitmis({ ad: 'Silinecek', ozet: 'eski metin', ozetG: 100 })]);
     await rafAc(page);
+    await ozetHazir(page);
     await detayAc(page, 'Silinecek');
     await page.click('#dOzetBlok [data-act="oz-ac"]');
     await expect(page.locator('#ozMetin')).toHaveValue('eski metin');
@@ -148,15 +159,21 @@ test.describe('G78 özet — detay arayüzü', () => {
     await page.click('[data-act="oz-kaydet"]');
     await expect(page.locator('#dOzetBlok')).toHaveCount(0);
     await expect(page.locator('.oz-bos .oz-ghost')).toBeVisible();
-    const k = await page.evaluate(() => veri.kitaplar[0]);
-    expect(k.ozet).toBe('');
-    expect(k.ozetG, 'silme de kasıtlı yazımdır — damga basılır').toBeGreaterThan(100);
+    const s = await page.evaluate(() => {
+      const k = veri.kitaplar[0];
+      return { ozetVar: k.ozetVar, metin: window.__ozet.oku(k.id),
+        mezarDamga: window.__ozet.damga(k.id) };
+    });
+    expect(s.ozetVar).toBe(false);
+    expect(s.metin).toBe('');
+    expect(s.mezarDamga, 'silme de kasıtlı yazımdır — mezar damgası taze').toBeGreaterThan(100);
   });
 
   test('(h) uzun özet katlanır, "Devamını göster" tamamını açar', async ({ page }) => {
     const uzunMetin = 'Başlangıç cümlesi. ' + 'dolgu sözcük '.repeat(80) + 'SON İŞARET';
     await tohumla(page, [bitmis({ ad: 'Uzun Özetli', ozet: uzunMetin, ozetG: 100 })]);
     await rafAc(page);
+    await ozetHazir(page);
     await detayAc(page, 'Uzun Özetli');
     await expect(page.locator('.oz-metin')).toContainText('Başlangıç cümlesi');
     await expect(page.locator('.oz-metin')).not.toContainText('SON İŞARET');
@@ -168,17 +185,18 @@ test.describe('G78 özet — detay arayüzü', () => {
 
 test.describe('G78 özet — görünürlük ve erişim', () => {
 
-  test('(i) raf araması özet metninde çalışır', async ({ page }) => {
+  test('(i) raf araması özet metninde çalışır (bellek dizini)', async ({ page }) => {
     await tohumla(page, [
       bitmis({ ad: 'Bulantı', yazar: 'Sartre', ozet: 'Varoluşçuluk ve özgürlük üzerine.', ozetG: 100 }),
       bitmis({ ad: 'Başka Kitap', yazar: 'Biri' })]);
     await rafAc(page);
+    await ozetHazir(page);
     await page.fill('#arama', 'varoluşçuluk');
     await expect(page.locator('#liste .kart')).toHaveCount(1);
     await expect(page.locator('#liste .kart')).toContainText('Bulantı');
   });
 
-  test('(j) Özetsiz çipi süzer; istatistik köprüsü rafa süzgeçli götürür', async ({ page }) => {
+  test('(j) Özetsiz çipi işaretle süzer; istatistik köprüsü rafa süzgeçli götürür', async ({ page }) => {
     await tohumla(page, [
       bitmis({ ad: 'Özetli Kitap', ozet: 'var', ozetG: 100 }),
       bitmis({ ad: 'Özetsiz Kitap' }),
@@ -187,7 +205,6 @@ test.describe('G78 özet — görünürlük ve erişim', () => {
     await page.click('#durumChips .chip[data-v="ozetsiz"]');
     await expect(page.locator('#liste .kart')).toHaveCount(1);
     await expect(page.locator('#liste .kart')).toContainText('Özetsiz Kitap');
-    // istatistik köprüsü (puansiz-git eşi)
     await page.click('nav [data-act="sekme"][data-v="ist"]');
     await expect(page.locator('#istOzet')).toContainText('1 bitmiş kitabında özetin var');
     await expect(page.locator('#istOzet')).toContainText('1 kitabın özeti yok');
@@ -197,12 +214,13 @@ test.describe('G78 özet — görünürlük ve erişim', () => {
     await expect(page.locator('#durumChips .chip[data-v="ozetsiz"]')).toHaveClass(/active/);
   });
 
-  test('(k) markdown: md-hepsi "### Özet" içerir, sadece-alıntılar SAF kalır, özetli-notsuz kitap dosyada', async ({ page }) => {
+  test('(k) markdown: md-hepsi "### Özet" içerir, sadece-alıntılar SAF, özetli-notsuz kitap dosyada', async ({ page }) => {
     await tohumla(page, [
       bitmis({ ad: 'Notsuz Ama Özetli', yazar: 'Yazar A', ozet: 'Kitabın ana fikri budur.', ozetG: 100 }),
       bitmis({ ad: 'Alıntılı Kitap', yazar: 'Yazar B',
         notlar: [{ id: 'n1', tip: 'alinti', metin: 'Bir alıntı.', tarih: '2026-01-01', sayfa: null, fikir: [], ng: 1 }] })]);
     await rafAc(page);
+    await ozetHazir(page);
     const hepsi = await aktarimYakala(page, 'notlariMdAktar(false)');
     expect(hepsi.ad).toMatch(/^kitaplik-alinti-not-.*\.md$/);
     expect(hepsi.icerik).toContain('## Notsuz Ama Özetli — Yazar A');
@@ -214,29 +232,20 @@ test.describe('G78 özet — görünürlük ve erişim', () => {
     expect(alintilar.icerik).not.toContain('Kitabın ana fikri budur.');
   });
 
-  test('(l) CSV: Özet sütunu var, çok satırlı metin tırnak içinde bozulmaz', async ({ page }) => {
+  test('(l) CSV: Özet sütunu var, çok satırlı metin bozulmaz (bellekten)', async ({ page }) => {
     await tohumla(page, [bitmis({ ad: 'CSV Kitabı',
       ozet: 'İlk satır; noktalı virgüllü.\nİkinci satır "tırnaklı".', ozetG: 100 })]);
     await rafAc(page);
+    await ozetHazir(page);
     const csv = await aktarimYakala(page, 'csvAktar()');
     const baslik = csv.icerik.replace(/^﻿/, '').split('\r\n')[0].split(';');
     expect(baslik[baslik.length - 1]).toBe('Özet');
     expect(csv.icerik).toContain('"İlk satır; noktalı virgüllü.\nİkinci satır ""tırnaklı""."');
   });
 
-  test('(m) DEPO BÜTÇESİ: 240 dolu özetle gerçek yük yazılır; kota hatasında şerit çıkar (taklit)', async ({ page }) => {
-    const kitaplar = Array.from({ length: 240 }, (_, i) =>
-      bitmis({ ad: 'Kitap ' + i, ozet: ('Özet metni ' + i + ' — ').padEnd(2500, 'dolgu yazı '), ozetG: 100 + i }));
-    await tohumla(page, kitaplar);
+  test('(m) v17 kota şeridi ana depo için yaşıyor (taklit)', async ({ page }) => {
+    await tohumla(page, [bitmis({ ad: 'Tek Kitap' })]);
     await rafAc(page);
-    const yuk = await page.evaluate(() => {
-      depoKaydet();   // ~700 KB gerçek yük: kota DOLMAZ, yazım başarılı
-      return { boyut: localStorage.getItem('kk_kitaplik_v1').length,
-        seritAcik: document.getElementById('kotaUyari').classList.contains('acik') };
-    });
-    expect(yuk.boyut).toBeGreaterThan(500000);
-    expect(yuk.seritAcik, 'gerçek yükte şerit YOK').toBe(false);
-    // kota taklidi: depo anahtarına yazım fırlatır → şerit açılır (v17 mekanizması)
     const sonra = await page.evaluate(() => {
       const asil = Storage.prototype.setItem;
       Storage.prototype.setItem = function(k, v){
@@ -261,38 +270,42 @@ test.describe('G78 özet — sırayla yazma akışı (M4)', () => {
     await expect(page.locator('#zgOzetOrtu')).toHaveClass(/acik/);
   }
 
-  test('(n) akış: kaydet-ve-sonraki damgayla yazar, atla yazmaz, geri metni geri getirir, bitti ekranı', async ({ page }) => {
+  test('(n) akış: kaydet-ve-sonraki ozetG ile yazar (k.g değişmez), atla yazmaz, geri metni getirir', async ({ page }) => {
     await tohumla(page, [
-      bitmis({ ad: 'Akış Bir', bitisTarihi: '2026-03-01', g: 10 }),
-      bitmis({ ad: 'Akış İki', bitisTarihi: '2026-02-01', g: 10 })]);
+      bitmis({ ad: 'Akış Bir', bitisTarihi: '2026-03-01' }),
+      bitmis({ ad: 'Akış İki', bitisTarihi: '2026-02-01' })]);
     await akisAc(page);
+    await ozetHazir(page);
+    const gIlk = await page.evaluate(() => {
+      depoKaydet();   // ilk damgalama otursun
+      return veri.kitaplar.find(k => k.ad === 'Akış Bir').g;
+    });
     await expect(page.locator('.zg-sayac')).toHaveText('1 / 2');
-    await expect(page.locator('.zg-kitap-ad')).toHaveText('Akış Bir');   // yeni bitten eskiye
+    await expect(page.locator('.zg-kitap-ad')).toHaveText('Akış Bir');
     await page.fill('#zgOzMetin', 'Birinci kitabın özeti.');
     await page.click('[data-act="zg-oz-kaydet"]');
     await expect(page.locator('.zg-onay-metin')).toContainText('Akış Bir → kaydedildi');
     await expect(page.locator('.zg-kitap-ad')).toHaveText('Akış İki');
-    // geri: bu-oturum yazdığım metin kutuya döner (düzeltilebilir)
     await page.click('[data-act="zg-oz-geri"]');
     await expect(page.locator('#zgOzMetin')).toHaveValue('Birinci kitabın özeti.');
-    await page.click('[data-act="zg-oz-kaydet"]');   // değişmeden ilerle
-    await page.click('[data-act="zg-oz-atla"]');     // ikinciyi atla — yazılmaz
-    await expect(page.locator('#zgOzetOrtuGovde')).toContainText('Bitti — bu oturumda 2 kitap');
-    const veriSon = await page.evaluate(() => veri.kitaplar.map(k => ({ ad: k.ad, ozet: k.ozet, ozetG: k.ozetG, g: k.g })));
+    await page.click('[data-act="zg-oz-kaydet"]');
+    await page.click('[data-act="zg-oz-atla"]');
+    await expect(page.locator('#zgOzetOrtuGovde')).toContainText('Bitti');
+    const veriSon = await page.evaluate(() => veri.kitaplar.map(k =>
+      ({ ad: k.ad, metin: window.__ozet.oku(k.id), ozetVar: k.ozetVar, ozetG: k.ozetG, g: k.g })));
     const bir = veriSon.find(k => k.ad === 'Akış Bir'), iki = veriSon.find(k => k.ad === 'Akış İki');
-    expect(bir.ozet).toBe('Birinci kitabın özeti.');
+    expect(bir.metin).toBe('Birinci kitabın özeti.');
+    expect(bir.ozetVar).toBe(true);
     expect(bir.ozetG).toBeGreaterThan(0);
-    expect(bir.g, 'kullanıcı eylemi damgası').toBeGreaterThan(10);
-    expect(iki.ozet, 'atlanan kitaba yazılmaz').toBe('');
-    // form hiç açılmadı (akış da form-suz)
+    expect(bir.g, 'akış yazımı da kitap damgası basmaz (v80)').toBe(gIlk);
+    expect(iki.metin, 'atlanan kitaba yazılmaz').toBe('');
     await expect(page.locator('#ortuForm')).not.toHaveClass(/acik/);
   });
 
-  test('(o) akış kuyruğu yalnız özetsizler; hepsi bitince düğme dürüst mesaj verir', async ({ page }) => {
+  test('(o) hepsi özetliyse köprünün akış ayağı çizilmez, dürüst durum satırı kalır', async ({ page }) => {
     await tohumla(page, [bitmis({ ad: 'Zaten Özetli', ozet: 'var', ozetG: 5 })]);
     await page.goto('/');
     await page.click('nav [data-act="sekme"][data-v="ist"]');
-    // özetsiz kalmayınca köprünün "sırayla yaz" ayağı hiç ÇİZİLMEZ — dürüst durum satırı kalır
     await expect(page.locator('#istOzet')).toContainText('hepsinde özetin var');
     await expect(page.locator('#istOzet [data-act="zg-ozetle"]')).toHaveCount(0);
   });
@@ -375,11 +388,11 @@ test.describe('G78 özet — Ciltli sözleşmeleri', () => {
         bitmis({ ad: 'Özetsiz Tema' })],
         { kk_tema_v1: tema });
       await rafAc(page);
+      await ozetHazir(page);
       await expect(page.locator('html')).toHaveAttribute('data-tema', tema);
       await detayAc(page, 'Tema Kitabı');
       await page.waitForTimeout(250);
       expect(await page.evaluate(SUPUR), 'detay + özet bölümü AA').toEqual([]);
-      // dolu düğme yok: özet bölümünün eylemleri şeffaf zeminli
       const dolu = await page.evaluate(() => {
         const alan = [...document.querySelectorAll('#dOzetBlok button, .oz-bos button')];
         return alan.filter(b => {
@@ -388,7 +401,6 @@ test.describe('G78 özet — Ciltli sözleşmeleri', () => {
         }).map(b => b.className);
       });
       expect(dolu, 'özet eylemlerinde dolu düğme yok').toEqual([]);
-      // akış paneli aynı temada
       await page.click('#ortuDetay .sheet-kapat');
       await page.click('nav [data-act="sekme"][data-v="ist"]');
       await page.click('#istOzet [data-act="zg-ozetle"]');

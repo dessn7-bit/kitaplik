@@ -752,7 +752,13 @@
      taşındı. Tür cfg'sindeki TÜM id/act/metinler eski değerlerle BİREBİR —
      g56/g59/g60 seçici ve metin kilitleri bozulmadan. Plan TEKİL (icePlan):
      aynı anda tek akış; iceOku başka akışın açık ortusunu kapatır (paylaşılan
-     uygula düğmesinin yanlış plana yazma riski sıfırlanır). */
+     uygula düğmesinin yanlış plana yazma riski sıfırlanır).
+     v80: ÜÇÜNCÜ tip ÖZET (M3) için cfg'ye iki OPSİYONEL kanca eklendi —
+     oku(k) (varsayılan k[cfg.anahtar]) ve yazHam(k, deger) (varsayılan senkron
+     k[anahtar]=deger + k.g damgası). Kancasız cfg'lerde (tur/adTr) davranış
+     BİREBİR eski. Özet metni kitapta değil IndexedDB'de yaşadığından oku
+     window.__ozet.oku'ya gider; yazım ise iceUygula'nın AYRI async dalında
+     (iceUygulaOzet) __ozet.kaydetHam ile parçalı koşar — yazHam'a girmez. */
   const ICE_TUR = {
     anahtar: 'tur', kaynakAnahtar: 'tur', taksonomiKapisi: true,
     ortuId: 'zgTurIceOrtu', ortuBaslik: 'Tür listesi yükle',
@@ -793,7 +799,42 @@
       toastYazildi: n => n + ' kitabın Türkçe adı dosyadan yazıldı'
     }
   };
+  /* v80 M3: ÖZET DOSYASI — üçüncü içe aktarım tipi. hazirYol BİLİNÇLİ yok:
+     ~2 MB kişisel veri repoya gömülmez, tek giriş dosya seçici. Metin kitapta
+     değil IndexedDB'de (window.__ozet) — oku kancası oradan okur; yazım
+     iceUygulaOzet'te kaydetHam ile (depoKaydet döngü SONUNDA tek sefer).
+     kisalt: önizlemede eski→yeni özet metinleri 60 karakterde kırpılır —
+     uzun metinler listeyi şişirmesin (tur/adTr'de bayrak yok, davranış aynı). */
+  const ICE_OZET = {
+    anahtar: 'ozet', kaynakAnahtar: 'ozet', taksonomiKapisi: false,
+    ortuId: 'zgOzetIceOrtu', ortuBaslik: 'Özet dosyası yükle',
+    denemeDamgala: false,
+    kisalt: true,
+    hazirla(){ return window.__ozet.hazirBekle(); },
+    oku: k => window.__ozet.oku(k.id),
+    sonTazele(){ durumTazele(); },
+    act: { uygula: 'zg-ozet-uygula', vazgec: 'zg-ozet-vazgec' },
+    metin: {
+      bicimYok: 'Bu dosyada özet listesi yok — beklenen biçim: { "ozet": [ {ad, yazar, ozet} ] }',
+      dolacak: ' kitapta boş özet dolacak',
+      degisecek: ' kitapta mevcut özet DEĞİŞECEK',
+      yalnizNot: 'Yalnız ÖZET alanı yazılır; puan, notlar, durum — hiçbir başka alana dokunulmaz. ' +
+        'Onaylamadan hiçbir şey yazılmaz.',
+      degisecekBaslik: 'Mevcut özeti değişecekler',
+      yazDugme: n => 'Özetleri yaz (' + n + ')',
+      toastYazildi: n => n + ' kitabın özeti dosyadan yazıldı'
+    }
+  };
   let icePlan = null;   // tekil: uygula/vazgec daima SON okunan plana işler
+  /* v80 kancalar: varsayılanlar eski davranışla BİREBİR (tur/adTr değişmez) */
+  function iceDegerOku(cfg, k){
+    return cfg.oku ? cfg.oku(k) : k[cfg.anahtar];
+  }
+  function iceYazHam(cfg, k, deger){
+    if(cfg.yazHam){ cfg.yazHam(k, deger); return; }
+    k[cfg.anahtar] = deger;
+    k.g = Date.now();          // kullanıcı eylemi — senkron damgası
+  }
   /* dosya: File YA DA fetch Response — yalnız .text() kullanılır (v70: yerleşik
      liste aynı borudan Response ile girer; boru tek, kopya mantık yok). */
   async function iceOku(cfg, dosya){
@@ -815,6 +856,10 @@
         return;
       }
     }
+    /* v80 opsiyonel hazirla kancası (özet): bellek dizini açılışta async dolar,
+       dolmadan oku '' verir — mevcut özet "dolacak" sanılır, DEĞİŞECEK uyarısı
+       kaçardı. Hata yutulur: dizin yoksa yazım da zaten başarısız sayılacak. */
+    if(cfg.hazirla){ try{ await cfg.hazirla(); }catch(e){} }
     const harita = {};
     (veri.kitaplar || []).forEach(k => {
       const anah = katla(k.ad) + '|' + katla(k.yazar || '');
@@ -839,9 +884,12 @@
       for(const k of kitaplar){
         if(planli.has(k.id)) continue;
         planli.add(k.id);
-        if(k[cfg.anahtar] === yeniDeger){ plan.ayni++; continue; }
-        (alanBos(k, cfg.anahtar) ? plan.dolacak : plan.degisecek)
-          .push({ id: k.id, ad: k.ad, eski: k[cfg.anahtar], yeni: yeniDeger });
+        /* v80: mevcut değer cfg.oku kancasından — varsayılan k[cfg.anahtar],
+           boşluk sınaması alanBos'un metin dalıyla BİREBİR aynı */
+        const mevcut = iceDegerOku(cfg, k);
+        if(mevcut === yeniDeger){ plan.ayni++; continue; }
+        ((mevcut && String(mevcut).trim()) ? plan.degisecek : plan.dolacak)
+          .push({ id: k.id, ad: k.ad, eski: mevcut, yeni: yeniDeger });
       }
     }
     // başka akışın önizlemesi açıksa kapat: paylaşılan tekil plan yanlış
@@ -870,13 +918,18 @@
       ? '<details class="zg-katla"><summary>' + baslik + ' (' + satirlar.length + ')</summary>' +
         '<div class="zg-onizle-liste">' + satirlar.join('') + '</div></details>'
       : '';
+    /* v80: kisalt bayraklı cfg'de (özet) eski→yeni metinler 60 karakterde
+       kırpılır; bayraksız (tur/adTr) kirp KİMLİK — çıktı bayt bayt eski. */
+    const kirp = cfg.kisalt
+      ? (s => { s = String(s == null ? '' : s); return s.length > 60 ? s.slice(0, 60) + '…' : s; })
+      : (s => s);
     g.innerHTML =
       '<div class="zg-ozet">' + (ozet.join(' · ') || 'Dosyada işlenecek kayıt yok.') + '</div>' +
       '<p class="zg-not">' + cfg.metin.yalnizNot + '</p>' +
       katla_(cfg.metin.degisecekBaslik, plan.degisecek.map(y =>
         '<div class="zg-onizle-satir"><div class="zg-onizle-ic">' +
         '<span class="zg-onizle-ad">' + esc(y.ad) + '</span>' +
-        '<span class="zg-onizle-alan">' + esc(y.eski) + ' → ' + esc(y.yeni) + '</span></div></div>')) +
+        '<span class="zg-onizle-alan">' + esc(kirp(y.eski)) + ' → ' + esc(kirp(y.yeni)) + '</span></div></div>')) +
       katla_('Kütüphanede bulunamayanlar', plan.eslesmeyen.map(r =>
         '<div class="zg-onizle-satir"><div class="zg-onizle-ic">' +
         '<span class="zg-onizle-ad">' + esc(r.ad) + '</span>' +
@@ -896,14 +949,16 @@
   function iceUygula(){
     const plan = icePlan;
     if(!plan) return;
+    /* v80: özet planı AYRI async dala — tur/adTr yolu aşağıda BİREBİR eski
+       senkron gövde (g56 toast zamanlaması değişmesin) */
+    if(plan.cfg === ICE_OZET){ iceUygulaOzet(plan); return; }
     const cfg = plan.cfg;
     const deneme = cfg.denemeDamgala ? defterOku(OTO_DENEME_ANAHTAR) : null;
     let n = 0;
     for(const y of plan.dolacak.concat(plan.degisecek)){
       const k = (veri.kitaplar || []).find(x => x.id === y.id);
       if(!k) continue;
-      k[cfg.anahtar] = y.yeni;
-      k.g = Date.now();          // kullanıcı eylemi — senkron damgası
+      iceYazHam(cfg, k, y.yeni);   // v80 kanca — varsayılan: k[anahtar]=yeni + k.g damgası
       if(deneme) deneme[k.id] = Date.now(); // açılış taraması bu kitabı yeniden sormasın
       n++;
     }
@@ -912,6 +967,41 @@
     if(typeof depoKaydet === 'function') depoKaydet();
     kapat(cfg.ortuId);
     bildir(cfg.metin.toastYazildi(n));
+    if(typeof hepsiniCiz === 'function') hepsiniCiz();
+    cfg.sonTazele();
+  }
+  /* v80: özet planının PARÇALI async yazımı. 2 MB'lık dosyada arayüz
+     KİLİTLENMESİN diye 25'lik dilimler; her dilim sonunda ilerleme satırı
+     güncellenir ve setTimeout(0) ile kare bırakılır. __ozet.kaydetHam verilen
+     damgayla IDB'ye yazar + kitap işaretlerini (ozetVar/ozetUzunluk/ozetG)
+     günceller ama depoKaydet YAPMAZ — döngü SONUNDA TEK depoKaydet.
+     k.g BASILMAZ (v80 kararı: özet ayrı kanal). Yazılamayan kayıt sayılır
+     ve toast'ta belirtilir. */
+  async function iceUygulaOzet(plan){
+    const cfg = plan.cfg;
+    icePlan = null;   // yeniden giriş kilidi: koşum boyunca plan yalnız burada
+    const hepsi = plan.dolacak.concat(plan.degisecek);
+    const g = document.getElementById(cfg.ortuId + 'Govde');
+    if(g) g.innerHTML = '<div class="zg-ozet" id="zgOzetIceIlerleme">0 / ' +
+      hepsi.length + ' yazıldı…</div>';
+    let n = 0, olmadi = 0, islenen = 0;
+    for(let i = 0; i < hepsi.length; i += 25){
+      for(const y of hepsi.slice(i, i + 25)){
+        islenen++;
+        const k = (veri.kitaplar || []).find(x => x.id === y.id);
+        if(!k){ olmadi++; continue; }
+        let tamam = false;
+        try{ tamam = await window.__ozet.kaydetHam(k.id, y.yeni, Date.now()); }
+        catch(e){}
+        if(tamam) n++; else olmadi++;
+      }
+      const il = document.getElementById('zgOzetIceIlerleme');
+      if(il) il.textContent = islenen + ' / ' + hepsi.length + ' yazıldı…';
+      await new Promise(r => setTimeout(r, 0));   // kareyi bırak — arayüz nefes alsın
+    }
+    if(typeof depoKaydet === 'function') depoKaydet();   // toplu iş: sonda TEK kayıt
+    kapat(cfg.ortuId);
+    bildir(cfg.metin.toastYazildi(n) + (olmadi ? ' — ' + olmadi + ' kayıt yazılamadı' : ''));
     if(typeof hepsiniCiz === 'function') hepsiniCiz();
     cfg.sonTazele();
   }
@@ -947,6 +1037,27 @@
       g.addEventListener('change', e => {
         const f = e.target.files && e.target.files[0];
         if(f) iceOku(ICE_TUR, f);
+        e.target.value = '';   // aynı dosya ikinci kez seçilebilsin
+      });
+    }
+    return g;
+  }
+  /* v80: özet dosya seçici — turDosyaKur'un AYRI kopyası (KARAR: g56
+     #zgTurDosya seçicisini ve davranışını kilitliyor; paylaşılan fonksiyona
+     genellemek yerine kopya, tür yolunu sıfır riskle korur). */
+  function ozetDosyaKur(){
+    let g = document.getElementById('zgOzetDosya');
+    if(!g){
+      g = document.createElement('input');
+      g.type = 'file'; g.id = 'zgOzetDosya';
+      g.accept = '.json,application/json'; g.hidden = true;
+      document.body.appendChild(g);
+    }
+    if(!g.__zgBagli){   // dinleyici BİR kez bağlanır — her tıklamada çoğalmasın
+      g.__zgBagli = true;
+      g.addEventListener('change', e => {
+        const f = e.target.files && e.target.files[0];
+        if(f) iceOku(ICE_OZET, f);
         e.target.value = '';   // aynı dosya ikinci kez seçilebilsin
       });
     }
@@ -1304,11 +1415,16 @@
      kalıcı "özet yazmayacağım" işareti kanıtlanmamış ihtiyaç, Atla geçicidir
      (kitap sonraki oturumda kuyruğa döner). Sınıflar zg- ailesinde: aynı
      eklentinin kardeş ekranı; zgOzetOrtu tembel kurulur (ortuKur), puan
-     paneli açık değilken DOM'da yoktur — test seçicileri çakışmaz. */
+     paneli açık değilken DOM'da yoktur — test seçicileri çakışmaz.
+     v80: özet METNİ artık kitap kaydında değil — IndexedDB + bellek dizini
+     (window.__ozet). Kitapta yalnız işaret: ozetVar/ozetUzunluk/ozetG.
+     Okuma __ozet.oku(id) (senkron, bellekten), yazma __ozet.kaydet(id, metin)
+     (async; işaretleri + depoKaydet'i KENDİ basar, k.g BASILMAZ — özet ayrı
+     kanal). */
   let ozKuyruk = null, ozSira = 0, ozBasi = 0;
   let ozYazdigim = new Set();   // bu oturumda yazdıklarım — geri dönüşte düzeltme izni
   function ozetsizler(){
-    return (veri.kitaplar || []).filter(k => k.durum === 'bitti' && !k.ozet)
+    return (veri.kitaplar || []).filter(k => k.durum === 'bitti' && !k.ozetVar)
       .sort((a, b) => String(b.bitisTarihi || '').localeCompare(String(a.bitisTarihi || '')));
   }
   function ozetBaslat(){
@@ -1324,7 +1440,7 @@
     if(!ozSira) return '';
     const onceki = ozKuyruk[ozSira - 1];
     const canli = (veri.kitaplar || []).find(x => x.id === onceki.id) || onceki;
-    const yazdim = canli.ozet && ozYazdigim.has(canli.id);
+    const yazdim = canli.ozetVar && ozYazdigim.has(canli.id);
     return '<div class="zg-onay"><span class="zg-onay-metin">' +
       (yazdim ? '✓ ' : '') + esc(canli.ad) + ' → ' + (yazdim ? 'kaydedildi' : 'atlandı') + '</span>' +
       '<button class="d-link" data-act="zg-oz-geri">Geri</button></div>';
@@ -1339,7 +1455,6 @@
       return;
     }
     const k = ozKuyruk[ozSira];
-    const canli = (veri.kitaplar || []).find(x => x.id === k.id) || k;
     const alt = [
       k.bitisTarihi ? String(k.bitisTarihi).slice(0, 4) + ' yılında bitti' : '',
       k.sayfa > 0 ? k.sayfa + ' sayfa' : '',
@@ -1360,7 +1475,7 @@
     if(typeof ktPlateHata === 'function') ktPlateHata(g);
     const ta = document.getElementById('zgOzMetin');
     if(ta){
-      if(ozYazdigim.has(k.id)) ta.value = canli.ozet || '';   // geri dönüşte düzeltme
+      if(ozYazdigim.has(k.id)) ta.value = window.__ozet.oku(k.id);   // geri dönüşte düzeltme (v80: metin bellek dizininden)
       ta.focus();
     }
   }
@@ -1372,13 +1487,21 @@
     const canli = (veri.kitaplar || []).find(x => x.id === k.id);
     /* boş metinle "Kaydet" = Atla (yazmadan geç); üzerine yazma yalnız BU
        oturumda benim yazdığım özette — dışarıdan (detay, başka cihaz) gelen
-       özet ezilmez (puanVer bayat-kuyruk koruması kalıbı) */
-    if(canli && metin && (!canli.ozet || ozYazdigim.has(canli.id))){
-      canli.ozet = metin;
-      canli.ozetG = Date.now();   // alan damgası (senkron birleşimi, gsG sınıfı)
-      canli.g = Date.now();       // kullanıcı eylemi — açık damga
-      ozYazdigim.add(canli.id);
-      if(typeof depoKaydet === 'function') depoKaydet();
+       özet ezilmez (puanVer bayat-kuyruk koruması kalıbı).
+       v80: yazım async — __ozet.kaydet işaretleri (ozetVar/ozetUzunluk/ozetG)
+       + depoKaydet'i KENDİ basar; k.g BASILMAZ. BAŞARISIZSA aynı ekranda
+       kalınır ki metin kaybolmasın. */
+    if(canli && metin && (!canli.ozetVar || ozYazdigim.has(canli.id))){
+      window.__ozet.kaydet(canli.id, metin).then(tamam => {
+        if(tamam){
+          ozYazdigim.add(canli.id);
+          ozSira++;
+          ozetCiz_();
+        }else{
+          bildir('Özet kaydedilemedi — cihaz depolama alanını kontrol et');
+        }
+      });
+      return;
     }
     ozSira++;
     ozetCiz_();
@@ -1544,6 +1667,10 @@
         case 'zg-adtr-hazir': iceHazirYukle(ICE_ADTR); break;
         case 'zg-adtr-uygula': iceUygula(); break;
         case 'zg-adtr-vazgec': iceVazgec(); break;
+        // v80 M3: özet dosyası — düğme HTML'i index.html'de (data-act="zg-ozet-ice")
+        case 'zg-ozet-ice': ozetDosyaKur(); document.getElementById('zgOzetDosya').click(); break;
+        case 'zg-ozet-uygula': iceUygula(); break;   // iceUygula özet planında async dalı seçer
+        case 'zg-ozet-vazgec': iceVazgec(); break;
         case 'zg-oto-liste':
           ortuKur('zgOtoOrtu', 'Otomatik atanan türler');
           otoListeCiz(); ac('zgOtoOrtu');

@@ -1197,6 +1197,14 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
         <div class="ay-eylem">
           <button class="btn btn-cerceve" data-act="zg-adtr-hazir">Hazır Türkçe ad listesini uygula</button>
         </div>
+        <h3 class="ay-baslik">Özet dosyası</h3>
+        <p class="ay-not">Dışarıda hazırladığın kitap özetlerini toplu yükler — beklenen biçim:
+      <b>{ "surum": 1, "ozet": [ {ad, yazar, ozet} ] }</b>. Kayıtlar ad + yazar ile eşlenir; yalnız özet
+      alanı yazılır, önizleme onayı olmadan hiçbir şey değişmez. Yerleşik dosya bilinçli yok: özetler
+      kişisel veridir ve 2 MB'lik dosyayı uygulamayla her cihaza indirmek yanlış olurdu.</p>
+        <div class="ay-eylem">
+          <button class="btn btn-cerceve" data-act="zg-ozet-ice">Özet dosyası seç</button>
+        </div>
       </section>
 
       <!-- ZENGİNLEŞTİR (zg-) — mantık zengin.js'te. Eksik alan sayımı + toplu
@@ -1223,6 +1231,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 
       <section class="ay-bolum" id="ayBolumDepolama">
         <div class="ay-bolum-bas"><span class="kicker">Depolama</span></div>
+        <h3 class="ay-baslik">Kitap özetlerin</h3>
+        <p class="ay-not">Özet metinlerin cihazın kalıcı deposunda (IndexedDB) saklanır, senkrona ve
+      JSON yedeğine <b>girer</b>. Uzun özetler ana kütüphane kaydını şişirmez — senkronda yalnız
+      değişen özet gönderilir.</p>
+        <div class="kp-depo-satir" id="ozDepoBilgi">Hesaplanıyor…</div>
         <h3 class="ay-baslik">Kapak fotoğrafları</h3>
         <p class="ay-not">Kendi çektiğin kapak fotoğrafları <b>yalnız bu cihazda</b> saklanır — senkrona ve JSON
       yedeğine girmezler. Cihaz değiştirirsen fotoğrafları yeni cihazda yeniden çekmen gerekir.</p>
@@ -1608,14 +1621,18 @@ function kitapNormalize(k){
     cevirmen: String(k.cevirmen || ''), dil: String(k.dil || '').trim().toLowerCase().slice(0, 8),
     seri: String(k.seri || ''), ciltNo: parseInt(k.ciltNo) || null,
     sahiplik: k.sahiplik === 'istek' ? 'istek' : 'sahip',
-    /* ozet (M1): kitabın BÜTÜNÜNE dair kullanıcının kendi değerlendirmesi —
-       alıntı/nottan AYRI kavram (onlar sayfa düzeyinde ve parçalı; bu tek
-       metin, tek kitap = tek özet). ozetG = alan damgası (gsG sınıfı): yalnız
-       kullanıcı yazımı basar; senkron birleşiminde kitap-LWW değil alan-LWW +
-       çakışma eki (kitapCiftiBirlestir). Kırpma YOK: içe aktarılan uzun metin
-       veri katmanında budanmaz, 10.000 karakter sınırı yalnız yazım arayüzünde.
-       Şema değişti → ANLIK_SURUM 11, SEMA_SURUM 3 (senkron.js). */
-    ozet: String(k.ozet || ''),
+    /* ozet İŞARETLERİ (v80): özet METNİ artık kitap kaydında YAŞAMAZ —
+       IndexedDB'de (kk_ozet_v1, __ozet API). Kitapta yalnız işaret durur:
+       ozetVar/ozetUzunluk + ozetG alan damgası. Gerekçe (ölçüldü): 242 uzun
+       özet ana senkron PUT gövdesini 3,2 MB yapardı; işaretlerle 148 KB.
+       Metin senkronu AYRI düğümden, yalnız değişen kayıt (senkron.js
+       ozetSenkronEt). Şema değişti → ANLIK_SURUM 12, SEMA_SURUM 4.
+       Aşağıdaki koşullu ozet alanı v79 GÖÇ penceresidir: localStorage'da
+       kalmış metin, IDB'ye taşınana dek BUDANMAZ (taşıma ozetDepoBaslat) —
+       göç başarısız olursa metin yerinde kalır, kayıp imkânsız. */
+    ...(k.ozet ? { ozet: String(k.ozet) } : null),
+    ozetVar: k.ozetVar === true || !!k.ozet,
+    ozetUzunluk: parseInt(k.ozetUzunluk) || (k.ozet ? String(k.ozet).length : 0),
     ozetG: parseInt(k.ozetG) || 0,   // eski kayıt = sahip (varsayılan)
     /* silinenNotlar: NOT mezar taşları {notId: silmeZamani}. Senkron dizileri
        birleştirdiği için mezar olmadan silinen not karşı cihazın kopyasından
@@ -1716,6 +1733,193 @@ function kotaUyariGizle(){
     el.classList.remove('acik');
     document.body.classList.remove('kota-dolu');
   }
+}
+
+/* ---------- ÖZET DEPOSU (v80): IndexedDB + bellek dizini ----------
+   NEDEN localStorage DEĞİL (ölçüldü): 242 × 13.024 karakterlik özet planı
+   kitap kaydında dursaydı ana senkron PUT gövdesi 3.220 KB olurdu (ölçüm;
+   yalnız işaretlerle 148 KB) — her kayıtta 3 MB mobil veri kabul edilemez;
+   localStorage da 5 MB sınırının %64'üne otururdu. Metin bu yüzden kapak.js
+   emsalindeki IndexedDB'de yaşar; kitap kaydında YALNIZ işaret durur
+   (ozetVar/ozetUzunluk/ozetG — kitapNormalize). IDB katmanı kapak.js
+   deseninin birebiridir (tek Promise önbelleği, onclose onarımı, tek-tekrar).
+
+   BELLEK DİZİNİ (karar — "tembel tek tek okuma" yerine açılışta toplu):
+   tüm özetler tek getAll ile belleğe iner (2 MB metin RAM'de önemsiz);
+   arama/md/csv/detay SENKRON bellekten okur. Gerekçe: arama 242 uzun özette
+   bellek-içi 6,3 ms (ölçüldü) — IDB'yi arama anında taramak her tuşta async
+   sözleşme değişikliği isterdi. Katlanmış kopya ayrıca tutulur: sorgu başına
+   242 × toLocaleLowerCase ~95 ms ÖLÇÜLDÜ, yazım anına amorti edilir. */
+const OZET_DB_AD = 'kk_ozet_v1';
+const OZET_MAGAZA = 'ozetler';
+let ozDbSoz = null;
+function ozDbAc(){
+  if(ozDbSoz) return ozDbSoz;
+  ozDbSoz = new Promise((cozul, kir) => {
+    if(!window.indexedDB){ kir(new Error('indexedDB yok')); return; }
+    let istek;
+    try{ istek = indexedDB.open(OZET_DB_AD, 1); }
+    catch(e){ kir(e); return; }
+    istek.onupgradeneeded = () => { istek.result.createObjectStore(OZET_MAGAZA); };
+    istek.onsuccess = () => {
+      const db = istek.result;
+      db.onclose = () => { ozDbSoz = null; };
+      db.onversionchange = () => { try{ db.close(); }catch(e){} ozDbSoz = null; };
+      cozul(db);
+    };
+    istek.onerror = () => kir(istek.error || new Error('açılamadı'));
+  });
+  ozDbSoz.catch(() => { ozDbSoz = null; });
+  return ozDbSoz;
+}
+function ozIslem(mod, gorev, tekrar){
+  return ozDbAc().then(db => new Promise((cozul, kir) => {
+    let sonuc, tx;
+    try{ tx = db.transaction(OZET_MAGAZA, mod); sonuc = gorev(tx.objectStore(OZET_MAGAZA)); }
+    catch(e){
+      if(!tekrar){ ozDbSoz = null; cozul(ozIslem(mod, gorev, true)); return; }
+      kir(e); return;
+    }
+    tx.oncomplete = () => cozul(sonuc ? sonuc.result : undefined);
+    tx.onerror = () => kir(tx.error || new Error('işlem hatası'));
+    tx.onabort = () => kir(tx.error || new Error('işlem iptal'));
+  }));
+}
+/* IDB kaydı: { m: metin, g: ozetG damgası }. SİLME kaydı silmez — { m:'', g }
+   MEZAR olarak durur (senkron: boş + damga = kasıtlı silme, v79 kuralı). */
+const ozetBellek = new Map();       // id -> { m, g }
+const ozetKatli = new Map();        // id -> katla(m) — arama dizini
+let ozetHazir = false;              // açılış getAll'i bitti mi
+let ozetKotaUyarildi = false;       // %80 eşik uyarısı oturum başına bir kez
+function ozBellekKoy(id, m, g){
+  ozetBellek.set(String(id), { m: String(m || ''), g: parseInt(g) || 0 });
+  ozetKatli.set(String(id), katla(m || ''));
+}
+window.__ozet = {
+  get hazir(){ return ozetHazir; },
+  oku(id){ const k = ozetBellek.get(String(id)); return k ? k.m : ''; },
+  okuKatli(id){ return ozetKatli.get(String(id)) || ''; },
+  damga(id){ const k = ozetBellek.get(String(id)); return k ? k.g : 0; },
+  /* KULLANICI yazımı: IDB önce (kalıcılık), başarılıysa bellek + kitap
+     işaretleri + depoKaydet. k.g BASILMAZ (v80 kararı): özet artık kitap
+     gövdesinin parçası değil, kendi kanalının damgasını (ozetG) taşır;
+     k.g basmak kitabı LWW'de taze yapıp İLGİSİZ alan çakışmalarını
+     etkilerdi (kitapParmak da özet alanlarını dışlar — senkron.js). */
+  async kaydet(id, metin){
+    const m = String(metin || ''), g = Date.now();
+    try{ await ozIslem('readwrite', st => st.put({ m, g }, String(id))); }
+    catch(e){ return false; }
+    ozBellekKoy(id, m, g);
+    const k = (veri.kitaplar || []).find(x => x.id === id);
+    if(k){ k.ozetVar = !!m; k.ozetUzunluk = m.length; k.ozetG = g; depoKaydet(); }
+    ozKotaDenetle();
+    return true;
+  },
+  /* senkron/göç/içe aktarım yazımı: damga DIŞARIDAN gelir */
+  async kaydetHam(id, m, g){
+    try{ await ozIslem('readwrite', st => st.put({ m: String(m || ''), g: parseInt(g) || 0 }, String(id))); }
+    catch(e){ return false; }
+    ozBellekKoy(id, m, g);
+    const k = (veri.kitaplar || []).find(x => x.id === id);
+    if(k){ k.ozetVar = !!m; k.ozetUzunluk = String(m || '').length; k.ozetG = parseInt(g) || 0; }
+    return true;
+  },
+  hepsiDisa(){   // JSON yedeğe: { id: {m,g} } — özet SENKRONLANAN veridir, yedeğe girer
+    const o = {};
+    for(const [id, kayit] of ozetBellek) if(kayit.m || kayit.g) o[id] = { m: kayit.m, g: kayit.g };
+    return o;
+  },
+  sayim(){
+    let n = 0, bayt = 0;
+    for(const kayit of ozetBellek.values())
+      if(kayit.m){ n++; bayt += kayit.m.length * 2; }   // UTF-16 kaba tahmin
+    return { n, bayt };
+  },
+  hazirBekle(){ return ozetYukSoz || Promise.resolve(); }
+};
+/* Açılış: IDB → bellek (tek getAll) + v79 GÖÇÜ. Göç: localStorage'daki
+   k.ozet metinleri IDB'ye taşınır; HER yazım başarılı olursa alan kitaptan
+   silinip depoKaydet ile localStorage küçülür. Yazım başarısızsa alan
+   YERİNDE KALIR (veri kaybı imkânsız) ve sonraki açılış yeniden dener —
+   göç bu yüzden kendiliğinden "bir kez koşar" (taşınacak şey kalmaz).
+   Göç k.g'ye DOKUNMAZ; ozet* alanları kitapParmak dışında olduğundan
+   damga da üretilmez (senkron.js v12 notu). */
+let ozetYukSoz = null;
+function ozetDepoBaslat(){
+  ozetYukSoz = (async () => {
+    try{
+      const [anahtarlar, kayitlar] = await Promise.all([
+        ozIslem('readonly', st => st.getAllKeys()),
+        ozIslem('readonly', st => st.getAll())
+      ]);
+      (anahtarlar || []).forEach((id, i) => {
+        const v = (kayitlar || [])[i];
+        if(v && typeof v === 'object') ozBellekKoy(id, v.m, v.g);
+      });
+    }catch(e){ /* IDB yok/açılamadı: bellek boş kalır, arama/detay işaretle yaşar */ }
+    ozetHazir = true;
+    // v79 göçü
+    const gocluk = (veri.kitaplar || []).filter(k => k && k.ozet);
+    if(gocluk.length){
+      let tasindi = 0;
+      for(const k of gocluk){
+        const g = parseInt(k.ozetG) || Date.now();
+        const eldeki = ozetBellek.get(String(k.id));
+        // IDB'de daha yeni kayıt varsa (yarım kalmış eski göç) onu ezme
+        if(!eldeki || (eldeki.g || 0) <= g){
+          try{ await ozIslem('readwrite', st => st.put({ m: String(k.ozet), g }, String(k.id))); }
+          catch(e){ continue; }   // yazılamayan kitapta alan YERİNDE kalır
+          ozBellekKoy(k.id, k.ozet, g);
+        }
+        delete k.ozet;
+        k.ozetVar = true; k.ozetUzunluk = (ozetBellek.get(String(k.id)) || { m: '' }).m.length;
+        k.ozetG = Math.max(parseInt(k.ozetG) || 0, (ozetBellek.get(String(k.id)) || { g: 0 }).g);
+        tasindi++;
+      }
+      if(tasindi){ depoKaydet(); if(typeof hepsiniCiz === 'function') hepsiniCiz(); }
+    }
+    ozDepoBilgiTazele();
+  })();
+  // yetim süpürücüsü (kapak.js deseni): kütüphane BOŞKEN süpürmez
+  setTimeout(() => {
+    if(!Array.isArray(veri.kitaplar) || !veri.kitaplar.length) return;
+    const canli = new Set(veri.kitaplar.map(k => String(k.id)));
+    ozIslem('readonly', st => st.getAllKeys()).then(anahtarlar => {
+      (anahtarlar || []).forEach(a => {
+        if(!canli.has(String(a))){
+          ozetBellek.delete(String(a)); ozetKatli.delete(String(a));
+          ozIslem('readwrite', st => st.delete(String(a))).catch(() => {});
+        }
+      });
+    }).catch(() => {});
+  }, 3000);
+}
+/* M4 bütçe: Ayarlar ▸ Depolama kartı + %80 eşik uyarısı (dolmadan ÖNCE —
+   v17 şeridi ancak iş işten geçince görünürdü). */
+function ozDepoBilgiTazele(){
+  const kutu = document.getElementById('ozDepoBilgi');
+  if(!kutu) return;
+  const { n, bayt } = window.__ozet.sayim();
+  let metin = n + ' özet · ' + (bayt / (1024 * 1024)).toFixed(2) + ' MB';
+  if(navigator.storage && navigator.storage.estimate){
+    navigator.storage.estimate().then(t => {
+      if(t && t.quota){
+        const oran = Math.round((t.usage || 0) / t.quota * 100);
+        metin += ' · cihaz deposu: %' + oran + ' dolu';
+        if(oran >= 80) metin += ' — YER AZALIYOR, yedek almayı düşün';
+      }
+      kutu.textContent = metin;
+    }).catch(() => { kutu.textContent = metin; });
+  }else kutu.textContent = metin;
+}
+function ozKotaDenetle(){
+  if(ozetKotaUyarildi || !navigator.storage || !navigator.storage.estimate) return;
+  navigator.storage.estimate().then(t => {
+    if(t && t.quota && (t.usage || 0) / t.quota >= 0.8){
+      ozetKotaUyarildi = true;
+      toast('Cihaz deposu %80 doldu — yedek al, yer açmayı düşün');
+    }
+  }).catch(() => {});
 }
 
 /* ---------- yardımcılar ---------- */
@@ -2031,16 +2235,19 @@ function listeCiz(){
   let ks = veri.kitaplar.filter(k => {
     const durumUy = durum.filtre === 'hepsi' ? true
       : durum.filtre === 'puansiz' ? (k.durum === 'bitti' && !k.puan && !k.puanYok)
-      : durum.filtre === 'ozetsiz' ? (k.durum === 'bitti' && !k.ozet)   // sanal süzgeç (puansiz emsali)
+      : durum.filtre === 'ozetsiz' ? (k.durum === 'bitti' && !k.ozetVar)   // sanal süzgeç (puansiz emsali)
       : k.durum === durum.filtre;
     const etiketUy = !durum.etiket || (k.etiketler||[]).includes(durum.etiket);
-    /* ozet aramada (M3): "varoluş" yazınca özetinde geçen kitap da çıkar.
-       Sıralama/ağırlık ETKİLENMEZ — bu saf bir alt-dize süzgecidir, sıralama
-       ayrı cmp tablosunda yaşar (özet eşleşmesi sıra değiştirmez). */
+    /* ozet aramada (M3/v80): "varoluş" yazınca özetinde geçen kitap da çıkar.
+       Metin artık kitapta değil — __ozet bellek dizininin KATLANMIŞ kopyası
+       taranır (242 uzun özette 6,3 ms ölçüldü; sorgu başına katla maliyeti
+       yazım anına amorti). Sıralama/ağırlık ETKİLENMEZ — saf alt-dize
+       süzgeci, sıralama ayrı cmp tablosunda yaşar. */
     const metin = katla(k.ad + ' ' + (k.adTr||'') + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.raf||'')
-      + ' ' + (k.cevirmen||'') + ' ' + (k.seri||'') + ' ' + (k.etiketler||[]).join(' ') + ' ' + (k.ozet||''));
+      + ' ' + (k.cevirmen||'') + ' ' + (k.seri||'') + ' ' + (k.etiketler||[]).join(' '));
     const sahiplikUy = durum.sahiplikFiltre === 'hepsi' || (k.sahiplik || 'sahip') === durum.sahiplikFiltre;
-    return durumUy && etiketUy && sahiplikUy && (!q || metin.includes(q));
+    return durumUy && etiketUy && sahiplikUy &&
+      (!q || metin.includes(q) || window.__ozet.okuKatli(k.id).includes(q));
   });
   const cmp = {
     /* v74 "Son bitirilen": bitisTarihi 'YYYY-MM-DD' STRING'dir (eklenme ise ms
@@ -2509,25 +2716,33 @@ function detayAc(id){
      paragraf ≈ ekranda ~yarım sayfa. Sınır 10.000 karakter YALNIZ arayüzde
      (maxlength) — depo bütçesi ölçümü: 240×10.000 uçta bile kota %56. */
   const ozetHtml = () => {
+    // v80: metin bellek dizininden (IDB açılış yüklemesi); k.ozet yalnız
+    // göç-öncesi mirasta dolu olabilir — o pencerede de metni gösterelim
+    const oMetin = window.__ozet.oku(k.id) || String(k.ozet || '');
+    if(k.ozetVar && !oMetin && !window.__ozet.hazir && durum.ozetDuzenle !== k.id)
+      return `<div class="detay-satir" id="dOzetBlok">
+        <div class="d-bolum-bas"><span class="kicker">Özetin</span></div>
+        <div class="oz-metin" style="color:var(--muted)">Özet yükleniyor…</div>
+      </div>`;
     if(durum.ozetDuzenle === k.id){
       return `<div class="detay-satir" id="dOzetBlok">
         <div class="d-bolum-bas"><span class="kicker">Özetin</span></div>
         <textarea id="ozMetin" rows="7" maxlength="10000" style="min-height:140px"
-          placeholder="Bu kitap sana ne bıraktı? Ana fikri, kendi değerlendirmen…">${esc(k.ozet || '')}</textarea>
+          placeholder="Bu kitap sana ne bıraktı? Ana fikri, kendi değerlendirmen…">${esc(oMetin)}</textarea>
         <div class="oz-eylem">
           <button class="btn btn-cerceve btn-kucuk" data-act="oz-kaydet">Kaydet</button>
           <button class="oz-sessiz" data-act="oz-vazgec">Vazgeç</button>
         </div>
-        ${k.ozet ? '<div class="mini-not">Metni boşaltıp kaydedersen özet silinir.</div>' : ''}
+        ${oMetin ? '<div class="mini-not">Metni boşaltıp kaydedersen özet silinir.</div>' : ''}
       </div>`;
     }
-    if(!k.ozet)
+    if(!oMetin)
       return `<div class="detay-satir oz-bos"><button class="oz-ghost" data-act="oz-ac">+ Özetini yaz</button></div>`;
-    const uzun = k.ozet.length > 600 && !durum.ozetAcik;
+    const uzun = oMetin.length > 600 && !durum.ozetAcik;
     return `<div class="detay-satir" id="dOzetBlok">
       <div class="d-bolum-bas"><span class="kicker">Özetin</span>
         <button class="oz-ghost" data-act="oz-ac">Düzenle</button></div>
-      <div class="oz-metin">${esc(uzun ? k.ozet.slice(0, 600) : k.ozet)}${uzun ? '…' : ''}</div>
+      <div class="oz-metin">${esc(uzun ? oMetin.slice(0, 600) : oMetin)}${uzun ? '…' : ''}</div>
       ${uzun ? '<button class="oz-sessiz" data-act="oz-devam">Devamını göster</button>' : ''}
     </div>`;
   };
@@ -2954,7 +3169,7 @@ function istCiz(){
   /* Özet köprüsü (M3) — puansız köprüsünün eşi: sayım + rafa süzgeçli geçiş +
      sırayla yazma akışı (zg-ozetle'yi zengin.js yakalar, data-act sözleşmesi). */
   {
-    const ozetliSay = bittiler.filter(k => k.ozet).length;
+    const ozetliSay = bittiler.filter(k => k.ozetVar).length;
     const ozetsizSay = bittiler.length - ozetliSay;
     if(ozetsizSay)
       html += `<div class="mini-not" id="istOzet">${ozetliSay ? ozetliSay + ' bitmiş kitabında özetin var; ' : ''}${ozetsizSay} kitabın özeti yok —
@@ -3100,7 +3315,11 @@ function dosyaIndir(icerik, ad, tip){
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 function disaAktar(){
-  dosyaIndir(JSON.stringify({ surum:2, tarih:new Date().toISOString(), ...veri }, null, 2),
+  /* ozetler (v80): metin IDB'de yaşadığı için ...veri spread'i artık kapsamıyor —
+     özet SENKRONLANAN veridir (kapak fotoğrafının aksine), yedeğe AYRI alan
+     olarak girer; iceAktar geri yükler. */
+  dosyaIndir(JSON.stringify({ surum:2, tarih:new Date().toISOString(), ...veri,
+      ozetler: window.__ozet.hepsiDisa() }, null, 2),
     `kitaplik-yedek-${bugun()}.json`, 'application/json');
   toast('Yedek indirildi');
 }
@@ -3118,7 +3337,8 @@ function csvAktar(){
     b(DURUM_AD[k.durum]), k.puan ?? '', k.sayfa ?? '',
     k.guncelSayfa ?? '', k.baslamaTarihi ?? '', k.bitisTarihi ?? '',
     (k.okumalar||[]).length + 1,
-    b((k.etiketler||[]).join(', ')), (k.notlar||[]).length, b(k.ozet)
+    b((k.etiketler||[]).join(', ')), (k.notlar||[]).length,
+    b(window.__ozet.oku(k.id) || k.ozet)   // v80: metin bellek dizininden (miras alan yedek)
   ].join(';')));
   dosyaIndir('\uFEFF' + sat.join('\r\n'), `kitaplik-${bugun()}.csv`, 'text/csv;charset=utf-8');
   toast('CSV indirildi');
@@ -3138,7 +3358,7 @@ function notlariMdUret(sadeceAlinti){
        altında "### Özet" bölümü — yazı çalışmasında tek kaynak dosya; ayrı
        seçenek düğme enflasyonu olurdu. Sadece-alıntılar dosyası SAF kalır
        (özet girmez). Özeti olan ama notu olmayan kitap da artık dosyaya girer. */
-    const ozet = sadeceAlinti ? '' : String(k.ozet || '');
+    const ozet = sadeceAlinti ? '' : (window.__ozet.oku(k.id) || String(k.ozet || ''));
     if(!notlar.length && !ozet) continue;
     kitapSay++;
     bl.push('## ' + k.ad + (k.yazar ? ' — ' + k.yazar : ''));
@@ -3207,6 +3427,17 @@ function iceAktar(dosya){
         veri.kesfetGizliGeri = { ...y.kesfetGizliGeri, ...(veri.kesfetGizliGeri || {}) };   // v62: geri almalar da döner
       if(y.turRed && typeof y.turRed === 'object')
         veri.turRed = { ...y.turRed, ...(veri.turRed || {}) };   // v66: tür redleri yedekten döner
+      /* ozetler (v80): yedekteki özet metinleri IDB'ye döner — yerelde daha
+         YENİ damgalı kayıt varsa ezilmez (yedek eski olabilir). Asenkron;
+         işaretler kaydetHam içinde güncellenir, ikinci depoKaydet ile oturur. */
+      if(y.ozetler && typeof y.ozetler === 'object'){
+        const girisler = Object.entries(y.ozetler)
+          .filter(([id, o]) => o && typeof o.m === 'string' &&
+            (parseInt(o.g) || 0) > window.__ozet.damga(id));
+        if(girisler.length) Promise.all(girisler.map(([id, o]) =>
+          window.__ozet.kaydetHam(id, o.m, o.g)))
+          .then(() => { depoKaydet(); if(typeof listeCiz === 'function') listeCiz(); });
+      }
       depoKaydet(); hepsiniCiz();
       toast(eklendi ? `${eklendi} kitap geri yüklendi` : 'Yeni kitap yok — hepsi zaten kayıtlı');
     }catch(e){ toast('Dosya okunamadı — geçerli bir Kitaplık yedeği değil'); }
@@ -3679,7 +3910,7 @@ document.addEventListener('click', e => {
 
   switch(act){
     case 'sekme': sekmeGec(v); break;
-    case 'ayar-ac': ayarAc(); break;
+    case 'ayar-ac': ayarAc(); ozDepoBilgiTazele(); break;
     case 'ayar-kapat': ayarKapat(); break;
     /* Ana sayfa köprüleri — hepsi mevcut yollara bağlanır, yeni mantık yok.
        (ana-okunuyor v47'de emekli: "Tümü" düğmesi kalktı, devam bölümü
@@ -3940,15 +4171,19 @@ document.addEventListener('click', e => {
       const ta = document.getElementById('ozMetin');
       if(k && ta){
         const metin = ta.value.trim();
-        if(metin !== (k.ozet || '')){
-          k.ozet = metin;
-          k.ozetG = Date.now();   // alan damgası: kullanıcı yazımı (gsG kalıbı)
-          k.g = Date.now();
-          depoKaydet(); listeCiz();   // özetsiz çipi/araması tazelensin; raf kartı etkilenmez
-          toast(metin ? 'Özetin kaydedildi' : 'Özet silindi');
+        if(metin === (window.__ozet.oku(k.id) || String(k.ozet || ''))){
+          durum.ozetDuzenle = null; detayAc(k.id); break;   // no-op: damga basılmaz
         }
-        durum.ozetDuzenle = null;
-        detayAc(k.id);
+        /* v80: metin IDB'ye (__ozet.kaydet işaretleri + depoKaydet'i de yapar).
+           IDB yazılamazsa işaret DE yazılmaz — yarım durum yok (kapak.js kalıbı). */
+        window.__ozet.kaydet(k.id, metin).then(tamam => {
+          if(!tamam){ toast('Özet kaydedilemedi — cihaz depolama alanını kontrol et'); return; }
+          delete k.ozet;   // göç penceresinden kalmış miras alan varsa artık IDB'de
+          durum.ozetDuzenle = null;
+          listeCiz();   // özetsiz çipi/araması tazelensin; raf kartı etkilenmez
+          if(durum.detayId === k.id) detayAc(k.id);
+          toast(metin ? 'Özetin kaydedildi' : 'Özet silindi');
+        });
       }
       break; }
     case 'ilerleme-kaydet': {
@@ -4109,6 +4344,13 @@ siralaYukle();
 hepsiniCiz();
 temaDugmeleriCiz();
 sekmeGorunum(durum.sekme);
+/* Özet deposu (v80): IDB → bellek yüklemesi + v79 göçü + yetim süpürücü.
+   Yükleme bitince açık ekran tazelenir (arama/detay artık metni görür). */
+ozetDepoBaslat();
+window.__ozet.hazirBekle().then(() => {
+  if(typeof listeCiz === 'function' && durum.sekme === 'raf') listeCiz();
+  if(durum.detayId && typeof detayAc === 'function') detayAc(durum.detayId);
+});
 /* Çip satırları kaydırma işareti: kenarda gizli içerik varken o kenar maskeyle
    solar (kayar-bas/kayar-son). Dinleyici pasif, ilk durum hemen basılır. */
 function cipKaydirmaKur(){
