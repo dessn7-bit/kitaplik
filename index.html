@@ -659,16 +659,16 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 /* ÖZET bölümü (M2, oz- ad alanı — d-ghost/d-sessiz reçeteleri kopya, sınıf
    yeniden kullanılmaz kuralı). Metin: düz serif, KUTUSUZ, italiksiz (italik =
    alıntı imzası); pre-wrap satır sonlarını korur. */
-.oz-bos{padding-top:2px}
-.oz-ghost{background:none;border:none;color:var(--brass);font-family:var(--sans);
+.oz-bos,.onto-bos{padding-top:2px}
+.oz-ghost,.onto-ghost{background:none;border:none;color:var(--brass);font-family:var(--sans);
   font-size:.72rem;font-weight:600;letter-spacing:.06em;padding:0;position:relative}
-.oz-ghost::after{content:'';position:absolute;inset:-8px}
-.oz-metin{white-space:pre-wrap;line-height:1.62;font-size:.95rem;overflow-wrap:anywhere}
-.oz-eylem{display:flex;gap:16px;align-items:center;margin-top:10px}
-.oz-sessiz{background:none;border:none;font-size:.8rem;color:var(--muted);padding:0;
+.oz-ghost::after,.onto-ghost::after{content:'';position:absolute;inset:-8px}
+.oz-metin,.onto-metin{white-space:pre-wrap;line-height:1.62;font-size:.95rem;overflow-wrap:anywhere}
+.oz-eylem,.onto-eylem{display:flex;gap:16px;align-items:center;margin-top:10px}
+.oz-sessiz,.onto-sessiz{background:none;border:none;font-size:.8rem;color:var(--muted);padding:0;
   position:relative;text-decoration:underline;text-underline-offset:3px;
   text-decoration-color:var(--muted2)}
-.oz-sessiz::after{content:'';position:absolute;inset:-8px}
+.oz-sessiz::after,.onto-sessiz::after{content:'';position:absolute;inset:-8px}
 .d-katla{margin-top:12px;border:1px solid var(--kontur);border-radius:var(--r-md);
   background:transparent;box-shadow:none}
 .d-katla summary{list-style:none;cursor:pointer;padding:12px 14px;font-size:.85rem;
@@ -1785,19 +1785,23 @@ function ozIslem(mod, gorev, tekrar){
     tx.onabort = () => kir(tx.error || new Error('işlem iptal'));
   }));
 }
-/* IDB kaydı: { m: metin, g: ozetG damgası }. SİLME kaydı silmez — { m:'', g }
-   MEZAR olarak durur (senkron: boş + damga = kasıtlı silme, v79 kuralı). */
-const ozetBellek = new Map();       // id -> { m, g }
-const ozetKatli = new Map();        // id -> katla(m) — arama dizini
+/* IDB kaydı: { m: metin, g: ozetG damgası, o: ontoloji metni }. SİLME kaydı
+   silmez — { m:'', g } MEZAR olarak durur (senkron: boş + damga = kasıtlı
+   silme, v79 kuralı). o (v81): özetin İKİZİ ikinci metin alanı — AYRI depo
+   AÇILMADI (ayrı depo senkron/yedek/göç/yetim süpürücüsünü ikiye katlardı);
+   damga g İKİSİNİ BİRDEN kapsar. o'suz eski kayıt okunduğunda o='' sayılır. */
+const ozetBellek = new Map();       // id -> { m, g, o }
+const ozetKatli = new Map();        // id -> katla(m + o) — arama dizini (ikisi birden aranır)
 let ozetHazir = false;              // açılış getAll'i bitti mi
 let ozetKotaUyarildi = false;       // %80 eşik uyarısı oturum başına bir kez
-function ozBellekKoy(id, m, g){
-  ozetBellek.set(String(id), { m: String(m || ''), g: parseInt(g) || 0 });
-  ozetKatli.set(String(id), katla(m || ''));
+function ozBellekKoy(id, m, g, o){
+  ozetBellek.set(String(id), { m: String(m || ''), g: parseInt(g) || 0, o: String(o || '') });
+  ozetKatli.set(String(id), katla((m || '') + (o ? '\n' + o : '')));
 }
 window.__ozet = {
   get hazir(){ return ozetHazir; },
   oku(id){ const k = ozetBellek.get(String(id)); return k ? k.m : ''; },
+  okuOnto(id){ const k = ozetBellek.get(String(id)); return k ? (k.o || '') : ''; },   // v81: o'suz eski kayıt '' döner
   okuKatli(id){ return ozetKatli.get(String(id)) || ''; },
   damga(id){ const k = ozetBellek.get(String(id)); return k ? k.g : 0; },
   /* KULLANICI yazımı: IDB önce (kalıcılık), başarılıysa bellek + kitap
@@ -1807,32 +1811,56 @@ window.__ozet = {
      etkilerdi (kitapParmak da özet alanlarını dışlar — senkron.js). */
   async kaydet(id, metin){
     const m = String(metin || ''), g = Date.now();
-    try{ await ozIslem('readwrite', st => st.put({ m, g }, String(id))); }
+    const o = (ozetBellek.get(String(id)) || { o: '' }).o || '';   // v81: özet yazımı ontolojiyi KORUR
+    try{ await ozIslem('readwrite', st => st.put({ m, g, o }, String(id))); }
     catch(e){ return false; }
-    ozBellekKoy(id, m, g);
+    ozBellekKoy(id, m, g, o);
     const k = (veri.kitaplar || []).find(x => x.id === id);
     if(k){ k.ozetVar = !!m; k.ozetUzunluk = m.length; k.ozetG = g; depoKaydet(); }
     ozKotaDenetle();
     return true;
   },
-  /* senkron/göç/içe aktarım yazımı: damga DIŞARIDAN gelir */
-  async kaydetHam(id, m, g){
-    try{ await ozIslem('readwrite', st => st.put({ m: String(m || ''), g: parseInt(g) || 0 }, String(id))); }
+  /* v81: yalnız ONTOLOJİYİ yazar — m korunur, g (tek damga, iki alanı birden
+     kapsar) tazelenir, kitap işaretleri güncellenir. kaydet'in birebiri. */
+  async kaydetOnto(id, metin){
+    const o = String(metin || ''), g = Date.now();
+    const m = (ozetBellek.get(String(id)) || { m: '' }).m || '';
+    try{ await ozIslem('readwrite', st => st.put({ m, g, o }, String(id))); }
     catch(e){ return false; }
-    ozBellekKoy(id, m, g);
+    ozBellekKoy(id, m, g, o);
+    const k = (veri.kitaplar || []).find(x => x.id === id);
+    if(k){ k.ozetVar = !!m; k.ozetUzunluk = m.length; k.ozetG = g; depoKaydet(); }
+    ozKotaDenetle();
+    return true;
+  },
+  /* senkron/göç/içe aktarım yazımı: damga DIŞARIDAN gelir.
+     o verilmezse (undefined/null) mevcut ontoloji KORUNUR — eski yedekler ve
+     3-parametreli çağrılar ontolojiyi silmesin (v81). */
+  async kaydetHam(id, m, g, o){
+    const oSon = (o === undefined || o === null)
+      ? (ozetBellek.get(String(id)) || { o: '' }).o || ''
+      : String(o || '');
+    try{ await ozIslem('readwrite', st => st.put({ m: String(m || ''), g: parseInt(g) || 0, o: oSon }, String(id))); }
+    catch(e){ return false; }
+    ozBellekKoy(id, m, g, oSon);
     const k = (veri.kitaplar || []).find(x => x.id === id);
     if(k){ k.ozetVar = !!m; k.ozetUzunluk = String(m || '').length; k.ozetG = parseInt(g) || 0; }
     return true;
   },
-  hepsiDisa(){   // JSON yedeğe: { id: {m,g} } — özet SENKRONLANAN veridir, yedeğe girer
-    const o = {};
-    for(const [id, kayit] of ozetBellek) if(kayit.m || kayit.g) o[id] = { m: kayit.m, g: kayit.g };
-    return o;
+  hepsiDisa(){   // JSON yedeğe: { id: {m,g,o} } — özet SENKRONLANAN veridir, yedeğe girer
+    const cikti = {};
+    for(const [id, kayit] of ozetBellek)
+      if(kayit.m || kayit.g || kayit.o)
+        // o boşsa alan HİÇ yazılmaz — yedek dosyası şişmesin (v81)
+        cikti[id] = kayit.o ? { m: kayit.m, g: kayit.g, o: kayit.o } : { m: kayit.m, g: kayit.g };
+    return cikti;
   },
   sayim(){
     let n = 0, bayt = 0;
-    for(const kayit of ozetBellek.values())
+    for(const kayit of ozetBellek.values()){
       if(kayit.m){ n++; bayt += kayit.m.length * 2; }   // UTF-16 kaba tahmin
+      if(kayit.o) bayt += kayit.o.length * 2;           // v81: ontoloji baytları da bütçede
+    }
     return { n, bayt };
   },
   hazirBekle(){ return ozetYukSoz || Promise.resolve(); }
@@ -1854,7 +1882,7 @@ function ozetDepoBaslat(){
       ]);
       (anahtarlar || []).forEach((id, i) => {
         const v = (kayitlar || [])[i];
-        if(v && typeof v === 'object') ozBellekKoy(id, v.m, v.g);
+        if(v && typeof v === 'object') ozBellekKoy(id, v.m, v.g, v.o);   // v.o eski kayıtta yok → ''
       });
     }catch(e){ /* IDB yok/açılamadı: bellek boş kalır, arama/detay işaretle yaşar */ }
     ozetHazir = true;
@@ -1867,9 +1895,10 @@ function ozetDepoBaslat(){
         const eldeki = ozetBellek.get(String(k.id));
         // IDB'de daha yeni kayıt varsa (yarım kalmış eski göç) onu ezme
         if(!eldeki || (eldeki.g || 0) <= g){
-          try{ await ozIslem('readwrite', st => st.put({ m: String(k.ozet), g }, String(k.id))); }
+          const o = (eldeki && eldeki.o) || '';   // v81: göç IDB'deki ontolojiyi ezmez
+          try{ await ozIslem('readwrite', st => st.put({ m: String(k.ozet), g, o }, String(k.id))); }
           catch(e){ continue; }   // yazılamayan kitapta alan YERİNDE kalır
-          ozBellekKoy(k.id, k.ozet, g);
+          ozBellekKoy(k.id, k.ozet, g, o);
         }
         delete k.ozet;
         k.ozetVar = true; k.ozetUzunluk = (ozetBellek.get(String(k.id)) || { m: '' }).m.length;
@@ -2241,8 +2270,10 @@ function listeCiz(){
     /* ozet aramada (M3/v80): "varoluş" yazınca özetinde geçen kitap da çıkar.
        Metin artık kitapta değil — __ozet bellek dizininin KATLANMIŞ kopyası
        taranır (242 uzun özette 6,3 ms ölçüldü; sorgu başına katla maliyeti
-       yazım anına amorti). Sıralama/ağırlık ETKİLENMEZ — saf alt-dize
-       süzgeci, sıralama ayrı cmp tablosunda yaşar. */
+       yazım anına amorti). v81: ONTOLOJİ metni de aynı katlanmış girdide
+       (ozBellekKoy m+o'yu birlikte katlar) — ek kod yok, arama ikisini bulur.
+       Sıralama/ağırlık ETKİLENMEZ — saf alt-dize süzgeci, sıralama ayrı cmp
+       tablosunda yaşar. */
     const metin = katla(k.ad + ' ' + (k.adTr||'') + ' ' + (k.yazar||'') + ' ' + (k.yayinevi||'') + ' ' + (k.raf||'')
       + ' ' + (k.cevirmen||'') + ' ' + (k.seri||'') + ' ' + (k.etiketler||[]).join(' '));
     const sahiplikUy = durum.sahiplikFiltre === 'hepsi' || (k.sahiplik || 'sahip') === durum.sahiplikFiltre;
@@ -2683,8 +2714,9 @@ function formKaydet(){
 function detayAc(id){
   const k = kitapBul(id);
   if(!k) return;
-  // özet bölümü geçici durumları kitaba bağlı: başka kitaba geçişte sıfırlanır
-  if(durum.detayId !== id){ durum.ozetDuzenle = null; durum.ozetAcik = false; }
+  // özet/ontoloji bölümü geçici durumları kitaba bağlı: başka kitaba geçişte sıfırlanır
+  if(durum.detayId !== id){ durum.ozetDuzenle = null; durum.ozetAcik = false;
+    durum.ontoDuzenle = null; durum.ontoAcik = false; }
   durum.detayId = id;
   const kap = document.getElementById('detayIcerik');
   const rSinif = { okunuyor:'r-okunuyor', bitti:'r-bitti', okunacak:'r-okunacak', yarim:'r-yarim' }[k.durum];
@@ -2744,6 +2776,41 @@ function detayAc(id){
         <button class="oz-ghost" data-act="oz-ac">Düzenle</button></div>
       <div class="oz-metin">${esc(uzun ? oMetin.slice(0, 600) : oMetin)}${uzun ? '…' : ''}</div>
       ${uzun ? '<button class="oz-sessiz" data-act="oz-devam">Devamını göster</button>' : ''}
+    </div>`;
+  };
+
+  /* ONTOLOJİ bölümü (v81) — özet bölümünün İKİZİ: ayrı saklanır (kk_ozet_v1
+     kaydında o alanı), ayrı görünür, ayrı düzenlenir; ayrı bayraklar
+     (ontoDuzenle/ontoAcik) ve onto- ad alanı (sınıf/act yeniden kullanılmaz
+     kuralı). BOŞ ontoloji: özet DOLUYSA tek ghost satır, özet de BOŞSA hiç
+     çizilmez — 243 kitabın 143'ünde ontoloji yok, boş düğme kalabalığı
+     olmasın. 600 kırpma + maxlength 10000 özetle birebir aynı. */
+  const ontoHtml = () => {
+    const oMetin = window.__ozet.okuOnto(k.id);
+    if(durum.ontoDuzenle === k.id){
+      return `<div class="detay-satir" id="dOntoBlok">
+        <div class="d-bolum-bas"><span class="kicker">Ontoloji</span></div>
+        <textarea id="ontoMetin" rows="7" maxlength="10000" style="min-height:140px"
+          placeholder="Kitabın ontolojisi…">${esc(oMetin)}</textarea>
+        <div class="onto-eylem">
+          <button class="btn btn-cerceve btn-kucuk" data-act="onto-kaydet">Kaydet</button>
+          <button class="onto-sessiz" data-act="onto-vazgec">Vazgeç</button>
+        </div>
+        ${oMetin ? '<div class="mini-not">Metni boşaltıp kaydedersen ontoloji silinir.</div>' : ''}
+      </div>`;
+    }
+    if(!oMetin){
+      const ozetDolu = !!(window.__ozet.oku(k.id) || k.ozet);
+      return ozetDolu
+        ? `<div class="detay-satir onto-bos"><button class="onto-ghost" data-act="onto-ac">+ Ontoloji yaz</button></div>`
+        : '';
+    }
+    const uzun = oMetin.length > 600 && !durum.ontoAcik;
+    return `<div class="detay-satir" id="dOntoBlok">
+      <div class="d-bolum-bas"><span class="kicker">Ontoloji</span>
+        <button class="onto-ghost" data-act="onto-ac">Düzenle</button></div>
+      <div class="onto-metin">${esc(uzun ? oMetin.slice(0, 600) : oMetin)}${uzun ? '…' : ''}</div>
+      ${uzun ? '<button class="onto-sessiz" data-act="onto-devam">Devamını göster</button>' : ''}
     </div>`;
   };
 
@@ -2926,7 +2993,7 @@ function detayAc(id){
     ${eylemHtml}
     ${kunyeHtml}
     ${etiketHtml}
-    ${ozetHtml()}
+    ${ozetHtml()}${ontoHtml()}
     <div class="detay-satir">
       <div class="d-bolum-bas"><span class="kicker">Notlar &amp; alıntılar</span><button class="oc-ghost" data-act="oc-baslat">${ikon('kamera')} Fotoğraftan</button></div>
       <div class="not-tip-sec">
@@ -3330,7 +3397,7 @@ function csvAktar(){
      gereği güvenlidir, Excel (BOM+CRLF) çok satırlı hücreyi doğru açar.
      Kırpmak "yazı çalışması" amacını baltalardı. */
   const sat = [['Ad','Türkçe Ad','Yazar','Çevirmen','Dil','Yayınevi','Yıl','Tür','Seri','Cilt','ISBN','Sahiplik',
-    'Durum','Puan','Sayfa','Güncel Sayfa','Başlama','Bitiş','Okuma Sayısı','Etiketler','Not Sayısı','Özet'].join(';')];
+    'Durum','Puan','Sayfa','Güncel Sayfa','Başlama','Bitiş','Okuma Sayısı','Etiketler','Not Sayısı','Özet','Ontoloji'].join(';')];
   veri.kitaplar.forEach(k => sat.push([
     b(k.ad), b(k.adTr), b(k.yazar), b(k.cevirmen), b(k.dil), b(k.yayinevi), k.yil ?? '', b(k.tur),
     b(k.seri), k.ciltNo ?? '', b(k.isbn), b(k.sahiplik === 'istek' ? 'İstek listesi' : 'Bende var'),
@@ -3338,7 +3405,8 @@ function csvAktar(){
     k.guncelSayfa ?? '', k.baslamaTarihi ?? '', k.bitisTarihi ?? '',
     (k.okumalar||[]).length + 1,
     b((k.etiketler||[]).join(', ')), (k.notlar||[]).length,
-    b(window.__ozet.oku(k.id) || k.ozet)   // v80: metin bellek dizininden (miras alan yedek)
+    b(window.__ozet.oku(k.id) || k.ozet),  // v80: metin bellek dizininden (miras alan yedek)
+    b(window.__ozet.okuOnto(k.id))         // v81: Ontoloji sütunu — Özet gibi tam metin, kırpma yok
   ].join(';')));
   dosyaIndir('\uFEFF' + sat.join('\r\n'), `kitaplik-${bugun()}.csv`, 'text/csv;charset=utf-8');
   toast('CSV indirildi');
@@ -3429,13 +3497,15 @@ function iceAktar(dosya){
         veri.turRed = { ...y.turRed, ...(veri.turRed || {}) };   // v66: tür redleri yedekten döner
       /* ozetler (v80): yedekteki özet metinleri IDB'ye döner — yerelde daha
          YENİ damgalı kayıt varsa ezilmez (yedek eski olabilir). Asenkron;
-         işaretler kaydetHam içinde güncellenir, ikinci depoKaydet ile oturur. */
+         işaretler kaydetHam içinde güncellenir, ikinci depoKaydet ile oturur.
+         v81: kayıttaki o (ontoloji) 4. parametreyle taşınır; o'suz eski
+         yedekte undefined gider — kaydetHam mevcut ontolojiyi KORUR. */
       if(y.ozetler && typeof y.ozetler === 'object'){
         const girisler = Object.entries(y.ozetler)
           .filter(([id, o]) => o && typeof o.m === 'string' &&
             (parseInt(o.g) || 0) > window.__ozet.damga(id));
         if(girisler.length) Promise.all(girisler.map(([id, o]) =>
-          window.__ozet.kaydetHam(id, o.m, o.g)))
+          window.__ozet.kaydetHam(id, o.m, o.g, o.o)))
           .then(() => { depoKaydet(); if(typeof listeCiz === 'function') listeCiz(); });
       }
       depoKaydet(); hepsiniCiz();
@@ -4183,6 +4253,32 @@ document.addEventListener('click', e => {
           listeCiz();   // özetsiz çipi/araması tazelensin; raf kartı etkilenmez
           if(durum.detayId === k.id) detayAc(k.id);
           toast(metin ? 'Özetin kaydedildi' : 'Özet silindi');
+        });
+      }
+      break; }
+    /* Ontoloji eylemleri (v81) — özet eylemlerinin birebiri, ayrı act/bayrak
+       adları. kaydetOnto m'yi KORUR, tek damgayı (ozetG kanalı) tazeler. */
+    case 'onto-ac': {
+      durum.ontoDuzenle = durum.detayId; detayAc(durum.detayId);
+      const ta = document.getElementById('ontoMetin');
+      if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+      break; }
+    case 'onto-vazgec': durum.ontoDuzenle = null; detayAc(durum.detayId); break;
+    case 'onto-devam': durum.ontoAcik = true; detayAc(durum.detayId); break;
+    case 'onto-kaydet': {
+      const k = kitapBul(durum.detayId);
+      const ta = document.getElementById('ontoMetin');
+      if(k && ta){
+        const metin = ta.value.trim();
+        if(metin === window.__ozet.okuOnto(k.id)){
+          durum.ontoDuzenle = null; detayAc(k.id); break;   // no-op: damga basılmaz
+        }
+        window.__ozet.kaydetOnto(k.id, metin).then(tamam => {
+          if(!tamam){ toast('Ontoloji kaydedilemedi — cihaz depolama alanını kontrol et'); return; }
+          durum.ontoDuzenle = null;
+          listeCiz();   // arama dizini ontolojiyi de tarar — tazelensin
+          if(durum.detayId === k.id) detayAc(k.id);
+          toast(metin ? 'Ontoloji kaydedildi' : 'Ontoloji silindi');
         });
       }
       break; }

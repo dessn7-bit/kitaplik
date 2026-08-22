@@ -11,7 +11,7 @@
      taşır; kitapParmak ozet* alanlarını dışlar.
    - Metin birleşimi kitap çiftinden çıktı → ozetBirlesim saf fonksiyonu
      (v79 çakışma-eki/silme/damgasız kuralları AYNEN, g79'da düğüm testleri).
-   - ANLIK_SURUM 12, SEMA_SURUM 4.
+   - ANLIK_SURUM 12, SEMA_SURUM 5 (v81: özet düğümü kaydına o/ontoloji eklendi).
    (Mutasyon: ozet işaretleri normalize'dan çıkar → kalıcılık vakaları
     kırmızı; md'den özet bloğu çıkar → markdown vakası kırmızı.) */
 const { test, expect, tohumla, sahteKitap, bugunISO, rafAc, rafaGec, ayarlarAc } = require('./yardim');
@@ -65,7 +65,7 @@ test.describe('G78 özet — veri modeli + senkron', () => {
     expect(s.hamAlan, 'localStorage kaydında metin kalmaz').toBeUndefined();
   });
 
-  test('(b) GÖÇ: eski ANLIK sürümüyle açılış damga BASMAZ; sürümler 12/4', async ({ page }) => {
+  test('(b) GÖÇ: eski ANLIK sürümüyle açılış damga BASMAZ; sürümler 12/5', async ({ page }) => {
     await tohumla(page, [bitmis({ ad: 'Göç Kitabı', g: 777, ozet: 'eski özet' })],
       { kk_senkron_anlik_v1: { s: 11, p: {} } });
     await rafAc(page);
@@ -77,7 +77,9 @@ test.describe('G78 özet — veri modeli + senkron', () => {
     });
     expect(sonuc.g, 'göç turu yeniden damgalamaz').toBe(777);
     expect(sonuc.surum).toBe(12);
-    expect(sonuc.sema).toBe(4);
+    // v81: özet düğümü kaydına o (ontoloji) eklendi — eski istemcinin PATCH'i
+    // o'yu sildiği için SEMA 4→5 (elle yazılan metin = veri-kaybı sınıfı)
+    expect(sonuc.sema).toBe(5);
   });
 
   test('(c) SENKRON İŞARETİ: kitap-LWW kazananı özetsiz olsa da yeni ozetG\'nin işareti kazanır', async ({ page }) => {
@@ -239,7 +241,9 @@ test.describe('G78 özet — görünürlük ve erişim', () => {
     await ozetHazir(page);
     const csv = await aktarimYakala(page, 'csvAktar()');
     const baslik = csv.icerik.replace(/^﻿/, '').split('\r\n')[0].split(';');
-    expect(baslik[baslik.length - 1]).toBe('Özet');
+    // v81: 'Ontoloji' sütunu Özet'in hemen sağına eklendi — Özet artık sondan ikinci
+    expect(baslik[baslik.length - 2]).toBe('Özet');
+    expect(baslik[baslik.length - 1]).toBe('Ontoloji');
     expect(csv.icerik).toContain('"İlk satır; noktalı virgüllü.\nİkinci satır ""tırnaklı""."');
   });
 

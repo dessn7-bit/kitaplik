@@ -29,6 +29,12 @@ async function odaKur(page, ayarlar) {
       body: JSON.stringify({ idToken: 'sahte-token', refreshToken: 'sahte-yenile' }) }));
   await page.route('**/*firebasedatabase.app/**', route => {
     const istek = route.request();
+    /* v81: ana turun SONUNDA fire-forget koşan özet düğümü turu (--ozet: izler
+       GET'i) bu sayaçlara GİRMEZ — sayaçlar ANA kanal maliyetini ölçer; özet
+       kanalının kendi kilitleri g79(D)/g80(I)'da. v80'den beri var olan bu
+       yarış, yük altında izler GET'i iddiadan önce düşürüp sayacı kirletiyordu. */
+    if (istek.url().includes('--ozet'))
+      return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
     if (istek.method() === 'GET') {
       durum.get++;
       return route.fulfill({ status: 200, contentType: 'application/json',

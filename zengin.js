@@ -810,19 +810,26 @@
     ortuId: 'zgOzetIceOrtu', ortuBaslik: 'Özet dosyası yükle',
     denemeDamgala: false,
     kisalt: true,
+    /* v81: ontoAnahtar — AYNI dosyadaki isteğe bağlı ikinci alan (ontoloji).
+       TEK dosya, TEK onay: kullanıcı iki kez dosya seçmez; önizleme özet ve
+       ontoloji sayılarını AYRI gösterir. Alanı olmayan kayıt o kitabın mevcut
+       ontolojisine DOKUNMAZ. tur/adTr cfg'lerinde bayrak yok — boru birebir. */
+    ontoAnahtar: 'ontoloji',
     hazirla(){ return window.__ozet.hazirBekle(); },
     oku: k => window.__ozet.oku(k.id),
     sonTazele(){ durumTazele(); },
     act: { uygula: 'zg-ozet-uygula', vazgec: 'zg-ozet-vazgec' },
     metin: {
-      bicimYok: 'Bu dosyada özet listesi yok — beklenen biçim: { "ozet": [ {ad, yazar, ozet} ] }',
+      bicimYok: 'Bu dosyada özet listesi yok — beklenen biçim: ' +
+        '{ "ozet": [ {ad, yazar, ozet, ontoloji} ] } (ontoloji isteğe bağlı)',
       dolacak: ' kitapta boş özet dolacak',
       degisecek: ' kitapta mevcut özet DEĞİŞECEK',
-      yalnizNot: 'Yalnız ÖZET alanı yazılır; puan, notlar, durum — hiçbir başka alana dokunulmaz. ' +
-        'Onaylamadan hiçbir şey yazılmaz.',
+      yalnizNot: 'Yalnız ÖZET ve ONTOLOJİ alanları yazılır; puan, notlar, durum — hiçbir başka ' +
+        'alana dokunulmaz. Onaylamadan hiçbir şey yazılmaz.',
       degisecekBaslik: 'Mevcut özeti değişecekler',
-      yazDugme: n => 'Özetleri yaz (' + n + ')',
-      toastYazildi: n => n + ' kitabın özeti dosyadan yazıldı'
+      yazDugme: n => 'Özetleri yaz (' + n + ')'
+      /* toastYazildi yok (v81): özet borusunun toast'ı iceUygulaOzet'te
+         iki-sayılı kurulur (özet + ontoloji ayrı söylenir) */
     }
   };
   let icePlan = null;   // tekil: uygula/vazgec daima SON okunan plana işler
@@ -865,19 +872,28 @@
       const anah = katla(k.ad) + '|' + katla(k.yazar || '');
       (harita[anah] = harita[anah] || []).push(k);
     });
-    const plan = { cfg, dolacak: [], degisecek: [], ayni: 0, gecersiz: 0,
+    const plan = { cfg, dolacak: [], degisecek: [], onto: [], ayni: 0, gecersiz: 0,
       eslesmeyen: [], taksonomiDisi: [] };
     const planli = new Set();   // dosyada çift kayıt: İLK kayıt kazanır
     for(const r of kayitlar){
-      if(!r || !String(r.ad || '').trim() || !String(r[cfg.kaynakAnahtar] || '').trim()){ plan.gecersiz++; continue; }
-      let yeniDeger;
-      if(cfg.taksonomiKapisi){
-        const hedef = taksonomi.find(x =>
-          katla(x.ad) === katla(r[cfg.kaynakAnahtar]) || katla(x.seo) === katla(r[cfg.kaynakAnahtar]));
-        if(!hedef){ plan.taksonomiDisi.push(r); continue; }
-        yeniDeger = hedef.ad;   // yazılan değer her zaman taksonominin KENDİ adı
-      }else{
-        yeniDeger = String(r[cfg.kaynakAnahtar]).trim();   // serbest metin alanı
+      /* v81 ontoloji (yalnız cfg.ontoAnahtar'lı boruda): kayıttaki isteğe
+         bağlı ikinci alan. null = alan yok/boş → o kitabın ontolojisine
+         DOKUNULMAZ (içe aktarım ontoloji SİLMEZ). tur/adTr'de ontoAnahtar
+         yok → ontoHam hep null, kapı ve döngü bayt bayt eski davranış. */
+      const ontoHam = (cfg.ontoAnahtar && r && typeof r[cfg.ontoAnahtar] === 'string'
+        && r[cfg.ontoAnahtar].trim()) ? r[cfg.ontoAnahtar].trim() : null;
+      const anaVar = !!(r && String(r[cfg.kaynakAnahtar] || '').trim());
+      if(!r || !String(r.ad || '').trim() || (!anaVar && !ontoHam)){ plan.gecersiz++; continue; }
+      let yeniDeger = '';
+      if(anaVar){
+        if(cfg.taksonomiKapisi){
+          const hedef = taksonomi.find(x =>
+            katla(x.ad) === katla(r[cfg.kaynakAnahtar]) || katla(x.seo) === katla(r[cfg.kaynakAnahtar]));
+          if(!hedef){ plan.taksonomiDisi.push(r); continue; }
+          yeniDeger = hedef.ad;   // yazılan değer her zaman taksonominin KENDİ adı
+        }else{
+          yeniDeger = String(r[cfg.kaynakAnahtar]).trim();   // serbest metin alanı
+        }
       }
       const kitaplar = harita[katla(r.ad) + '|' + katla(r.yazar || '')];
       if(!kitaplar){ plan.eslesmeyen.push(r); continue; }
@@ -887,8 +903,15 @@
         /* v80: mevcut değer cfg.oku kancasından — varsayılan k[cfg.anahtar],
            boşluk sınaması alanBos'un metin dalıyla BİREBİR aynı */
         const mevcut = iceDegerOku(cfg, k);
-        if(mevcut === yeniDeger){ plan.ayni++; continue; }
-        ((mevcut && String(mevcut).trim()) ? plan.degisecek : plan.dolacak)
+        let ontoSatir = null;
+        if(ontoHam !== null){
+          const mevcutO = window.__ozet.okuOnto(k.id);
+          if(mevcutO !== ontoHam) ontoSatir = { id: k.id, ad: k.ad, eski: mevcutO, yeni: ontoHam };
+        }
+        const anaYaz = anaVar && mevcut !== yeniDeger;
+        if(!anaYaz && !ontoSatir){ plan.ayni++; continue; }
+        if(ontoSatir) plan.onto.push(ontoSatir);
+        if(anaYaz) ((mevcut && String(mevcut).trim()) ? plan.degisecek : plan.dolacak)
           .push({ id: k.id, ad: k.ad, eski: mevcut, yeni: yeniDeger });
       }
     }
@@ -906,10 +929,15 @@
     const cfg = plan.cfg;
     const g = document.getElementById(cfg.ortuId + 'Govde');
     if(!g) return;
-    const yazilacak = plan.dolacak.length + plan.degisecek.length;
+    /* v81: yazılacak = KİTAP sayısı (özet ∪ ontoloji) — aynı kitapta ikisi de
+       değişse tek sayılır. tur/adTr'de plan.onto yok → eski toplamla birebir. */
+    const yazIdler = new Set(plan.dolacak.concat(plan.degisecek).map(y => y.id));
+    (plan.onto || []).forEach(y => yazIdler.add(y.id));
+    const yazilacak = yazIdler.size;
     const ozet = [];
     if(plan.dolacak.length) ozet.push('<b>' + plan.dolacak.length + '</b>' + cfg.metin.dolacak);
     if(plan.degisecek.length) ozet.push('<b>' + plan.degisecek.length + '</b>' + cfg.metin.degisecek);
+    if((plan.onto || []).length) ozet.push('<b>' + plan.onto.length + '</b> kitapta ontoloji yazılacak');
     if(plan.ayni) ozet.push(plan.ayni + ' kitap zaten aynı');
     if(plan.eslesmeyen.length) ozet.push(plan.eslesmeyen.length + ' kayıt kütüphanede bulunamadı');
     if(plan.taksonomiDisi.length) ozet.push(plan.taksonomiDisi.length + ' kayıt taksonomi dışı (atlanacak)');
@@ -927,6 +955,10 @@
       '<div class="zg-ozet">' + (ozet.join(' · ') || 'Dosyada işlenecek kayıt yok.') + '</div>' +
       '<p class="zg-not">' + cfg.metin.yalnizNot + '</p>' +
       katla_(cfg.metin.degisecekBaslik, plan.degisecek.map(y =>
+        '<div class="zg-onizle-satir"><div class="zg-onizle-ic">' +
+        '<span class="zg-onizle-ad">' + esc(y.ad) + '</span>' +
+        '<span class="zg-onizle-alan">' + esc(kirp(y.eski)) + ' → ' + esc(kirp(y.yeni)) + '</span></div></div>')) +
+      katla_('Ontolojisi yazılacaklar', (plan.onto || []).map(y =>
         '<div class="zg-onizle-satir"><div class="zg-onizle-ic">' +
         '<span class="zg-onizle-ad">' + esc(y.ad) + '</span>' +
         '<span class="zg-onizle-alan">' + esc(kirp(y.eski)) + ' → ' + esc(kirp(y.yeni)) + '</span></div></div>')) +
@@ -980,20 +1012,31 @@
   async function iceUygulaOzet(plan){
     const cfg = plan.cfg;
     icePlan = null;   // yeniden giriş kilidi: koşum boyunca plan yalnız burada
-    const hepsi = plan.dolacak.concat(plan.degisecek);
+    /* v81: kitap başına TEK yazım — özet ve ontoloji AYNI kayda gider (damga
+       tek, ikisini kapsar). m: null = özet değişmiyor (mevcut korunur);
+       o: undefined = ontoloji değişmiyor (kaydetHam korur). */
+    const isler = new Map();   // id -> { m: yeniÖzet | null, o: yeniOntoloji | undefined }
+    for(const y of plan.dolacak.concat(plan.degisecek)) isler.set(y.id, { m: y.yeni });
+    for(const y of (plan.onto || [])){
+      const v = isler.get(y.id) || { m: null };
+      v.o = y.yeni; isler.set(y.id, v);
+    }
+    const hepsi = Array.from(isler.entries());
     const g = document.getElementById(cfg.ortuId + 'Govde');
     if(g) g.innerHTML = '<div class="zg-ozet" id="zgOzetIceIlerleme">0 / ' +
       hepsi.length + ' yazıldı…</div>';
-    let n = 0, olmadi = 0, islenen = 0;
+    let nOzet = 0, nOnto = 0, olmadi = 0, islenen = 0;
     for(let i = 0; i < hepsi.length; i += 25){
-      for(const y of hepsi.slice(i, i + 25)){
+      for(const [id, y] of hepsi.slice(i, i + 25)){
         islenen++;
-        const k = (veri.kitaplar || []).find(x => x.id === y.id);
+        const k = (veri.kitaplar || []).find(x => x.id === id);
         if(!k){ olmadi++; continue; }
+        const m = (y.m === null) ? window.__ozet.oku(k.id) : y.m;   // özet değişmiyorsa mevcut korunur
         let tamam = false;
-        try{ tamam = await window.__ozet.kaydetHam(k.id, y.yeni, Date.now()); }
+        try{ tamam = await window.__ozet.kaydetHam(k.id, m, Date.now(), y.o); }
         catch(e){}
-        if(tamam) n++; else olmadi++;
+        if(tamam){ if(y.m !== null) nOzet++; if(y.o !== undefined) nOnto++; }
+        else olmadi++;
       }
       const il = document.getElementById('zgOzetIceIlerleme');
       if(il) il.textContent = islenen + ' / ' + hepsi.length + ' yazıldı…';
@@ -1001,7 +1044,12 @@
     }
     if(typeof depoKaydet === 'function') depoKaydet();   // toplu iş: sonda TEK kayıt
     kapat(cfg.ortuId);
-    bildir(cfg.metin.toastYazildi(n) + (olmadi ? ' — ' + olmadi + ' kayıt yazılamadı' : ''));
+    /* toast iki sayıyı ayrı söyler; ontosuz dosyada metin ESKİSİYLE birebir */
+    const par = [];
+    if(nOzet) par.push(nOzet + ' kitabın özeti');
+    if(nOnto) par.push(nOnto + ' kitabın ontolojisi');
+    bildir((par.length ? par.join(' ve ') + ' dosyadan yazıldı' : 'Hiçbir kayıt yazılamadı')
+      + (olmadi ? ' — ' + olmadi + ' kayıt yazılamadı' : ''));
     if(typeof hepsiniCiz === 'function') hepsiniCiz();
     cfg.sonTazele();
   }
