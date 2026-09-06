@@ -288,14 +288,23 @@ test.describe('G47 Defterin — Alıntılar ekranı Ciltli', () => {
     await expect(page.locator('[data-act="tk-baslat"]').first()).toBeVisible();
   });
 
-  test('günün alıntısı gerçek bir alıntı gösterir ve gün içinde sabit kalır', async ({ page }) => {
+  test('günün favorisi gerçek bir kayıt gösterir ve gün içinde sabit kalır', async ({ page }) => {
     await alintiAc(page);
     const m = await page.locator('#alBolumGunun .ga-metin').textContent();
     expect(m.length).toBeGreaterThan(10);
-    const metinler = await page.evaluate(() => veri.kitaplar.flatMap(k => k.notlar)
-      .filter(n => n.tip === 'alinti').map(n => n.metin));
-    expect(metinler.some(x => m.includes(x)), 'gerçek alıntıdan geliyor').toBe(true);
-    await expect(page.locator('#alBolumGunun .ga-kaynak')).toContainText('sf.');
+    /* v110: havuz artık TİP değil FAVORİ ölçütünde — not da seçilebilir. Vaka
+       bu yüzden TÜM havuza bakıyor; eskiden yalnız alıntılara bakıyordu ve
+       fikstürdeki tek not seçildiği günlerde (seed % 5 === 2) tarihe bağlı
+       olarak kırmızı yanardı. */
+    const secilen = await page.evaluate(m2 => {
+      const hepsi = veri.kitaplar.flatMap(k => k.notlar);
+      const n = hepsi.find(x => m2.includes(x.metin));
+      return n ? { tip: n.tip, sayfa: n.sayfa } : null;
+    }, m);
+    expect(secilen, 'gerçek bir kayıttan geliyor').not.toBeNull();
+    const kaynak = page.locator('#alBolumGunun .ga-kaynak');
+    if(secilen.sayfa) await expect(kaynak).toContainText('sf.');
+    await expect(kaynak).toContainText('kitaba git');
     await page.reload();
     await page.click('nav [data-act="sekme"][data-v="alinti"]');
     await expect(page.locator('#alBolumGunun .ga-metin')).toHaveText(m);
