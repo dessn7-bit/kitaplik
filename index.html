@@ -828,6 +828,13 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .fvb-kaynak{font-size:.78rem;color:var(--muted);margin-top:6px;letter-spacing:.02em}
 .fvb-git{color:var(--brass);margin-left:6px;font-size:.78rem;position:relative;padding:2px 4px}
 .fvb-git::after{content:'';position:absolute;inset:-10px}
+/* MÜKERRER ONAYI (ik-, v116) — kutu değil kıl payı hatlı satır (Ciltli dili). */
+.ik-kart{border-left:1px solid var(--brass);padding:2px 0 2px 14px;margin:4px 0 10px}
+.ik-ad{font-family:var(--serif);font-size:calc(1.15rem * var(--tipo-bas,1));
+  font-weight:var(--tipo-basfw,600);letter-spacing:var(--tipo-basls,normal);line-height:1.25;
+  color:var(--paper);display:block}
+.ik-kunye{font-size:.78rem;color:var(--muted);margin-top:3px}
+.ik-not{font-size:.82rem;color:var(--muted);line-height:1.55;margin:0 0 4px}
 #alintiArama{margin-bottom:4px}
 
 /* ---------- Ayarlar penceresi (ay-, v56 Ciltli) — dönüşümün SON parçası ----------
@@ -2028,6 +2035,28 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     </div>
   </div>
 </div>
+<!-- ===== MÜKERRER KAYIT ONAYI (ik-, v116) =====
+     ENGEL DEĞİL ONAY: aynı kitabın iki baskısına sahip olmak meşru, ama
+     sessizce ikinci kayıt oluşturmak da yanlış. Karar kullanıcının, ama
+     GÖREREK. "Kitaba git" düğmesi asıl çare: mükerrer eklemenin çoğu
+     "acaba eklemiş miydim?" belirsizliğinden doğuyor — mevcut kaydı
+     gösterince ikinci kayda gerek kalmıyor. -->
+<div class="ortu" id="ortuIkiz">
+  <div class="sheet">
+    <div class="tutamac"></div>
+    <button class="sheet-kapat" data-act="ik-vazgec" aria-label="Kapat">✕</button>
+    <div class="sheet-baslik">Bu kitap zaten var</div>
+    <div class="ik-kart" id="ikKart"></div>
+    <p class="ik-not" id="ikNot"></p>
+    <div class="form-alt">
+      <button class="btn btn-cerceve" data-act="ik-git" style="flex:1">Kitaba git</button>
+      <button class="btn btn-cerceve" data-act="ik-yine" style="flex:1">Yine de ekle</button>
+    </div>
+    <div class="form-alt" style="margin-top:8px">
+      <button class="btn btn-cerceve" data-act="ik-vazgec" style="flex:1">Vazgeç</button>
+    </div>
+  </div>
+</div>
 <!-- ===== FOTOĞRAFTAN ALINTI (oc-) — mantık ocr.js'te. Paket peşin İNMEZ:
      ocr/ dosyaları sw ASSETS'te yok; İLK KULLANIMDA onay sorulmadan indirilip
      kk_ocr_paket_v1 kovasına alınır (Kaan kararı, v60 — dürüstlük ilerleme
@@ -2101,7 +2130,11 @@ let veri = depoYukle();
 let durum = { filtre:'hepsi', arama:'', etiket:'', sirala:'bitis', sekme:'ana',
   formDuzenId:null, formDurum:'okunacak', formPuan:null, formKapak:null,
   detayId:null, notTip:'not', alintiArama:'', araTip:'ad', metinSekme:'ozet',
-  gelenKitapId:null, gelenTip:'alinti', sahiplikFiltre:'sahip' };
+  gelenKitapId:null, gelenTip:'alinti', sahiplikFiltre:'sahip',
+  /* v116 mükerrer onayı: ikizId = kartta gösterilen MEVCUT kaydın id'si
+     ("Kitaba git" onu açar), ikizGec = "Yine de ekle" dendi, ikinci turda
+     kapı atlanacak. İkisi de oturumluk, depoya girmez. */
+  ikizId:null, ikizGec:false };
 
 /* ---------- sıralama tercihi (v74) ----------
    Bulgu: sıralama seçimi HİÇBİR yerde saklanmıyordu — her yenilemede
@@ -3664,6 +3697,20 @@ function formKaydet(){
     etiketler, kapak: durum.formKapak
   };
 
+  /* v116 MÜKERRER KAPISI — YALNIZ YENİ kayıtta. Düzenlemede sorulmaz:
+     mevcut kaydı düzenlerken "zaten var" demek kendini göstermek olurdu
+     (zatenVar haric parametresiyle kendini elemiş olsa da soru anlamsız).
+     Kapı BURADA çünkü arama sonucundan ekleme (olSec) formu doldurup aynı
+     yoldan kaydediyor — iki boşluk tek yerde kapanıyor.
+     ikizGec: "Yine de ekle" dendiğinde ikinci turda kapı atlanır. */
+  if(!durum.formDuzenId && !durum.ikizGec){
+    /* YALNIZ ad+yazar: ISBN ikizi yukarıdaki ikizUyari ile zaten söyleniyor
+       ve o davranış KORUNUYOR (uyar ama kaydet). */
+    const varOlan = adYazarVar(ortak.ad, ortak.yazar, null);
+    if(varOlan){ ikizSor(varOlan, isbn); return; }
+  }
+  durum.ikizGec = false;
+
   let kayitId; // formda bekleyen kapak fotoğrafı bu kitaba bağlanacak
   if(durum.formDuzenId){
     const k = kitapBul(durum.formDuzenId);
@@ -4093,6 +4140,54 @@ function alBolumTemizle(){
     b.hidden = !dolu;
   });
 }
+/* ---------- MÜKERRER KAYIT TESPİTİ (v116) — TEK OTORİTE ----------
+   Eskiden yalnız katalog.js içindeydi (barkod yolu) ve `window.__katalog`
+   üzerinden dışa açıktı; elle form, arama sonucundan ekleme ve Keşfet
+   "İstek listeme ekle" yollarında HİÇBİR kontrol yoktu — dört mükerrer kayıt
+   oradan doğdu. Kural çekirdeğe alındı: iki yerde iki kopya kural, v112'de
+   mutasyonun sağ kalmasına yol açan hatanın aynısı olurdu.
+
+   ÖLÇÜT (Kaan onaylı): katla(ad) + '|' + katla(yazar), ISBN İKİNCİ KOL.
+   · katla() ŞART: kaynaklar "Istanbul" yazar, kullanıcı "İstanbul" — TR
+     küçültme + aksan düzleştirme olmadan iki kayıt farklı görünür.
+   · ad+yazar BİRİNCİL, çünkü ISBN yeterli DEĞİL: 4 Eylül yedeğinde 299
+     kitabın 199'unda ISBN var, 100'ünde YOK (üçte biri boş). Boş kaldığı
+     yerde tek başına hiçbir şey yakalamaz.
+   · ISBN yine de İKİNCİ KOL: tuttuğunda kesin sonuç verir, maliyeti yok.
+   · Ölçüm (4 Eylül, 299 kitap): katlanmış ad+yazar çakışması 0, ISBN
+     çakışması 0 — iki kol da bugünkü veride kusursuz ayırt edici.
+   · adTr BİLEREK DIŞARIDA: "An Actor Prepares" ile "Bir Aktör Hazırlanıyor"
+     AYRI fiziksel kitaplardır. adTr yalnız UYARI kolunda yaşar (yakinKayit,
+     v96) — engele girseydi çeviri baskısı eklenemezdi. */
+function kopyaAnahtar(ad, yazar){
+  return katla(String(ad || '')) + '|' + katla(String(yazar || ''));
+}
+/* haric: düzenlenen kaydın kendisi (form güncellemede kendini bulmasın). */
+function zatenVar(ad, yazar, isbn, haric){
+  const a = kopyaAnahtar(ad, yazar);
+  const t = String(isbn || '').replace(/[^0-9Xx]/g, '').toUpperCase();
+  return (veri.kitaplar || []).find(k =>
+    k.id !== haric && (
+      (t && String(k.isbn || '').toUpperCase() === t) ||
+      kopyaAnahtar(k.ad, k.yazar) === a
+    )) || null;
+}
+/* İKİ AYRI SORU, İKİ AYRI KOL — bilerek ayrıldı:
+   · zatenVar (ISBN VEYA ad+yazar) → BARKOD ve KEŞFET yolları, SERT engel.
+     Orada form açılmaz; seri taramayı onay kartıyla kesmek 40 kitaplık
+     taramayı çileye çevirirdi (v96 kararının devamı).
+   · adYazarVar (YALNIZ ad+yazar) → ELLE FORM yolu, ONAY KARTI.
+     ISBN kolu forma girmiyor çünkü orada zaten v??'den beri bir ISBN ikizi
+     UYARISI var ve davranışı korunuyor: uyar ama kaydet. Aynı ISBN farklı
+     ad ile girildiğinde (ör. künye düzeltmesi) kullanıcıyı karta düşürmek
+     akışı bozardı — o durum uyarıyla yeterince görünür. */
+function adYazarVar(ad, yazar, haric){
+  const a = kopyaAnahtar(ad, yazar);
+  return (veri.kitaplar || []).find(k =>
+    k.id !== haric && kopyaAnahtar(k.ad, k.yazar) === a) || null;
+}
+window.__kopya = { zatenVar, adYazarVar, kopyaAnahtar };
+
 /* ---------- FAVORİ (fv-, v110 → v111 TERS → v113 AYRIK) ----------
    TARİHÇE, çünkü kavram iki kez yer değiştirdi:
    · v110 yıldızı "günün bloğunun havuzu" olarak kurdu, varsayılan DAHİL →
@@ -4147,6 +4242,40 @@ function favoriCevir(nid, kid){
     if(dugme) dugme.focus({ preventScroll: true });
   }
 }
+/* ---------- MÜKERRER ONAYI (ik-, v116) ----------
+   Kayıt AKIŞI KESİLİR, iptal edilmez: form olduğu gibi duruyor, kullanıcı
+   "Yine de ekle" derse aynı veriyle ikinci turda kaydedilir. Bekleyen durum
+   `durum.ikizId` — kart kapanınca temizlenir ki bayat "Kitaba git" kalmasın. */
+function ikizSor(varOlan, isbn){
+  durum.ikizId = varOlan.id;
+  const kart = document.getElementById('ikKart');
+  const not = document.getElementById('ikNot');
+  if(kart) kart.innerHTML = '<span class="ik-ad">' + esc(varOlan.ad) + '</span>' +
+    '<span class="ik-kunye">' + esc(varOlan.yazar || 'yazarı yazılmamış') +
+    (varOlan.yil ? ' · ' + varOlan.yil : '') +
+    (varOlan.yayinevi ? ' · ' + esc(varOlan.yayinevi) : '') +
+    (varOlan.isbn ? ' · ISBN ' + esc(varOlan.isbn) : '') + '</span>';
+  /* Eşleşmenin HANGİ koldan geldiğini söylüyoruz: kullanıcı kararı ancak
+     sebebi bilerek verebilir (ISBN eşitliği ad benzerliğinden başka şey). */
+  const t = String(isbn || '').replace(/[^0-9Xx]/g, '').toUpperCase();
+  const isbnKolu = t && String(varOlan.isbn || '').toUpperCase() === t;
+  if(not) not.textContent = isbnKolu
+    ? 'Aynı ISBN kütüphanende zaten kayıtlı. Aynı kitabın ikinci bir kopyası ya da farklı bir baskısıysa yine de ekleyebilirsin.'
+    : 'Aynı ad ve yazarla bir kayıt zaten var. Farklı bir baskıysa yine de ekleyebilirsin — ama önce mevcut kayda bakmak isteyebilirsin.';
+  const o = document.getElementById('ortuIkiz');
+  if(o){ o.classList.add('acik'); ortuAriaKur(o); }
+}
+function ikizKapat(){
+  durum.ikizId = null;
+  const o = document.getElementById('ortuIkiz');
+  /* ortuKapatEt KULLANILMAZ: o, `.sheet-kapat[data-act]` düğmesini TIKLAYARAK
+     kapatıyor — bizim kapatma düğmemizin data-act'i de ik-vazgec olduğu için
+     handler kendini yeniden çağırır ve özyineleme oluşur (ölçüldü: kart açık
+     kalıyordu). Sınıf doğrudan düşürülür; Esc yolu da ortuKapatEt üzerinden
+     bu düğmeye tıklayıp buraya varır, tek turda biter. */
+  if(o) o.classList.remove('acik');
+}
+
 function alintiCiz(){
   const kap = document.getElementById('alintiIcerik');
   const tumu = [];
@@ -5539,6 +5668,22 @@ document.addEventListener('click', e => {
     case 'detay-kapat': document.getElementById('ortuDetay').classList.remove('acik'); durum.detayId = null; break;
     case 'alinti-git': detayAc(el.dataset.id); break;
     case 'fv-cevir': favoriCevir(el.dataset.nid, el.dataset.kid); break;
+    /* v116 mükerrer onayı — üç yol, üçü de kartı kapatır. */
+    case 'ik-vazgec': ikizKapat(); break;
+    case 'ik-git': {
+      const id = durum.ikizId;
+      ikizKapat();
+      /* Form penceresi de kapanır: kullanıcı "mevcut kayda bak" dedi, arkada
+         yarım kalmış bir ekleme formu bırakmak kafa karıştırır. */
+      const f = document.getElementById('ortuForm');
+      if(f && f.classList.contains('acik')) ortuKapatEt(f);
+      if(id) detayAc(id);
+      break; }
+    case 'ik-yine':
+      durum.ikizGec = true;   // ikinci turda kapı atlanır
+      ikizKapat();
+      formKaydet();
+      break;
     case 'duzenle':
       // Form ve detay aynı z-index'te; detay DOM'da sonra geldiği için üstte boyanıyordu.
       // Detayı kapatıyoruz: kaydedince formKaydet detayı zaten geri açıyor.

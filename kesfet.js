@@ -890,6 +890,20 @@
   function bEkle(i){
     const a = B.gorunen[+i];
     if(!a || typeof kitapNormalize !== 'function' || typeof uid !== 'function') return;
+    /* v116: EKLEME ANINDA kapı. Aday havuzu bKutuphanede ile zaten eleniyor
+       ama o ÇİZİM anında koşuyor — kullanıcı listeyi açık bırakıp kitabı
+       başka yoldan eklerse (barkod, elle form) bayat düğme sessizce ikinci
+       kayıt üretirdi. Burada SERT engel doğru: Keşfet listesinde onay kartı
+       açmak akışı kesip "İlgilenmiyorum" ile karışırdı; kullanıcı zaten
+       sahip olduğu bir kitabı istek listesine almak istemez. */
+    if(window.__kopya && window.__kopya.zatenVar){
+      const eski = window.__kopya.zatenVar(a.ad, a.yazar, a.isbn, null);
+      if(eski){
+        if(typeof toast === 'function') toast('Zaten kütüphanende: ' + eski.ad);
+        ciz();
+        return;
+      }
+    }
     // katalog.js kodIsle emsali: normalize + push + depoKaydet + hepsiniCiz
     const yeni = kitapNormalize({ id: uid(), ad: a.ad, yazar: a.yazar || '',
       yayinevi: a.yayinevi || '', yil: a.yil || null, sayfa: a.sayfa || null,
@@ -1187,5 +1201,8 @@
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', baslat);
   else baslat();
 
-  window.__kesfet = { ciz };   // test/tanı kancası
+  /* v116: bEkle de dışa açıldı — Keşfet'in ekleme ANI kapısı davranışla
+     sınanabilsin diye. Kaynak dizgisine bakan vaka mutasyonu YAKALAYAMADI
+     (koşul false yapılınca gövdedeki __kopya adı yerinde kalıyordu). */
+  window.__kesfet = { ciz, bEkle, B };   // test/tanı kancası
 })();

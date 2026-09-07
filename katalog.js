@@ -155,7 +155,13 @@
   }
   /* Kitap kopya tespiti çekirdeğin katla()'sıyla: "Istanbul" ve "İstanbul" aynı kitaptır. */
   const kat = s => (typeof katla === 'function') ? katla(s) : String(s ?? '').toLocaleLowerCase('tr');
+  /* v116: KURAL BURADA DEĞİL ARTIK — çekirdeğe taşındı (window.__kopya).
+     İki yerde iki kopya kural, v112'de mutasyonun sağ kalmasına yol açan
+     hatanın aynısıydı. Bu sarmalayıcı yalnız eski imzayı (isbn, ad, yazar)
+     koruyor; eklenti çekirdeksiz yüklenirse eski davranışa düşer. */
   function zatenVar(isbn, ad, yazar){
+    if(window.__kopya && window.__kopya.zatenVar)
+      return window.__kopya.zatenVar(ad, yazar, isbn, null);
     const a = kat(ad), y = kat(yazar);
     return (veri.kitaplar||[]).find(k =>
       (isbn && k.isbn === isbn) ||
