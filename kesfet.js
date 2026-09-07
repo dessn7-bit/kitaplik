@@ -33,7 +33,7 @@
     return sayfa < 200 ? 'kisa' : sayfa <= 400 ? 'orta' : 'uzun';
   }
   // süzgeç + liste durumu (cihaz-yerel, oturumluk — kalıcı tercih değil)
-  const S = { sahiplik: 'sahip', tur: null, uzunluk: null, raf: null,
+  const S = { sahiplik: 'sahip', tur: null, uzunluk: null, raf: null, ara: '',
     limit: SAYFA_ADIMI, erteliAcik: false, gizliAcik: false };
 
   const CSS = [
@@ -43,6 +43,12 @@
     '.ks-baslik{font-family:var(--serif);font-size:calc(1.8rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,400);line-height:1.15;margin-top:2px;letter-spacing:var(--tipo-basls,normal)}',
     '.ks-acilis{font-size:.78rem;color:var(--muted);margin-top:4px;letter-spacing:.02em;font-variant-numeric:tabular-nums}',
     '.ks-ust .zar-btn{flex:0 0 40px;height:40px;margin-top:6px}',
+    /* v115 arama: Kütüphane'nin arama satırıyla aynı görsel dil — iki
+       ekranda iki farklı arama görünümü olmasın. */
+    '#ksAra{width:100%;margin:2px 0 10px;padding:9px 12px;border:1px solid var(--kontur);' +
+      'border-radius:var(--r-sm);background:var(--surface2);color:var(--paper);' +
+      'font-family:var(--sans);font-size:calc(.86rem * var(--tipo-nav,1))}',
+    '#ksAra::placeholder{color:var(--muted2)}',
     '.ks-suz{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:6px 0;align-items:center}',
     '.ks-suz::-webkit-scrollbar{display:none}',
     '.ks-suz-ad{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);flex:0 0 auto;margin-right:2px}',
@@ -128,8 +134,24 @@
       '</div>';
   }
 
+  /* v115 ARAMA. Kütüphane sekmesindeki davranış TAŞINDI ama BİREBİR DEĞİL —
+     iki fark bilinçli, ikisi de aşağıda gerekçesiyle yazılı. */
+  function araHtml(){
+    return '<input type="search" id="ksAra" autocomplete="off" ' +
+      'placeholder="Adaylar arasında ara…" value="' + escAttr(S.ara) + '">';
+  }
+  /* FARK 1 — ALAN KÜMESİ: Kütüphane özet/ontoloji metnini de tarar; burada
+     TARAMAZ. Keşfet adayları okunacak/yarım kitaplardır, özetleri henüz
+     yazılmamıştır — o kol burada ölü ağırlık olurdu. */
+  function araUyar(k){
+    if(!S.ara) return true;
+    const q = katla(S.ara);
+    const metin = katla([k.ad, k.adTr, k.yazar, k.yayinevi, k.tur, k.raf, k.seri,
+      (k.etiketler || []).join(' ')].filter(Boolean).join(' '));
+    return metin.includes(q);
+  }
   function suzgecHtml(turler, raflar){
-    let html = '<div class="ks-suz"><span class="ks-suz-ad">Süz</span>' +
+    let html = araHtml() + '<div class="ks-suz"><span class="ks-suz-ad">Süz</span>' +
       chip('sahiplik', 'sahip', 'Bende', S.sahiplik === 'sahip') +
       chip('sahiplik', 'istek', 'İstek listem', S.sahiplik === 'istek') +
       Object.keys(UZUNLUK_AD).map(u =>
@@ -961,22 +983,32 @@
     if(S.tur && turler.indexOf(S.tur) < 0) S.tur = null;   // aday kalmadıysa süzgeç düşer
     if(S.raf && raflar.indexOf(S.raf) < 0) S.raf = null;
 
+    /* ARAMA ÇİPLERİ EZMEZ, BİRLİKTE ÇALIŞIR (VE). Gerekçe: çipler ekranda
+       SEÇİLİ duruyor; arama onları sessizce geçersiz kılsaydı arayüz
+       uygulanmayan bir süzgeci uygulanmış gibi gösterirdi — v111/v113'te
+       kaldırdığımız "işaret yalan söylüyor" kusurunun aynısı. Kütüphane
+       sekmesi de aynı sözleşmeyi kullanıyor (durumUy && etiketUy && … && q). */
     const filtreli = havuz.filter(o => {
       const k = o.kitap;
       if(S.tur && k.tur !== S.tur) return false;
       if(S.raf && k.raf !== S.raf) return false;
       if(S.uzunluk && uzunlukKova(k.sayfa) !== S.uzunluk) return false;
-      return true;
+      return araUyar(k);
     });
 
-    // az-veri: bekleme sırası korunur (çeşitlilik kotası skor listesi içindir)
-    const secilen = h.mod === 'az-veri'
+    /* FARK 2 — ÇEŞİTLİLİK KOTASI ARAMADA DEVRE DIŞI. Kota (aynı yazardan en
+       fazla 2) ÖNERİ içindir: "bana bir şey öner" derken aynı yazarın beş
+       kitabını üst üste görmek istemezsin. Ama "Dostoyevski" YAZAN kullanıcı
+       öneri istemiyor, ARIYOR — kota orada aradığını gizlerdi. Kütüphane
+       sekmesinde bu sorun yok çünkü orada kota da yok.
+       az-veri: bekleme sırası korunur (kota skor listesi içindir). */
+    const secilen = (h.mod === 'az-veri' || S.ara)
       ? filtreli.slice(0, S.limit)
       : M.cesitlilikSec(filtreli, S.limit);
     M.nedenAta(secilen);
 
     // "daha fazla" DÜRÜST: bir sonraki adım gerçekten yeni öğe getirecekse görünür
-    const sonrakiN = h.mod === 'az-veri'
+    const sonrakiN = (h.mod === 'az-veri' || S.ara)
       ? Math.min(filtreli.length, S.limit + SAYFA_ADIMI)
       : M.cesitlilikSec(filtreli, S.limit + SAYFA_ADIMI).length;
     const dahaVar = sonrakiN > secilen.length;
@@ -1031,12 +1063,27 @@
     if(!secilen.length){
       // boş-durum metni SAHİPLİK moduna göre (inceleme K2: istek modunda
       // "rafına kitap ekle" yanıltıcıydı)
-      html += '<div class="ks-not">' + (havuz.length
-        ? 'Bu süzgeçlerle eşleşen aday kalmadı — bir süzgeci kaldırmayı dene.'
-        : S.sahiplik === 'istek'
+      /* v115: arama ve çipler BİRLİKTE süzdüğü için boş sonucun sebebi
+         belirsizleşebilir. Hangisinin kestiğini SÖYLEMEK gerekiyor —
+         yoksa kullanıcı yanlış kolu kurcalar. Ölçüm boş sözden iyidir:
+         aramayı kaldırınca kaç aday döneceğini SAYARAK yazıyoruz. */
+      const cipVar = !!(S.tur || S.raf || S.uzunluk);
+      let bos;
+      if(!havuz.length){
+        bos = S.sahiplik === 'istek'
           ? 'İstek listende bekleyen kitap yok.'
           : 'Okunacak listende önerilebilecek kitap yok — rafına kitap ekle, ya da ' +
-            '"Şimdi değil" dediklerin ' + M.ERTELEME_GUN + ' gün sonra geri gelir.') + '</div>';
+            '"Şimdi değil" dediklerin ' + M.ERTELEME_GUN + ' gün sonra geri gelir.';
+      }else if(S.ara){
+        const cipsiz = havuz.filter(o => araUyar(o.kitap)).length;
+        bos = '“' + esc(S.ara) + '” ile eşleşen aday yok'
+          + (cipVar && cipsiz
+              ? ' — süzgeçleri kaldırınca ' + cipsiz + ' aday eşleşiyor.'
+              : ' — ' + havuz.length + ' adayın hiçbirinde geçmiyor.');
+      }else{
+        bos = 'Bu süzgeçlerle eşleşen aday kalmadı — bir süzgeci kaldırmayı dene.';
+      }
+      html += '<div class="ks-not">' + bos + '</div>';
     }else{
       html += secilen.map(o => satirHtml(o, enY, enD)).join('');
       if(dahaVar)
@@ -1056,8 +1103,18 @@
     html += bBolumHtml();   // v51: YENİ KİTAPLAR — Rafından'ın altında, kıl payı ayraçlı
     kap.innerHTML = html;
     if(typeof ktPlateHata === 'function') ktPlateHata(kap);   // levha kapakları tek yedek yoluna (v44)
+    /* v115: panel her tuşta TÜMÜYLE yeniden çiziliyor (ciz innerHTML yazar),
+       yani arama girdisi de yok edilip yeniden kuruluyor. Odak ve imleç elle
+       geri konmazsa kullanıcı ikinci harfi yazamaz — Defterin aramasında
+       (alintiCiz) aynı sorun aynı yolla çözülmüştü. */
+    if(araOdak){
+      const g = document.getElementById('ksAra');
+      if(g){ g.focus(); const n = g.value.length; g.setSelectionRange(n, n); }
+      araOdak = false;
+    }
   }
 
+  let araOdak = false;   // v115: bir sonraki çizimde arama girdisine dön
   function baslat(){
     const st = document.createElement('style');
     st.textContent = CSS;
@@ -1078,6 +1135,17 @@
     // açılışta Keşfet aktifse ilk çizimi burada yap (inceleme K1).
     if(typeof durum === 'object' && durum.sekme === 'kesfet') ciz();
 
+    /* Girdi her çizimde yeniden doğduğu için olay DOĞRUDAN girdiye değil
+       belgeye bağlanır (tıklama dalıyla aynı kalıp). */
+    document.addEventListener('input', e => {
+      if(!e.target || e.target.id !== 'ksAra') return;
+      const yeni = e.target.value.trim();
+      if(yeni === S.ara) return;
+      S.ara = yeni;
+      S.limit = SAYFA_ADIMI;   // yeni sorgu = yeni liste; eski "daha fazla" durumu taşınmaz
+      araOdak = true;
+      ciz();
+    });
     document.addEventListener('click', e => {
       const el = e.target.closest('[data-act]');
       if(!el) return;
