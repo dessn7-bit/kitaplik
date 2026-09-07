@@ -718,9 +718,25 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   position:relative;background:transparent;border:none;line-height:1}
 .fv-yildiz.fv-acik{color:var(--brass)}
 .fv-yildiz::after{content:'';position:absolute;inset:-12px}
-/* v111: boş havuz daveti — yıldızın ne işe yaradığını öğreten TEK yüzey. */
+/* v111: davet satırı — yıldızın ne işe yaradığını öğreten TEK yüzey.
+   v113'te Favoriler bölümüne taşındı (günün notu artık koşulsuz seçiyor). */
 .ga-davet{color:var(--muted);font-size:.86rem;line-height:1.6;margin:0}
 .ga-davet-yildiz{color:var(--brass)}
+/* FAVORİLER bölümü (fvb-, v113) — kendi ad alanı: aynı kayıt hem burada hem
+   alttaki listede çizildiği için .not-kart YENİDEN KULLANILAMAZ (aynı data-nid
+   iki düğümde olurdu, eklenti ve test seçicileri gölgelenirdi).
+   Liste kartından daha sıkı: kürasyon kısa kalsın, uzun metin 4 satırda kırpılsın
+   — tamamı "kitaba git" ile bir tık ötede. Alıntı biçimi g31 sözleşmesine sadık:
+   altın kıl payı hat + italik; not dik. */
+.fvb-kart{padding:10px 0;border-bottom:1px solid var(--cizgi)}
+.fvb-kart:last-child{border-bottom:none}
+.fvb-alinti{border-left:1px solid var(--brass);padding-left:14px}
+.fvb-metin{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
+.fvb-alinti .fvb-metin{font-family:var(--sans);font-style:italic}
+.fvb-alinti .fvb-metin em{font-style:normal}
+.fvb-kaynak{font-size:.78rem;color:var(--muted);margin-top:6px;letter-spacing:.02em}
+.fvb-git{color:var(--brass);margin-left:6px;font-size:.78rem;position:relative;padding:2px 4px}
+.fvb-git::after{content:'';position:absolute;inset:-10px}
 #alintiArama{margin-bottom:4px}
 
 /* ---------- Ayarlar penceresi (ay-, v56 Ciltli) — dönüşümün SON parçası ----------
@@ -2068,8 +2084,11 @@ function kitapNormalize(k){
            Senkron not birleşimi (id + ng + silinenNotlar mezarı) alanı olduğu
            gibi taşır — ng/sayfa davranışı DEĞİŞMEDİ. */
         ...(n.kayn === 'dosya' ? { kayn: 'dosya' } : {}),
-        /* favori (v111 — v110'un TERSİ): günün bloğunun havuzu. VARSAYILAN
-           HAVUZ DIŞI, kullanıcı beğendiğini havuza ALIR. v110'da varsayılan
+        /* favori (v111 pozitif → v113 AYRIK): artık YALNIZ "bu kaydı beğendim".
+           Günün notu bloğu bu alana HİÇ bakmıyor (koşulsuz seçiyor); işaretli
+           kayıtlar Defterin'de kendi "Favoriler" bölümünde toplanıyor. Aşağıdaki
+           saklama kararı v111'den, DEĞİŞMEDİ — gerekçesi hâlâ geçerli:
+           VARSAYILAN İŞARETSİZ, kullanıcı beğendiğini işaretler. v110'da varsayılan
            dahildi ve işaret negatifti; ekrandaki sonucu 299 kaydın hepsinin
            DOLU yıldızla görünmesiydi. Dolu yıldız her arayüzde "bunu ben
            seçtim" demektir — kullanıcı hiçbir şey seçmediği hâlde 299 kitabı
@@ -3943,17 +3962,21 @@ function alBolumTemizle(){
     b.hidden = !dolu;
   });
 }
-/* ---------- FAVORİ (fv-, v110 → v111 TERS) ----------
-   Ölçüt TİP değil FAVORİ (v110: blok yalnız tip==='alinti' havuzundan
-   seçiyordu, 299 not / 0 alıntı olan kütüphanede özellik ölüydü).
-   v111 VARSAYILANI ÇEVİRİR: havuz BOŞ başlar, kullanıcı beğendiğini yıldızla
-   havuza alır. Gerekçe: varsayılan dahilken üç yüzeyde de her kayıt DOLU
-   yıldızla çiziliyordu; dolu yıldız "seçtim" demek olduğu için işaret yalan
-   söylüyordu. Boş havuzda blok GİZLENMEZ, DAVET eder (alintiCiz) — gizleseydik
-   varsayılanı boş olan özellik ilk günden görünmez olurdu, yani v110 öncesi
-   kusurun ta kendisi (blok hiç çizilmiyordu) geri gelirdi.
-   Yıldızın metni de "havuz" değil FAVORİ der: Kaan'ın cümlesiyle, yıldız artık
-   gerçekten favori demek. */
+/* ---------- FAVORİ (fv-, v110 → v111 TERS → v113 AYRIK) ----------
+   TARİHÇE, çünkü kavram iki kez yer değiştirdi:
+   · v110 yıldızı "günün bloğunun havuzu" olarak kurdu, varsayılan DAHİL →
+     299 kayıt dolu yıldızla göründü, işaret kullanıcı adına beyanda bulundu.
+   · v111 varsayılanı çevirdi (işaret POZİTİF, havuz boş başlar) → işaret
+     dürüstleşti ama bu sefer havuz boş olduğu için günün bloğu ölü kaldı.
+   · v113 KÖK NEDENİ kaldırıyor: yıldız iki iş birden yapıyordu — "bunu
+     beğendim" VE "bunu günün havuzuna koy". Bunlar farklı iki şey.
+   ARTIK: yıldız YALNIZ favori demek. Günün notu bloğu favoriye HİÇ bakmaz
+   (koşulsuz seçer); favoriler Defterin'de kendi bölümünde toplanır (fvb-).
+   Saklama v111'den beri POZİTİF ve öyle kalıyor: işaretsiz kaydın normalize
+   çıktısında `favori` anahtarı YOK — parmak izi değişmez. İşaretli kaydın izi
+   değişir (favori kitapParmak'ta, tekrar* gibi dışlanmaz) ama bu DOĞRU:
+   yıldız çevirmek gerçek bir kullanıcı düzenlemesidir ve favoriCevir zaten
+   n.ng + k.g damgası basar — LWW'nin çözmesi gereken tam olarak budur. */
 function favoriMi(n){ return !!n && (n.favori === 1 || n.favori === true); }
 function fvDugme(n, kid){
   const f = favoriMi(n);
@@ -3997,28 +4020,39 @@ function alintiCiz(){
   const kap = document.getElementById('alintiIcerik');
   const tumu = [];
   veri.kitaplar.forEach(k => (k.notlar||[]).forEach(n => tumu.push({ ...n, kitap: k })));
-  const havuz = tumu.filter(favoriMi);              // günün bloğunun havuzu (favori)
+  const favoriler = tumu.filter(favoriMi);          // v113: AYRI bölüm, günün notuyla ilgisi YOK
   const alintilar = tumu.filter(n => n.tip === 'alinti');   // özet satırı TİPE göre sayar
 
-  /* BÖLÜM SIRASI (v55): tekrar (panel markup'ında, en üstte) → günün alıntısı
-     → fikirler → liste. Gerekçe: (1) tekrar ZAMAN-SINIRLI, bugün yapılmazsa
-     devrolur; (2) günün alıntısı tek dokunuşsuz ödül, ekranı açma sebebi;
-     (3) fikir bulutu aşağıdaki listenin SÜZGECİ — süzgeç süzdüğü şeyden önce
-     gelmeli, yoksa kullanıcı sonucu görüp yukarı geri kaydırır; (4) liste en
-     uzun ve en çok kaydırılan yüzey, sona. */
+  /* BÖLÜM SIRASI (v55, v113'te bir bölüm eklendi): tekrar (panel markup'ında,
+     en üstte) → günün notu → favoriler → fikirler → liste. Gerekçe: (1) tekrar
+     ZAMAN-SINIRLI, bugün yapılmazsa devrolur; (2) günün notu tek dokunuşsuz
+     ödül, ekranı açma sebebi; (3) favoriler KISA ve kullanıcının kendi kürasyonu,
+     uzun listeden önce gelir; (4) fikir bulutu aşağıdaki listenin SÜZGECİ —
+     süzgeç süzdüğü şeyden önce gelmeli; (5) liste en uzun yüzey, sona. */
+
+  /* ---------- GÜNÜN NOTU (v113) ----------
+     v110-v112'de blok "Günün favorisi"ydi ve YALNIZ favori havuzundan seçiyordu;
+     v111 varsayılanı havuz dışına çevirince havuz boş kaldı ve özellik yine
+     çalışmaz oldu. İki kavram baştan beri birbirine kaynaklıydı: yıldız hem
+     "bunu beğendim" hem "bunu günün havuzuna koy" demek zorundaydı.
+     v113 AYIRIYOR: seçim KOŞULSUZ — bütün notlar ve alıntılar arasından. Havuz
+     kavramı kalktı; favori artık bu bloğu hiç etkilemiyor. */
   let ganHtml = '';
-  if(havuz.length){
+  if(tumu.length){
+    /* GÜN BOYU SABİT: tohum gün-bazlı (yıl*1000 + yılın günü), sayfa yenilense
+       de aynı kayıt gelir, ertesi gün değişir. v110'dan beri aynı mekanizma —
+       değişen tek şey artık `tumu` üzerinde koşması. */
     const g = new Date();
     const seed = g.getFullYear() * 1000 + Math.floor((g - new Date(g.getFullYear(),0,0)) / 86400000);
-    const a = havuz[seed % havuz.length];
-    /* Etiket artık bölüm kicker'ı (.ga-etiket emekli); blok kutusuz, altın hatlı.
-       v110: TİP BİÇİMİ TAŞIR. Alıntı italik + tırnaklı (g31 sözleşmesi: italik
-       yalnız bilinçli alıntı yüzeylerinde); NOT dik ve tırnaksız — not alıntı
-       değildir, öyleymiş gibi dizilemez. Başlık ikisini de kapsayan tek ad. */
+    const a = tumu[seed % tumu.length];
+    /* v110: TİP BİÇİMİ TAŞIR (v113'te de aynen duruyor). Alıntı italik + tırnaklı
+       (g31 sözleşmesi: italik yalnız bilinçli alıntı yüzeylerinde); NOT dik ve
+       tırnaksız — not alıntı değildir, öyleymiş gibi dizilemez. Başlık ikisini
+       de kapsayan tek ad: kayıt tipi ne olursa olsun "Günün notu". */
     const alintiMi = a.tip === 'alinti';
     const govde = esc(mdDuz(a.metin));
     ganHtml = `<section class="al-bolum" id="alBolumGunun">
-      <div class="al-bolum-bas"><span class="kicker">Günün favorisi</span></div>
+      <div class="al-bolum-bas"><span class="kicker">Günün notu</span></div>
       <blockquote class="gunun-alintisi" data-nid="${escAttr(a.id)}" data-kid="${escAttr(a.kitap.id)}">
         <div class="ga-metin${alintiMi ? '' : ' ga-not'}">${alintiMi ? '&ldquo;' + govde + '&rdquo;' : govde}</div>
         <div class="ga-kaynak">— ${esc(a.kitap.ad)}${a.kitap.yazar ? ', ' + esc(a.kitap.yazar) : ''}${a.sayfa ? ' (sf. ' + a.sayfa + ')' : ''}
@@ -4026,19 +4060,35 @@ function alintiCiz(){
           ${fvDugme(a, a.kitap.id)}</div>
       </blockquote>
     </section>`;
+  }
+
+  /* ---------- FAVORİLER (fvb-, v113) ----------
+     Yıldızın gittiği yer. Kendi ad alanı: .not-kart YENİDEN KULLANILMIYOR —
+     aynı kayıt hem burada hem alttaki listede çizildiği için aynı `data-nid`
+     iki DOM düğümünde olurdu; mevcut sınıfı yeniden kullanmak eklentilerin
+     (tekrar.js/fikir.js/kart.js) ve testlerin genel seçicilerini gölgeler
+     (evin kuralı: yeni UI parçası = yeni önek).
+     BOŞKEN: gizlenmiyor, tek satır DAVET ediyor — yıldızın ne işe yaradığını
+     söyleyen tek yüzey burası (v111'in daveti bu bölüme taşındı, çünkü artık
+     günün notu bloğunda işi yok). Hiç kayıt yokken bölüm hiç çizilmez. */
+  let favHtml = '';
+  if(favoriler.length){
+    favHtml = `<section class="al-bolum" id="alBolumFavori">
+      <div class="al-bolum-bas"><span class="kicker">Favoriler</span>
+        <span class="al-sayi">${favoriler.length}</span></div>
+      <div id="favoriListe">${favoriler.map(n => `
+        <div class="fvb-kart${n.tip === 'alinti' ? ' fvb-alinti' : ''}" data-fvb-nid="${escAttr(n.id)}">
+          <div class="fvb-metin">${mdMini(n.metin)}</div>
+          <div class="fvb-kaynak">${esc(n.kitap.ad)}${n.sayfa ? ' · sf. ' + n.sayfa : ''}
+            <button class="fvb-git" data-act="alinti-git" data-id="${escAttr(n.kitap.id)}">kitaba git →</button>
+            ${fvDugme(n, n.kitap.id)}</div>
+        </div>`).join('')}</div>
+    </section>`;
   } else if(tumu.length){
-    /* v111: BOŞ HAVUZ GİZLENMEZ, DAVET EDER. Varsayılan havuz dışı olunca her
-       kütüphane boş havuzla başlar; blok gizlenseydi özellik ilk günden
-       görünmez olur, yıldızın ne işe yaradığı hiç öğrenilmezdi (v110 öncesi
-       kusurun aynısı). Havuzu "tüm notlara" düşürmek de seçenek değildi:
-       kullanıcının SEÇMEDİĞİ bir kaydı "Günün favorisi" diye göstermek,
-       kaldırdığımız yalanı yön değiştirerek geri getirirdi.
-       Hiç kayıt YOKKEN (tumu boş) blok yine çizilmez — notu olmayan
-       kütüphaneye favori daveti gürültüdür. */
-    ganHtml = `<section class="al-bolum" id="alBolumGunun">
-      <div class="al-bolum-bas"><span class="kicker">Günün favorisi</span></div>
+    favHtml = `<section class="al-bolum" id="alBolumFavori">
+      <div class="al-bolum-bas"><span class="kicker">Favoriler</span></div>
       <p class="ga-davet">Henüz favori seçmedin. Beğendiğin bir kaydı
-        <span class="ga-davet-yildiz">☆</span> ile havuza al — her gün birini buraya çıkarayım.</p>
+        <span class="ga-davet-yildiz">☆</span> ile işaretle — burada toplansın.</p>
     </section>`;
   }
 
@@ -4060,20 +4110,20 @@ function alintiCiz(){
   const notSayisi = tumu.length - alintilar.length;
   const kitapSayisi = new Set(tumu.map(n => n.kitap.id)).size;
   const ozet = document.getElementById('alOzet');
-  /* v111: SAYILAN ŞEY TERSİNE DÖNDÜ. "N havuz dışı" varsayılan dahilken
-     anlamlıydı (istisna çıkarmaydı); varsayılan havuz dışıyken istisna
-     FAVORİDİR — "299 havuz dışı" yazmak gürültüden ibaret olurdu. Kural aynı
-     kaldı: sayı YALNIZ varken görünür, hiç favorisi olmayana "0 favori"
-     denmez (v106'nın "0,00 MB hiçliği anlatır" dersinin eşi). */
+  /* v113: favori sayısı satırın İÇİNE girdi (tip sayılarından sonra, "kitaptan"
+     kapanışından önce) ve SIFIRKEN DE görünür. v111'de yalnız varken görünüyordu
+     çünkü o zamanki sayı "havuz dışı" istisnasıydı; bu satır artık bir ENVANTER
+     ve envanter zaten "0 alıntı · 299 not" yazıyor — favoriyi saklamak aynı
+     satırda iki farklı kural demek olurdu. (v106'nın "0,00 MB hiçliği anlatır"
+     dersi istisna sayıları için geçerli, envanter kalemleri için değil.) */
   if(ozet) ozet.textContent = tumu.length
-    ? `${alintilar.length} alıntı · ${notSayisi} not · ${kitapSayisi} kitaptan`
-      + (havuz.length ? ` · ${havuz.length} favori` : '')
+    ? `${alintilar.length} alıntı · ${notSayisi} not · ${favoriler.length} favori · ${kitapSayisi} kitaptan`
     : 'Henüz kayıt yok';
 
   /* FİKİR bölümü yuvaları: fikir.js bulutu ve fikirag.js paneli buraya yazar.
      Eskiden ikisi de "arama girdisinden önce"ye kendini sokuyordu — konum
      kırılgandı ve bölüm başlığı yoktu. Bölüm boş kalırsa gizlenir. */
-  kap.innerHTML = ganHtml +
+  kap.innerHTML = ganHtml + favHtml +
     `<section class="al-bolum" id="alBolumFikir">
        <div class="al-bolum-bas"><span class="kicker">Fikirler</span></div>
        <div class="al-yuva" id="alYuvaFikir"></div>

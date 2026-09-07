@@ -35,11 +35,9 @@ function defter() {
   return [
     sahteKitap({ ad: 'Tutunamayanlar', yazar: 'Oğuz Atay', durum: 'bitti', puan: 10,
       bitisTarihi: BUGUN, notlar: [
-        /* favori: 1 — v111'de havuz BOŞ başlar (varsayılan havuz dışı), blok
-           yalnız kullanıcının seçtiği kayıtlarla çizilir. Fikstürdeki TEK
-           favori bu: günün bloğu hem var olur hem de seçim gün tohumundan
-           bağımsız kalır (havuz tek kayıt). Boş havuzun DAVET yüzeyi
-           g109'da ayrıca sınanıyor. */
+        /* favori: 1 — v113'te bu artık GÜNÜN NOTUNU etkilemiyor (blok koşulsuz
+           seçiyor); fikstürdeki tek favori Favoriler bölümünü ve özet satırının
+           favori kalemini dolduruyor. Ayrımın kendisi g109'da sınanıyor. */
         alinti('Ben buradayım sevgili okuyucum, sen neredesin acaba?',
           { favori: 1, fikir: ['yalnızlık', 'ironi'], tekrarSonraki: BUGUN, tekrarAralik: 4, tekrarSayisi: 2 }),
         alinti('İnsan kendisine yabancılaştığı ölçüde kalabalıklaşır.',
@@ -243,7 +241,7 @@ test.describe('G47 Defterin — Alıntılar ekranı Ciltli', () => {
       if (await page.locator(sec).count() === 0) eksik.push(ad + ' (' + sec + ')');
     }
     expect(eksik, 'kaybolan özellik').toEqual([]);
-    await expect(page.locator('#alOzet')).toHaveText('4 alıntı · 1 not · 2 kitaptan · 1 favori');
+    await expect(page.locator('#alOzet')).toHaveText('4 alıntı · 1 not · 1 favori · 2 kitaptan');
   });
 
   /* ---------- etkileşim ---------- */
@@ -295,8 +293,9 @@ test.describe('G47 Defterin — Alıntılar ekranı Ciltli', () => {
 
   test('günün favorisi gerçek bir kayıt gösterir ve gün içinde sabit kalır', async ({ page }) => {
     await alintiAc(page);
-    /* v111: havuz BOŞ başlar; fikstürdeki TEK favori (favori: 1) bloğu kuruyor
-       ve havuz tek kayıt olduğu için seçim gün tohumundan bağımsız. */
+    /* v113: blok KOŞULSUZ seçiyor — havuz kavramı yok, favori bakılmıyor.
+       Vaka içeriği sabitlemiyor; seçilenin GERÇEK bir kayıt olduğunu ve gün
+       içinde değişmediğini sınıyor (tarihe bağlı kırılma yok). */
     const m = await page.locator('#alBolumGunun .ga-metin').textContent();
     expect(m.length).toBeGreaterThan(10);
     /* v110: havuz TİP değil FAVORİ ölçütünde — not da seçilebilir. Vaka bu
