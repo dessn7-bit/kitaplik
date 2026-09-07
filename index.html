@@ -711,11 +711,16 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .ga-git{color:var(--brass);margin-left:6px;font-size:.78rem;position:relative;padding:2px 4px}
 .ga-git::after{content:'';position:absolute;inset:-10px}
 /* FAVORİ yıldızı (fv-, v110) — üç yüzeyde aynı düğme: günün bloğu, Defterin
-   listesi, kitap detayı. Dokunma hedefi 40px (::after ile büyütülür). */
+   listesi, kitap detayı. Dokunma hedefi 40px (::after ile büyütülür).
+   v111: varsayılan artık BOŞ yıldız (☆, muted2). Dolu yıldız (★, brass) yalnız
+   kullanıcının seçtiği kayıtta — üç yüzeyde de aynı kural, aynı düğme. */
 .fv-yildiz{color:var(--muted2);font-size:.95rem;margin-left:6px;padding:2px 4px;
   position:relative;background:transparent;border:none;line-height:1}
 .fv-yildiz.fv-acik{color:var(--brass)}
 .fv-yildiz::after{content:'';position:absolute;inset:-12px}
+/* v111: boş havuz daveti — yıldızın ne işe yaradığını öğreten TEK yüzey. */
+.ga-davet{color:var(--muted);font-size:.86rem;line-height:1.6;margin:0}
+.ga-davet-yildiz{color:var(--brass)}
 #alintiArama{margin-bottom:4px}
 
 /* ---------- Ayarlar penceresi (ay-, v56 Ciltli) — dönüşümün SON parçası ----------
@@ -2063,16 +2068,22 @@ function kitapNormalize(k){
            Senkron not birleşimi (id + ng + silinenNotlar mezarı) alanı olduğu
            gibi taşır — ng/sayfa davranışı DEĞİŞMEDİ. */
         ...(n.kayn === 'dosya' ? { kayn: 'dosya' } : {}),
-        /* favori (v110): günün bloğunun havuzu. VARSAYILAN DAHİL — Kaan kararı
-           ("hep 299 favori"): mevcut ve yeni notların hepsi havuzda BAŞLAR,
-           kullanıcı istemediğini çıkarır. Bu yüzden saklanan işaret NEGATİF:
-           yalnız ÇIKARILDIĞINDA yazılır. kayn kalıbının aynısı — işaretsiz
-           notların normalize çıktısı bayt bayt aynı kalır, parmak izleri
-           değişmez, ANLIK_SURUM turu ve toplu yeniden damgalama GEREKMEZ
-           (tekrar* alanları bunu yapamadığı için sürüm 5'e çıkmıştı).
-           Pozitif alan seçseydik 299 notun hepsine favori:1 yazılacak, tüm
-           kütüphane yeniden damgalanacak ve bayat cihaz günceli ezebilecekti. */
-        ...(n.favori === 0 || n.favori === false ? { favori: 0 } : {}),
+        /* favori (v111 — v110'un TERSİ): günün bloğunun havuzu. VARSAYILAN
+           HAVUZ DIŞI, kullanıcı beğendiğini havuza ALIR. v110'da varsayılan
+           dahildi ve işaret negatifti; ekrandaki sonucu 299 kaydın hepsinin
+           DOLU yıldızla görünmesiydi. Dolu yıldız her arayüzde "bunu ben
+           seçtim" demektir — kullanıcı hiçbir şey seçmediği hâlde 299 kitabı
+           favorilemiş görünüyordu, yani işaret YALAN SÖYLÜYORDU. İşaret artık
+           POZİTİF ve yalnız SEÇİLDİĞİNDE yazılır.
+           GÖÇ: v110'un favori:0 kayıtları bu koşuldan geçemez, alan sessizce
+           DÜŞER. Kayıp yok — favori:0 "bunu havuzda istemiyorum" demekti ve
+           yeni varsayılan zaten tam olarak o; kullanıcının ifade ettiği tek
+           tercih korunur. Düşen alan YALNIZ o notların parmak izini
+           değiştirir (işaretsiz notlar bayt bayt aynı kalır); yine de o kadarı
+           bile sahte "içerik değişti" damgası üretebileceği için senkron.js
+           ANLIK_SURUM 12→13: göç turunda damgala() hiçbir kitaba taze damga
+           basmaz, bayat cihaz odadaki günceli ezemez. */
+        ...(n.favori === 1 || n.favori === true ? { favori: 1 } : {}),
         fikir: Array.isArray(n.fikir) ? n.fikir.map(f => String(f)).filter(Boolean) : [],
         /* tekrar*: aralıklı alıntı tekrarı (tekrar.js). Alıntılar varsayılan döngüde,
            notlar dışında (kartından "tekrara al" ile açılır). tekrarSonraki=null =
@@ -3917,30 +3928,55 @@ function alBolumTemizle(){
     b.hidden = !dolu;
   });
 }
-/* ---------- FAVORİ (fv-, v110) ----------
-   Günün bloğu eskiden YALNIZ tip==='alinti' havuzundan seçiyordu; alıntı
-   havuzu boş olan kütüphanede (299 not, 0 alıntı) özellik hiç çalışmıyordu.
-   Ölçüt artık TİP değil FAVORİ. Varsayılan dahil: işaret koymadan da çalışır,
-   kullanıcı istemediğini çıkardıkça havuz onun seçimine daralır. */
-function favoriMi(n){ return !n || n.favori !== 0; }
+/* ---------- FAVORİ (fv-, v110 → v111 TERS) ----------
+   Ölçüt TİP değil FAVORİ (v110: blok yalnız tip==='alinti' havuzundan
+   seçiyordu, 299 not / 0 alıntı olan kütüphanede özellik ölüydü).
+   v111 VARSAYILANI ÇEVİRİR: havuz BOŞ başlar, kullanıcı beğendiğini yıldızla
+   havuza alır. Gerekçe: varsayılan dahilken üç yüzeyde de her kayıt DOLU
+   yıldızla çiziliyordu; dolu yıldız "seçtim" demek olduğu için işaret yalan
+   söylüyordu. Boş havuzda blok GİZLENMEZ, DAVET eder (alintiCiz) — gizleseydik
+   varsayılanı boş olan özellik ilk günden görünmez olurdu, yani v110 öncesi
+   kusurun ta kendisi (blok hiç çizilmiyordu) geri gelirdi.
+   Yıldızın metni de "havuz" değil FAVORİ der: Kaan'ın cümlesiyle, yıldız artık
+   gerçekten favori demek. */
+function favoriMi(n){ return !!n && (n.favori === 1 || n.favori === true); }
 function fvDugme(n, kid){
   const f = favoriMi(n);
   return `<button class="fv-yildiz${f ? ' fv-acik' : ''}" data-act="fv-cevir"
     data-nid="${escAttr(n.id)}" data-kid="${escAttr(kid)}"
-    aria-pressed="${f}" title="${f ? 'Günün havuzundan çıkar' : 'Günün havuzuna al'}"
-    aria-label="${f ? 'Günün havuzundan çıkar' : 'Günün havuzuna al'}">${f ? '★' : '☆'}</button>`;
+    aria-pressed="${f}" title="${f ? 'Favorilerden çıkar' : 'Favorilere ekle'}"
+    aria-label="${f ? 'Favorilerden çıkar' : 'Favorilere ekle'}">${f ? '★' : '☆'}</button>`;
 }
 function favoriCevir(nid, kid){
   const k = kitapBul(kid);
   const n = k && (k.notlar||[]).find(x => x.id === nid);
   if(!n) return;
-  if(favoriMi(n)) n.favori = 0; else delete n.favori;
+  /* v111: seçim POZİTİF yazılır, geri alma alanı SİLER (favori:0 yazmaz) —
+     "seçmedim" durumu alanın YOKLUĞUDUR, ikinci bir değer değil. */
+  if(favoriMi(n)) delete n.favori; else n.favori = 1;
   /* Kasıtlı kullanıcı düzenlemesi: not damgası (senkron not birleşimi LWW'yi
      ng ile çözüyor) + kitap damgası. Otomatik hiçbir yol bu alanı yazmaz. */
   n.ng = Date.now();
   k.g = Date.now();
   depoKaydet();
   hepsiniCiz();
+  /* v111: ÜÇÜNCÜ YÜZEY. hepsiniCiz ana ekranları çizer ama AÇIK detay
+     örtüsüne DOKUNMAZ — detaydan basılan yıldız v110'da yerinde donuyordu,
+     aynı işaret iki yüzeyde farklı görünüyordu (varsayılan dahilken kimse
+     fark etmiyordu; artık boş/dolu ayrımı gerçek bilgi taşıyor).
+     Ev kalıbı: durum.detayId kapısı + detayAc (bkz. etiket-ekle, puan-ver).
+     scrollTop ve odak elle korunur: not listesi uzun, yıldız sayfanın
+     dibinde olabilir; yeniden çizim eski düğmeyi yok ettiği için odak da
+     kaybolurdu (v25 klavye sözleşmesi). */
+  if(durum.detayId === kid){
+    const kap = document.getElementById('detayIcerik');
+    const kayma = kap ? kap.scrollTop : 0;
+    detayAc(kid);
+    if(kap) kap.scrollTop = kayma;
+    const dugme = [...document.querySelectorAll('#ortuDetay .fv-yildiz')]
+      .find(b => b.dataset.nid === nid);
+    if(dugme) dugme.focus({ preventScroll: true });
+  }
 }
 function alintiCiz(){
   const kap = document.getElementById('alintiIcerik');
@@ -3975,6 +4011,20 @@ function alintiCiz(){
           ${fvDugme(a, a.kitap.id)}</div>
       </blockquote>
     </section>`;
+  } else if(tumu.length){
+    /* v111: BOŞ HAVUZ GİZLENMEZ, DAVET EDER. Varsayılan havuz dışı olunca her
+       kütüphane boş havuzla başlar; blok gizlenseydi özellik ilk günden
+       görünmez olur, yıldızın ne işe yaradığı hiç öğrenilmezdi (v110 öncesi
+       kusurun aynısı). Havuzu "tüm notlara" düşürmek de seçenek değildi:
+       kullanıcının SEÇMEDİĞİ bir kaydı "Günün favorisi" diye göstermek,
+       kaldırdığımız yalanı yön değiştirerek geri getirirdi.
+       Hiç kayıt YOKKEN (tumu boş) blok yine çizilmez — notu olmayan
+       kütüphaneye favori daveti gürültüdür. */
+    ganHtml = `<section class="al-bolum" id="alBolumGunun">
+      <div class="al-bolum-bas"><span class="kicker">Günün favorisi</span></div>
+      <p class="ga-davet">Henüz favori seçmedin. Beğendiğin bir kaydı
+        <span class="ga-davet-yildiz">☆</span> ile havuza al — her gün birini buraya çıkarayım.</p>
+    </section>`;
   }
 
   const q = katla(durum.alintiArama);
@@ -3995,13 +4045,14 @@ function alintiCiz(){
   const notSayisi = tumu.length - alintilar.length;
   const kitapSayisi = new Set(tumu.map(n => n.kitap.id)).size;
   const ozet = document.getElementById('alOzet');
-  /* v110: havuz dışı sayısı YALNIZ varken görünür — hiç çıkarma yapmamış
-     kullanıcıya "0 havuz dışı" demek gürültü olurdu (v106'nın "0,00 MB
-     hiçliği anlatır" dersinin eşi). */
-  const havuzDisi = tumu.length - havuz.length;
+  /* v111: SAYILAN ŞEY TERSİNE DÖNDÜ. "N havuz dışı" varsayılan dahilken
+     anlamlıydı (istisna çıkarmaydı); varsayılan havuz dışıyken istisna
+     FAVORİDİR — "299 havuz dışı" yazmak gürültüden ibaret olurdu. Kural aynı
+     kaldı: sayı YALNIZ varken görünür, hiç favorisi olmayana "0 favori"
+     denmez (v106'nın "0,00 MB hiçliği anlatır" dersinin eşi). */
   if(ozet) ozet.textContent = tumu.length
     ? `${alintilar.length} alıntı · ${notSayisi} not · ${kitapSayisi} kitaptan`
-      + (havuzDisi ? ` · ${havuzDisi} havuz dışı` : '')
+      + (havuz.length ? ` · ${havuz.length} favori` : '')
     : 'Henüz kayıt yok';
 
   /* FİKİR bölümü yuvaları: fikir.js bulutu ve fikirag.js paneli buraya yazar.

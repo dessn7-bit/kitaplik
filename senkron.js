@@ -30,7 +30,7 @@
   function bildir(m){ if(typeof toast === 'function') toast(m); }
 
   /* ---------- damgalama: depoKaydet sarmalayıcısı ---------- */
-  const ANLIK_SURUM = 12;
+  const ANLIK_SURUM = 13;
   /* SEMA_SURUM: PUT gövdesine yazılan VERİ şeması numarası (parmak izi deposu
      sürümü olan ANLIK_SURUM'dan ayrı — o iz biçimi için de artar). Odadaki sema
      yerelden BÜYÜKSE bu istemci eskidir: birleştirme + yazma tümüyle durur.
@@ -79,7 +79,19 @@
      tek damga ikisini kapsar). SEMA_SURUM 4→5: eski v80 istemcinin çok-yollu
      PATCH'i k/<id>'yi {m,g} ile BÜTÜN değiştirir — düğümdeki o'yu siler,
      sonraki indirme yerel ontolojiyi de ezerdi. Ontoloji elle yazılan uzun
-     metin = v11/v12'deki veri-kaybı sınıfı → eski cihaz donar. */
+     metin = v11/v12'deki veri-kaybı sınıfı → eski cihaz donar.
+     ANLIK_SURUM 13 (v111): not favorisi TERS ÇEVRİLDİ — varsayılan havuz dışı,
+     işaret POZİTİF (favori:1). v110'un favori:0 kayıtlarında alan normalize'da
+     düşer; düşen alan O NOTLARIN parmak izini değiştirir. Sayı küçük (yalnız
+     elle çıkarılmış kayıtlar; işaretsiz notlar bayt bayt aynı kalır) ama
+     mekanizma büyüklüğe duyarlı değil: iz eşleşmeyince damgala() o kitaba
+     GERÇEK bir düzenleme olmadığı hâlde taze g basar, bayat kopya LWW'de
+     odadaki günceli ezebilirdi. Sürüm artışı göç turunu tetikler (goc=true →
+     yalnız damgasız kitap damgalanır), iz tabanı sessizce yeniden kurulur.
+     SEMA_SURUM BİLİNÇLİ artmadı (v9/v10 emsali): eski v110 istemcisi favori:1
+     alanını budar, kaybı tek dokunuşla geri alınan bir İŞARETTİR — ozet/gsG
+     sınıfı kalıcı emek kaybı değil; SEMA artışı ise güncellenmemiş cihazın
+     senkronunu tümüyle dondururdu. */
   function anlikYukle(){
     try{
       const h = JSON.parse(localStorage.getItem(ANLIK_ANAHTAR));

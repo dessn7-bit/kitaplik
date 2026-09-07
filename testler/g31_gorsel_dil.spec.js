@@ -19,7 +19,9 @@ function kitapAlinti(ek) {
   return sahteKitap(Object.assign({
     ad: 'Alıntılı Kitap', durum: 'bitti', puan: 8, sayfa: 200,
     bitisTarihi: bugunISO(),
-    notlar: [{ id: 'n1', tip: 'alinti', metin: 'Denemek, yenilmenin yarısıdır.', tarih: bugunISO(), fikir: [] }]
+    /* favori: 1 — v111'de günün bloğu yalnız SEÇİLMİŞ kayıtlarla çizilir
+       (varsayılan havuz dışı); .ga-metin'i ölçen vakalar bunu gerektirir. */
+    notlar: [{ id: 'n1', tip: 'alinti', favori: 1, metin: 'Denemek, yenilmenin yarısıdır.', tarih: bugunISO(), fikir: [] }]
   }, ek || {}));
 }
 

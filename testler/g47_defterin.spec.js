@@ -35,8 +35,13 @@ function defter() {
   return [
     sahteKitap({ ad: 'Tutunamayanlar', yazar: 'Oğuz Atay', durum: 'bitti', puan: 10,
       bitisTarihi: BUGUN, notlar: [
+        /* favori: 1 — v111'de havuz BOŞ başlar (varsayılan havuz dışı), blok
+           yalnız kullanıcının seçtiği kayıtlarla çizilir. Fikstürdeki TEK
+           favori bu: günün bloğu hem var olur hem de seçim gün tohumundan
+           bağımsız kalır (havuz tek kayıt). Boş havuzun DAVET yüzeyi
+           g109'da ayrıca sınanıyor. */
         alinti('Ben buradayım sevgili okuyucum, sen neredesin acaba?',
-          { fikir: ['yalnızlık', 'ironi'], tekrarSonraki: BUGUN, tekrarAralik: 4, tekrarSayisi: 2 }),
+          { favori: 1, fikir: ['yalnızlık', 'ironi'], tekrarSonraki: BUGUN, tekrarAralik: 4, tekrarSayisi: 2 }),
         alinti('İnsan kendisine yabancılaştığı ölçüde kalabalıklaşır.',
           { fikir: ['yalnızlık', 'ironi'] }),
         not_('Anlatıcının sesi ikinci bölümde değişiyor.', { fikir: ['ironi'] })
@@ -238,7 +243,7 @@ test.describe('G47 Defterin — Alıntılar ekranı Ciltli', () => {
       if (await page.locator(sec).count() === 0) eksik.push(ad + ' (' + sec + ')');
     }
     expect(eksik, 'kaybolan özellik').toEqual([]);
-    await expect(page.locator('#alOzet')).toHaveText('4 alıntı · 1 not · 2 kitaptan');
+    await expect(page.locator('#alOzet')).toHaveText('4 alıntı · 1 not · 2 kitaptan · 1 favori');
   });
 
   /* ---------- etkileşim ---------- */
@@ -290,10 +295,12 @@ test.describe('G47 Defterin — Alıntılar ekranı Ciltli', () => {
 
   test('günün favorisi gerçek bir kayıt gösterir ve gün içinde sabit kalır', async ({ page }) => {
     await alintiAc(page);
+    /* v111: havuz BOŞ başlar; fikstürdeki TEK favori (favori: 1) bloğu kuruyor
+       ve havuz tek kayıt olduğu için seçim gün tohumundan bağımsız. */
     const m = await page.locator('#alBolumGunun .ga-metin').textContent();
     expect(m.length).toBeGreaterThan(10);
-    /* v110: havuz artık TİP değil FAVORİ ölçütünde — not da seçilebilir. Vaka
-       bu yüzden TÜM havuza bakıyor; eskiden yalnız alıntılara bakıyordu ve
+    /* v110: havuz TİP değil FAVORİ ölçütünde — not da seçilebilir. Vaka bu
+       yüzden TÜM havuza bakıyor; eskiden yalnız alıntılara bakıyordu ve
        fikstürdeki tek not seçildiği günlerde (seed % 5 === 2) tarihe bağlı
        olarak kırmızı yanardı. */
     const secilen = await page.evaluate(m2 => {

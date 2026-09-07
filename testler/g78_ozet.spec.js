@@ -65,7 +65,7 @@ test.describe('G78 özet — veri modeli + senkron', () => {
     expect(s.hamAlan, 'localStorage kaydında metin kalmaz').toBeUndefined();
   });
 
-  test('(b) GÖÇ: eski ANLIK sürümüyle açılış damga BASMAZ; sürümler 12/5', async ({ page }) => {
+  test('(b) GÖÇ: eski ANLIK sürümüyle açılış damga BASMAZ; sürümler 13/5', async ({ page }) => {
     await tohumla(page, [bitmis({ ad: 'Göç Kitabı', g: 777, ozet: 'eski özet' })],
       { kk_senkron_anlik_v1: { s: 11, p: {} } });
     await rafAc(page);
@@ -76,7 +76,14 @@ test.describe('G78 özet — veri modeli + senkron', () => {
         sema: window.__senkron.SEMA_SURUM };
     });
     expect(sonuc.g, 'göç turu yeniden damgalamaz').toBe(777);
-    expect(sonuc.surum).toBe(12);
+    /* Sürüm SABİT yazılıyor (dinamik okunmuyor): kitapNormalize şeması her
+       değiştiğinde bu satırın da elle değişmesi ZORUNLU — kapı burada.
+       12→13 (v111): not favorisi ters çevrildi, v110'un favori:0 kayıtlarında
+       alan normalize'da düşüyor, o notların parmak izi değişiyor. Yukarıdaki
+       g === 777 iddiası bu artışın ne satın aldığını gösteriyor: göç turunda
+       damgala() hiçbir kitaba taze damga basmıyor, bayat cihaz odadaki
+       günceli ezemiyor. */
+    expect(sonuc.surum).toBe(13);
     // v81: özet düğümü kaydına o (ontoloji) eklendi — eski istemcinin PATCH'i
     // o'yu sildiği için SEMA 4→5 (elle yazılan metin = veri-kaybı sınıfı)
     expect(sonuc.sema).toBe(5);

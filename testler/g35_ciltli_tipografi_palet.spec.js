@@ -57,7 +57,9 @@ function dolulKitap(ek) {
   return sahteKitap(Object.assign({
     ad: 'Işık Şövalyesi Ğüneş', yazar: 'İğneli Şairoğlu Çölüm', durum: 'bitti', puan: 8,
     sayfa: 320, guncelSayfa: 320, bitisTarihi: bugunISO(), etiketler: ['şiir'],
-    notlar: [{ id: 'g35n1', tip: 'alinti', metin: 'Iğdır\'ın şoförü öğünç.', tarih: bugunISO(), fikir: [] }]
+    /* favori: 1 — v111: günün bloğu yalnız SEÇİLMİŞ kayıtlarla çizilir
+       (varsayılan havuz dışı); .ga-metin'i ölçen vakalar bunu gerektirir. */
+    notlar: [{ id: 'g35n1', tip: 'alinti', favori: 1, metin: 'Iğdır\'ın şoförü öğünç.', tarih: bugunISO(), fikir: [] }]
   }, ek || {}));
 }
 

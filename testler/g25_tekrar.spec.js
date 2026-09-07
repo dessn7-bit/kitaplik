@@ -259,8 +259,13 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
   });
 
   test('günün alıntısı ile çakışmaz: ikisi ayrı yaşar, tekrar eylemi günün alıntısını değiştirmez', async ({ page }) => {
+    /* favori: 1 — v111: günün bloğu yalnız SEÇİLMİŞ kayıtlarla çizilir. Seçilen
+       kayıt BİLEREK tekrar kutusundaki (dunkuAktif) DEĞİL: vakanın iddiası
+       zaten "ikisi ayrı yaşar" — tekrar eylemi başka bir kaydı işlerken günün
+       bloğu kıpırdamamalı. Havuz tek kayıt olduğu için seçim de gün tohumundan
+       bağımsız. */
     const notlar = [dunkuAktif(), notYap({ tekrarDurum: 'aktif', tekrarAralik: 3,
-      tekrarSayisi: 0, tekrarSonraki: bugunISO(9) }), notYap({ tekrarDurum: 'aktif',
+      tekrarSayisi: 0, tekrarSonraki: bugunISO(9), favori: 1 }), notYap({ tekrarDurum: 'aktif',
       tekrarAralik: 3, tekrarSayisi: 0, tekrarSonraki: bugunISO(9) })];
     await tohumla(page, [kitapla(notlar)]);
     await alintiAc(page);
