@@ -214,9 +214,13 @@ test.describe('G104 okuma tipografisi', () => {
     /* Durum şeridi KATLANMAZ: grup kapalıyken de görünür (Kaan kararı —
        "baktığın şeyler" kapağın arkasında durmaz). */
     await expect(page.locator('#aydSerit')).toBeVisible();
-    /* tipografi "Görünüm ve okuma" grubunun içinde — çipi görmek için aç. */
+    /* tipografi "Görünüm ve okuma" grubunun içinde — açılınca görünür.
+       v114: çipler artık "İnce ayar" kapağının arkasında; grubun açıldığını
+       kanıtlayan yüzey hazır ayar şeridi (kapalı halde de görünür olan). */
     await page.click('#aygGorunum summary.ayg-bas');
-    await expect(page.locator('#ayBolumTipografi .tp-chip').first()).toBeVisible();
+    await expect(page.locator('#tpTema button').first()).toBeVisible();
+    await expect(page.locator('#ayBolumTipografi .tp-chip').first(),
+      'eksenler varsayılan halde KAPALI').toBeHidden();
     expect(await page.locator('#tpOnizleme .oz-metin').count()).toBe(1);
     await page.click('[data-act="ayar-kapat"]');
     expect(await page.locator('#tpOnizleme .oz-metin').count(), 'kapanınca silinir').toBe(0);

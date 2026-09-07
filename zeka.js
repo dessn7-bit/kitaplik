@@ -289,11 +289,11 @@
     s.textContent = `
       .zk-blok{margin-top:18px}
       .is-yuva > .zk-blok:first-child{margin-top:0}
-      .zk-baslik{font-family:var(--serif);font-size:1.05rem}
+      .zk-baslik{font-family:var(--serif);font-size:calc(1.05rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,inherit);letter-spacing:var(--tipo-basls,normal)}
       .zk-alt-baslik{font-size:.72rem;color:var(--muted2);margin:14px 0 2px;
         letter-spacing:.06em;text-transform:uppercase}
       .zk-not{font-size:.8rem;color:var(--muted);margin-top:8px;line-height:1.55}
-      .zk-buyuk{font-family:var(--serif);font-size:1.5rem;line-height:1.1;color:var(--paper);
+      .zk-buyuk{font-family:var(--serif);font-size:calc(1.5rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,inherit);letter-spacing:var(--tipo-basls,normal);line-height:1.1;color:var(--paper);
         margin-top:8px;font-variant-numeric:tabular-nums}
       .zk-vurgu{color:var(--brass);font-weight:600}
       .zk-iyi{color:var(--ok)}

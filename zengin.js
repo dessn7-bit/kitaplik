@@ -2841,7 +2841,7 @@
     '.zg-sayac{font-size:.75rem;letter-spacing:.06em;color:var(--muted2);margin:8px 0;font-variant-numeric:tabular-nums}',
     '.zg-kitap{display:flex;gap:12px;align-items:flex-start;margin:6px 0 12px}',
     '.zg-kitap-ic{flex:1;min-width:0}',
-    '.zg-kitap-ad{display:block;font-family:var(--serif);font-size:1.15rem;font-weight:600;line-height:1.25}',
+    '.zg-kitap-ad{display:block;font-family:var(--serif);font-size:calc(1.15rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,600);line-height:1.25;letter-spacing:var(--tipo-basls,normal)}',
     '.zg-kitap-yazar{display:block;font-style:italic;font-size:.82rem;color:var(--muted);margin-top:2px}',
     '.zg-kitap-alt{display:block;font-size:.75rem;color:var(--muted2);margin-top:4px}',
     /* puan/yıl düğmeleri: .puan-btn görsel reçetesinin zg- kopyası (sınıf

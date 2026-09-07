@@ -64,12 +64,16 @@ test.describe('G105 ayarlar düzeni', () => {
 
   test('(c) grup açılıp kapanır, içindeki bölümler görünür olur', async ({ page }) => {
     await hamAc(page);
-    await expect(page.locator('#ayBolumTipografi .tp-chip').first()).toBeHidden();
+    /* v114: görünürlük sondası .tp-chip DEĞİL hazır ayar şeridi — çipler artık
+       bölümün kendi "İnce ayar" kapağının arkasında, yani grup AÇIKKEN de
+       gizli olabilirler. Sonda, grubun kapağını ölçmelidir, içerideki
+       ikinci kapağı değil. */
+    await expect(page.locator('#tpTema button').first()).toBeHidden();
     await page.click('#aygGorunum summary.ayg-bas');
-    await expect(page.locator('#ayBolumTipografi .tp-chip').first()).toBeVisible();
+    await expect(page.locator('#tpTema button').first()).toBeVisible();
     await expect(page.locator('#ayBolumGorunum .tm-dugme').first()).toBeVisible();
     await page.click('#aygGorunum summary.ayg-bas');
-    await expect(page.locator('#ayBolumTipografi .tp-chip').first()).toBeHidden();
+    await expect(page.locator('#tpTema button').first()).toBeHidden();
   });
 
   test('(d) durum şeridi KATLANMAZ — gruplar kapalıyken de görünür', async ({ page }) => {

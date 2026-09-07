@@ -160,7 +160,7 @@
       .fa-kart{background:transparent;border:none;border-radius:0;box-shadow:none;
         padding:0;margin-top:16px}
       #faPanel > .fa-kart:first-child{margin-top:0}
-      .fa-baslik{font-family:var(--serif);font-size:1.02rem}
+      .fa-baslik{font-family:var(--serif);font-size:calc(1.02rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,inherit);letter-spacing:var(--tipo-basls,normal)}
       .fa-not{font-size:.76rem;color:var(--muted);margin-top:8px;line-height:1.5}
       .fa-vurgu{font-size:.82rem;color:var(--brass);font-weight:600;margin-top:8px}
       .fa-sira{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:3px;scrollbar-width:none}

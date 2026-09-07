@@ -65,7 +65,15 @@ function _iz(yer, e){ if(window.__KK_IZ) console.warn('[kk]', yer, e); }
     lora:      "'Lora',Georgia,'Times New Roman',serif",
     cormorant: "'Cormorant Garamond','Iowan Old Style',Georgia,serif",
     sistem:    "system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif",
-    georgia:   "Georgia,'Times New Roman',Times,serif"
+    georgia:   "Georgia,'Times New Roman',Times,serif",
+    /* v114 — SIFIR BAYT: ikisi de sistem yığını, indirme YOK. Brewmaster 190 ad
+       için 415 woff2 / 11 MB taşıyor; Pinakes'in TÜM font yükü 156 KB. Seçeneği
+       çoğaltmanın buradaki dürüst yolu diske dosya eklemek değil, cihazda ZATEN
+       olan aileleri sunmak. İkisi de ötekilerden gerçekten farklı: geniş =
+       yüksek x-yüksekliği, düşük çözünürlükte küçük puntoda en okunur; eski =
+       Garamond'un aksine kalın tırnaklı, gövde metni için tasarlanmış. */
+    genis:     "Verdana,'DejaVu Sans',Tahoma,'Segoe UI',sans-serif",
+    eski:      "'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif"
   };
   /* SEÇENEK TABLOSU tek otorite: hem panel düğmelerini üretir hem DOĞRULAMA
      kapısıdır. Değer iki güvenilmez kaynaktan gelebilir — localStorage ve
@@ -76,16 +84,53 @@ function _iz(yer, e){ if(window.__KK_IZ) console.warn('[kk]', yer, e); }
        (bkz. tipografiUygula). Otekiler tek jetona yazar. */
     fs:   {                    ad:'Yazı boyutu', ipucu:'TÜM uygulama — okuma metni tam, arayüz yarı oranda büyür',
             secim:[{v:null,ad:'Varsayılan'},{v:0.92,ad:'Küçük'},{v:1.1,ad:'Büyük'},{v:1.25,ad:'Çok büyük'}] },
-    lh:   { css:'--tipo-lh',   ad:'Satır yüksekliği', ipucu:'Yalnız okuma metni — satırlar arası nefes',
+    lh:   { css:'--tipo-lh',   kat:'oku', ad:'Satır yüksekliği', ipucu:'Satırlar arası nefes',
             secim:[{v:null,ad:'Varsayılan'},{v:0.9,ad:'Sık'},{v:1.12,ad:'Ferah'},{v:1.25,ad:'Çok ferah'}] },
-    pb:   { css:'--tipo-pb',   ad:'Paragraf arası', ipucu:'Yalnız okuma metni — paragrafları ayıran boşluk',
+    pb:   { css:'--tipo-pb',   kat:'oku', ad:'Paragraf arası', ipucu:'Paragrafları ayıran boşluk',
             secim:[{v:null,ad:'Varsayılan'},{v:'.45em',ad:'Sıkı'},{v:'1.5em',ad:'Ferah'},{v:'2.1em',ad:'Çok ferah'}] },
-    olcu: { css:'--tipo-olcu', ad:'Satır uzunluğu', ipucu:'Yalnız okuma metni — geniş ekranda satır uzayınca göz satır başını kaybeder',
+    olcu: { css:'--tipo-olcu', kat:'oku', ad:'Satır uzunluğu', ipucu:'Geniş ekranda satır uzayınca göz satır başını kaybeder',
             secim:[{v:null,ad:'Sınırsız'},{v:'34em',ad:'Dar'},{v:'42em',ad:'Orta'},{v:'52em',ad:'Geniş'}] },
+    /* ls (v114): WCAG 1.4.12 metin aralığı ölçütünün DÖRDÜNCÜ kaldıracı. v104'te
+       lh + pb alınmış, bu gerekçesiz atlanmıştı — kapsam kısıtının içinde sessizce
+       düşmüş. Okuma konforunda en çok işe yarayan eksenlerden biri. */
+    ls:   { css:'--tipo-ls',   kat:'oku', ad:'Harf aralığı', ipucu:'Harfler arası nefes — sıkışık dizilmiş metni açar',
+            secim:[{v:null,ad:'Varsayılan'},{v:'.02em',ad:'Hafif'},{v:'.05em',ad:'Geniş'},{v:'.08em',ad:'Çok geniş'}] },
     font: { css:'--tipo-font', ad:'Yazı ailesi', ipucu:'TÜM uygulamanın gövde yazısı; başlıklar Cormorant kalır. Hepsi cihazda — indirme yok',
-            secim:[{v:null,ad:'Lora'},{v:'cormorant',ad:'Cormorant'},{v:'sistem',ad:'Sistem'},{v:'georgia',ad:'Georgia'}] }
+            secim:[{v:null,ad:'Lora'},{v:'cormorant',ad:'Cormorant'},{v:'eski',ad:'Eski stil'},
+                   {v:'sistem',ad:'Sistem'},{v:'genis',ad:'Geniş'},{v:'georgia',ad:'Georgia'}] },
+    /* ---- BAŞLIK KATMANI (v114) ----
+       v104'te "okuma yüzeyi salt gövde" diye elenmişti; o kısıt v105'te kalktığı
+       için gerekçe GEÇERSİZ. Aile hâlâ kilitli (--serif = Cormorant = kimlik,
+       Kaan kararı); ayarlanan yalnız boyut, ağırlık, harf aralığı.
+       KATMANIN SINIRI: Cormorant ile dizilen ve ≥1rem olan yüzeyler (ekran
+       başlıkları, kart başlıkları, bölüm adları, büyük sayı göstergeleri).
+       Cormorant ALTI yüzeyler (düğme dili .85rem, sekme .9rem, geri bağlantısı)
+       ve .fab (54px sabit kutuda "+" glifi) DIŞARIDA — akmayan sabit kutuda
+       büyüyen metin taşar (v105'in sekme çubuğu dersi). */
+    bas:   { css:'--tipo-bas',   kat:'bas', ad:'Başlık boyutu', ipucu:'Ekran ve kart başlıkları — gövdeden bağımsız',
+             secim:[{v:null,ad:'Varsayılan'},{v:0.88,ad:'Küçük'},{v:1.12,ad:'Büyük'}] },
+    /* basfw: Cormorant woff2'si 400-600 DEĞİŞKEN aralığı taşıyor (ölçüldü) —
+       iki uç da GERÇEK kesim, taklit kalın yok. 700 sunulmuyor: aralık dışı
+       kalır ve tarayıcı sentezler. Gövdeye ağırlık ekseni YOK, çünkü Lora
+       diskte yalnız 400 (normal + italik) — orada her şey taklit olurdu. */
+    basfw: { css:'--tipo-basfw', kat:'bas', ad:'Başlık ağırlığı', ipucu:'Cormorant 400-600 arası gerçek kesim taşır',
+             secim:[{v:null,ad:'Varsayılan'},{v:400,ad:'İnce'},{v:600,ad:'Koyu'}] },
+    basls: { css:'--tipo-basls', kat:'bas', ad:'Başlık harf aralığı', ipucu:'Cormorant büyük puntoda sıkı dizilmeyi sever',
+             secim:[{v:null,ad:'Varsayılan'},{v:'-.01em',ad:'Sıkı'},{v:'.04em',ad:'Geniş'}] }
   };
   window.TIPO_SECENEK = SECENEK;
+  /* ---------- HAZIR AYARLAR (v114) ----------
+     Brewmaster'ın beş teması FONT EŞLEŞTİRMESİ (Playfair+Lora gibi) — orada
+     190 aile var, burada 2. Birebir taşımak anlamsız. Buradaki karşılığı
+     OKUMA DURUMU: her hazır ayar bir soruya cevap veriyor, bir zevke değil.
+     Değerler SECENEK tablosundaki gerçek seçeneklerden — doğrulama kapısı
+     hazır ayara da uygulanır, uydurma değer sessizce düşer. */
+  var TEMA = {
+    uzun:   { lh:1.12, pb:'1.5em', olcu:'42em' },
+    yorgun: { fs:1.1, lh:1.25, pb:'1.5em', olcu:'34em', ls:'.05em', bas:1.12, basfw:600 },
+    yogun:  { fs:0.92, lh:0.9, pb:'.45em', bas:0.88, basls:'-.01em' }
+  };
+  window.TIPO_TEMA = TEMA;
   function gecerli(k, v){
     var s = SECENEK[k];
     if(!s || v === null || v === undefined) return null;
@@ -169,6 +214,38 @@ function _iz(yer, e){ if(window.__KK_IZ) console.warn('[kk]', yer, e); }
   window.tipografiSifirla = function(){
     try{ localStorage.removeItem(ANAHTAR); }catch(e){ _iz('tipografiSifirla', e); }
     window.tipografiUygula({});
+  };
+  /* Hazır ayar TAM DEĞİŞTİRİR, birleştirmez: "Yoğun"un üstüne "Göz yorgunu"
+     seçen kullanıcı iki ayarın melezini değil ikincisini ister. Her değer yine
+     gecerli() kapısından geçer — tanımda yazım hatası olsa sessizce düşer,
+     panel bozulmaz. Bilinmeyen ad = sıfırla (tanımsız temaya {} düşer). */
+  window.tipografiTema = function(ad){
+    var kaynak = TEMA[ad] || {}, t = {};
+    for(var k in kaynak){
+      if(!Object.prototype.hasOwnProperty.call(kaynak, k)) continue;
+      var g = gecerli(k, kaynak[k]);
+      if(g !== null) t[k] = g;
+    }
+    try{
+      if(Object.keys(t).length) localStorage.setItem(ANAHTAR, JSON.stringify(t));
+      else localStorage.removeItem(ANAHTAR);
+    }catch(e){ _iz('tipografiTema', e); }
+    window.tipografiUygula(t);
+    return t;
+  };
+  /* Panelde "seçili hazır ayar" rozetini çizebilmek için: mevcut ayar bir
+     temayla BİREBİR aynı mı? Fazla/eksik anahtar varsa değildir. */
+  window.tipografiTemaAdi = function(){
+    var t = window.tipografiOku(), an = Object.keys(t);
+    for(var ad in TEMA){
+      if(!Object.prototype.hasOwnProperty.call(TEMA, ad)) continue;
+      var bn = Object.keys(TEMA[ad]);
+      if(bn.length !== an.length) continue;
+      var ayni = true;
+      for(var i = 0; i < bn.length; i++) if(t[bn[i]] !== TEMA[ad][bn[i]]){ ayni = false; break; }
+      if(ayni) return ad;
+    }
+    return an.length ? null : 'sifir';
   };
   /* YEDEK köprüsü — tercihler bloğu ham JSON metni taşır (tema/görünüm gibi
      düz dize sözleşmesi). Yazım yine doğrulama kapısından geçirilir. */
@@ -364,7 +441,7 @@ input[type="number"],input[type="date"]{font-variant-numeric:tabular-nums}
 /* D2: üst yığın inceltildi — dikey dolgular kısıldı, liste daha erken başlar */
 header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%,var(--header-fade));
   backdrop-filter:blur(6px);padding:calc(10px + env(safe-area-inset-top)) 16px 8px}
-.app-title{font-family:var(--serif);font-size:1.5rem;letter-spacing:.02em}
+.app-title{font-family:var(--serif);font-size:calc(1.5rem * var(--tipo-bas,1));letter-spacing:var(--tipo-basls,.02em);font-weight:var(--tipo-basfw,inherit)}
 .app-title span{color:var(--brass)}
 /* Ayarlar başlık satırında, arama satırında DEĞİL: arama satırı yalnız Kütüphane
    sekmesinde görünüyor (sekmeGec), ayarlar ise her sekmeden erişilebilmeli. */
@@ -438,7 +515,7 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
    kesikli çerçeve (p-bos) "kapak yok" der; ad zaten satırın kendisinde. */
 .plate.p-mini{width:44px;height:64px;border-width:4px}
 .kart-ic{flex:1;padding:2px 0 0;min-width:0}
-.kart-baslik{font-family:var(--serif);font-size:1.05rem;font-weight:600;line-height:1.3;overflow-wrap:break-word}
+.kart-baslik{font-family:var(--serif);font-size:calc(1.05rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,600);line-height:1.3;overflow-wrap:break-word;letter-spacing:var(--tipo-basls,normal)}
 .kart-yazar{font-size:.8rem;color:var(--muted);margin-top:3px}
 .kart-alt{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
 /* Rozet hiyerarşisi: DURUM = yumuşak dolgu hap (tint zemin, kenarlıksız —
@@ -480,7 +557,7 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
   opacity:.35;pointer-events:none}
 .kt-ust{padding:2px 16px 0}
 .kt-baslik-satir{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.kt-baslik{font-family:var(--serif);font-size:1.8rem;font-weight:400;line-height:1.15}
+.kt-baslik{font-family:var(--serif);font-size:calc(1.8rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,400);line-height:1.15;letter-spacing:var(--tipo-basls,normal)}
 .kt-cilt{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
   white-space:nowrap;font-variant-numeric:tabular-nums}
 .kt-tarih{font-size:.75rem;color:var(--muted);margin-top:3px;letter-spacing:.02em}
@@ -494,7 +571,7 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 .kt-devam-kart{display:flex;gap:14px;text-align:left}
 .kt-dkapak{width:88px;height:132px}
 .kt-devam-ic{flex:1;min-width:0;display:flex;flex-direction:column}
-.kt-devam-ad{font-family:var(--serif);font-size:1.3rem;font-weight:400;line-height:1.15;overflow-wrap:break-word}
+.kt-devam-ad{font-family:var(--serif);font-size:calc(1.3rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,400);line-height:1.15;overflow-wrap:break-word;letter-spacing:var(--tipo-basls,normal)}
 .kt-devam-yazar{font-family:var(--sans);font-style:italic;font-size:.78rem;color:var(--muted);margin-top:2px}
 .kt-devam-alt{margin-top:auto;padding-top:8px}
 .kt-devam-alt .ilerleme{margin-top:0}
@@ -522,12 +599,12 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
   overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 /* Keşfet iskeleti (v42): sekme var, motor sonraki sprintte taşınacak */
 .kesfet-bos{padding:36px 20px;display:flex;flex-direction:column;gap:10px;max-width:560px}
-.kesfet-bos p{font-family:var(--serif);font-size:1.15rem;line-height:1.5}
+.kesfet-bos p{font-family:var(--serif);font-size:calc(1.15rem * var(--tipo-bas,1));line-height:1.5;letter-spacing:var(--tipo-basls,normal);font-weight:var(--tipo-basfw,inherit)}
 .kesfet-bos small{font-size:.8rem;color:var(--muted);line-height:1.5}
 
 .bos{text-align:center;padding:70px 30px;color:var(--muted)}
 .bos .b-ikon{margin-bottom:14px;opacity:.6}
-.bos p{font-family:var(--serif);font-size:1.05rem;line-height:1.5}
+.bos p{font-family:var(--serif);font-size:calc(1.05rem * var(--tipo-bas,1));line-height:1.5;letter-spacing:var(--tipo-basls,normal);font-weight:var(--tipo-basfw,inherit)}
 .bos small{display:block;margin-top:8px;font-size:.85rem;color:var(--muted2)}
 
 /* Ana Sayfa (as-, v47 Ciltli) — kutu/gölge/eski yarıçap YOK; bölümler kıl payı
@@ -538,7 +615,7 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
    İLK eşleşmesine yazıyor, ana sayfa DOM'da raf panelinden önce. */
 .as-wrap{padding:2px 16px 24px}
 .as-ust{padding:0 0 12px}
-.as-selam{font-family:var(--serif);font-size:1.8rem;font-weight:400;line-height:1.15}
+.as-selam{font-family:var(--serif);font-size:calc(1.8rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,400);line-height:1.15;letter-spacing:var(--tipo-basls,normal)}
 .as-ozet{font-size:.78rem;color:var(--muted);margin-top:5px;letter-spacing:.02em;
   font-variant-numeric:tabular-nums}
 /* BUGÜN üç-hücre satırı: tasarımın "today" deseni — sol kıl payı ayraçlı
@@ -546,8 +623,8 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 .as-bugun{display:flex}
 .as-hucre{flex:1;min-width:0;display:block;padding:0 12px;border-left:1px solid var(--cizgi);
   text-align:left}
-.as-hucre-sayi{display:block;font-family:var(--serif);font-size:1.5rem;line-height:1.1;
-  color:var(--paper);font-variant-numeric:tabular-nums}
+.as-hucre-sayi{display:block;font-family:var(--serif);font-size:calc(1.5rem * var(--tipo-bas,1));line-height:1.1;
+  color:var(--paper);font-variant-numeric:tabular-nums;letter-spacing:var(--tipo-basls,normal);font-weight:var(--tipo-basfw,inherit)}
 .as-hucre-ad{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
   color:var(--muted);margin-top:5px}
 /* SIRADAKİ öneri satırı: mini levha + ad/yazar/gerekçe (tasarımın Keşfet öneri
@@ -555,8 +632,8 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 .as-oneri{display:flex;gap:12px;width:100%;text-align:left;padding:10px 0;align-items:flex-start}
 .as-oneri + .as-oneri{border-top:1px solid var(--cizgi)}
 .as-oneri-ic{flex:1;min-width:0;display:block}
-.as-oneri-ad{display:block;font-family:var(--serif);font-size:1.05rem;font-weight:600;
-  line-height:1.25;overflow-wrap:break-word}
+.as-oneri-ad{display:block;font-family:var(--serif);font-size:calc(1.05rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,600);
+  line-height:1.25;overflow-wrap:break-word;letter-spacing:var(--tipo-basls,normal)}
 .as-oneri-yazar{display:block;font-style:italic;font-size:.78rem;color:var(--muted);margin-top:1px}
 .as-neden{display:block;font-size:.8rem;color:var(--muted2);line-height:1.5;margin-top:4px}
 /* M3 (v69): Sıradaki'nde yarım kalan aday rozetle ayrılır (Keşfet .ks-rozet reçetesi) */
@@ -581,10 +658,19 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
    çubuk 329px oluyor ve son sekme kesiliyor. Bu yüzden nav KENDİ kazancını
    taşır (--tipo-nav, çeyrek oran) — kartlar/formlar akışkan olduğu için tam
    arayüz kazancında kalır, yalnız akamayan bileşen daha çok sönümlenir. */
-.nav-btn{flex:1;padding:9px 0 10px;display:flex;flex-direction:column;align-items:center;gap:3px;
+/* v114 EK KALKAN: cubuk artik TASMAK yerine KISALIYOR. Olcum (320px):
+   fs=1.25 tek basina sigiyor, GENIS aile tek basina siginiyor, ama IKISI
+   BIRLIKTE tasiyor (genis/eski 324px, georgia 321px). georgia v104'ten
+   beri seceneklerde -> bu kusur v114'un getirdigi degil, agir-ayar
+   taramasinin ortaya cikardigi ESKI bir kusur. Ceyrek sonum sayiyi
+   kucultuyor ama aile GENISLIGINI sonumleyemez; carenin yeri sayi degil
+   TASMA DAVRANISI: min-width:0 flex ogesinin icerik genisliginin altina
+   inmesine izin verir, ellipsis de son sekmeyi kesmek yerine kisaltir. */
+.nav-btn{flex:1;min-width:0;padding:9px 0 10px;display:flex;flex-direction:column;align-items:center;gap:3px;
   color:var(--muted2);font-size:calc(.66rem * var(--tipo-nav, 1));letter-spacing:.05em;text-transform:uppercase}
 .nav-btn .n-ikon{line-height:1;display:flex}
-.nav-btn .n-etiket{border-bottom:1px solid transparent;padding-bottom:2px;white-space:nowrap}
+.nav-btn .n-etiket{border-bottom:1px solid transparent;padding-bottom:2px;white-space:nowrap;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .nav-btn.active{color:var(--brass)}
 .nav-btn.active .n-etiket{border-bottom-color:var(--brass)}
 
@@ -610,7 +696,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
    ise ANLAMINI kaybetti (artık kart yok) — kaldırıldılar. */
 .ist-wrap{padding:2px 16px 24px}
 .is-ust{padding:0 0 10px}
-.is-baslik{font-family:var(--serif);font-size:1.8rem;font-weight:400;line-height:1.15;margin-top:2px}
+.is-baslik{font-family:var(--serif);font-size:calc(1.8rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,400);line-height:1.15;margin-top:2px;letter-spacing:var(--tipo-basls,normal)}
 .is-ozet{font-size:.78rem;color:var(--muted);margin-top:5px;letter-spacing:.02em;
   font-variant-numeric:tabular-nums}
 /* HERO: ekranın cevaplaması gereken ilk soru — "bu yıl nasıl gidiyorum?".
@@ -619,8 +705,8 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .is-hero{display:flex;padding-bottom:14px;border-bottom:1px solid var(--cizgi)}
 .is-hucre{flex:1;min-width:0;padding:0 12px;border-left:1px solid var(--cizgi)}
 .is-hero .is-hucre:first-child{padding-left:0;border-left:none}
-.is-hero-sayi{display:block;font-family:var(--serif);font-size:2.1rem;line-height:1.05;
-  color:var(--paper);font-variant-numeric:tabular-nums}
+.is-hero-sayi{display:block;font-family:var(--serif);font-size:calc(2.1rem * var(--tipo-bas,1));line-height:1.05;
+  color:var(--paper);font-variant-numeric:tabular-nums;letter-spacing:var(--tipo-basls,normal);font-weight:var(--tipo-basfw,inherit)}
 .is-hucre-ad{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
   color:var(--muted);margin-top:6px}
 /* Bölüm: kutu değil kıl payı ayraç (.kt-bolum ile aynı reçete, ayrı ad alanı —
@@ -632,8 +718,8 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .is-toplam{display:flex;flex-wrap:wrap;row-gap:14px}
 .is-toplam .is-hucre{flex:1 1 40%}
 .is-toplam .is-hucre:nth-child(2n+1){padding-left:0;border-left:none}
-.ist-sayi{display:block;font-family:var(--serif);font-size:1.5rem;line-height:1.1;
-  color:var(--paper);font-variant-numeric:tabular-nums}
+.ist-sayi{display:block;font-family:var(--serif);font-size:calc(1.5rem * var(--tipo-bas,1));line-height:1.1;
+  color:var(--paper);font-variant-numeric:tabular-nums;letter-spacing:var(--tipo-basls,normal);font-weight:var(--tipo-basfw,inherit)}
 .ist-etiket{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
   color:var(--muted);margin-top:5px}
 /* PAYDA ("N kitaptan"): sayının tabanı — etiketin ALTINDA, kısık ve tabular.
@@ -643,7 +729,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   margin-top:3px;font-variant-numeric:tabular-nums;text-transform:none}
 .is-blok{margin-top:18px}
 .is-yuva > .is-blok:first-child{margin-top:0}
-.ist-bolum-baslik{font-family:var(--serif);font-size:1.05rem;margin-top:14px}
+.ist-bolum-baslik{font-family:var(--serif);font-size:calc(1.05rem * var(--tipo-bas,1));margin-top:14px;letter-spacing:var(--tipo-basls,normal);font-weight:var(--tipo-basfw,inherit)}
 .is-bolum-bas + .ist-bolum-baslik,.is-yuva > :first-child .ist-bolum-baslik{margin-top:0}
 /* ÇUBUK: kanal YOK — mürekkep doğrudan kâğıdın üstünde. Ciltli'de kap yok;
    değer zaten sağda yazılı olduğu için boş rayın taşıdığı bilgi de yok.
@@ -665,7 +751,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .is-katla{margin-top:16px}
 .is-katla > summary{list-style:none;display:flex;align-items:baseline;gap:8px}
 .is-katla > summary::-webkit-details-marker{display:none}
-.is-katla-ad{font-family:var(--serif);font-size:1.05rem;flex:0 0 auto}
+.is-katla-ad{font-family:var(--serif);font-size:calc(1.05rem * var(--tipo-bas,1));flex:0 0 auto;letter-spacing:var(--tipo-basls,normal);font-weight:var(--tipo-basfw,inherit)}
 .is-katla-ozet{flex:1;min-width:0;font-size:.75rem;color:var(--muted2);
   font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .is-katla-ok{flex:0 0 auto;font-size:.7rem;color:var(--brass);letter-spacing:.08em;
@@ -685,7 +771,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
    DÜZ rolleri alır: ekran başlığı ve bölüm alt başlıkları. */
 .alinti-wrap{padding:2px 16px 24px}
 .al-ust{padding:0 0 10px}
-.al-baslik{font-family:var(--serif);font-size:1.8rem;font-weight:400;line-height:1.15;margin-top:2px}
+.al-baslik{font-family:var(--serif);font-size:calc(1.8rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,400);line-height:1.15;margin-top:2px;letter-spacing:var(--tipo-basls,normal)}
 .al-ozet{font-size:.78rem;color:var(--muted);margin-top:5px;letter-spacing:.02em;
   font-variant-numeric:tabular-nums}
 .al-bolum{padding:14px 0 16px;border-bottom:1px solid var(--cizgi)}
@@ -699,7 +785,8 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .gunun-alintisi{border-left:1px solid var(--brass);padding:2px 0 2px 16px;margin:0}
 /* v105: gunun alintisi OKUMA katmani — okunmak icin duran metin (etiket degil) */
 .ga-metin{font-family:var(--sans);font-style:italic;font-size:calc(1.15rem * var(--tipo-oku,1));
-  line-height:calc(1.7 * var(--tipo-lh,1));max-width:var(--tipo-olcu,none)}
+  line-height:calc(1.7 * var(--tipo-lh,1));max-width:var(--tipo-olcu,none);
+  letter-spacing:var(--tipo-ls,normal)}
 /* v110: NOT dik dizilir — italik yalnız bilinçli alıntı yüzeylerinde (g31).
    Havuz artık notları da taşıdığı için ayrımı BİÇİM yapıyor. */
 .ga-metin.ga-not{font-style:normal}
@@ -731,7 +818,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .fvb-kart{padding:10px 0;border-bottom:1px solid var(--cizgi)}
 .fvb-kart:last-child{border-bottom:none}
 .fvb-alinti{border-left:1px solid var(--brass);padding-left:14px}
-.fvb-metin{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
+/* v114: okuma jetonları — v113'te bu yüzey eklenirken bağlanmamıştı, yani
+   Favoriler bölümü tipografi ayarlarına sağır kalmıştı (kusur, ölçüldü). */
+.fvb-metin{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;
+  font-size:calc(.9rem * var(--tipo-oku,1));line-height:calc(1.55 * var(--tipo-lh,1));
+  max-width:var(--tipo-olcu,none);letter-spacing:var(--tipo-ls,normal)}
 .fvb-alinti .fvb-metin{font-family:var(--sans);font-style:italic}
 .fvb-alinti .fvb-metin em{font-style:normal}
 .fvb-kaynak{font-size:.78rem;color:var(--muted);margin-top:6px;letter-spacing:.02em}
@@ -750,7 +841,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .ay-bolum{padding:14px 0 16px;border-bottom:1px solid var(--cizgi)}
 .ay-bolum-bas{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
   margin-bottom:10px}
-.ay-baslik{font-family:var(--serif);font-size:1rem;font-weight:600;margin:18px 0 4px}
+.ay-baslik{font-family:var(--serif);font-size:calc(1rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,600);margin:18px 0 4px;letter-spacing:var(--tipo-basls,normal)}
 .ay-bolum-bas + .ay-baslik,.ay-yuva > :first-child .ay-baslik{margin-top:0}
 .ay-not{font-size:.85rem;color:var(--muted);line-height:1.55;margin-bottom:10px}
 /* Hakkında dipnotu (hk-, v89) — .ay-bolum/.kicker BİLİNÇLİ kullanılmadı:
@@ -803,7 +894,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   padding:8px 16px calc(24px + env(safe-area-inset-bottom));animation:yukari .22s ease;position:relative}
 @keyframes yukari{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
 .tutamac{width:38px;height:4px;background:var(--muted2);border-radius:999px;margin:6px auto 12px}
-.sheet-baslik{font-family:var(--serif);font-size:1.28rem;line-height:1.3;padding-right:34px}
+.sheet-baslik{font-family:var(--serif);font-size:calc(1.28rem * var(--tipo-bas,1));line-height:1.3;padding-right:34px;letter-spacing:var(--tipo-basls,normal);font-weight:var(--tipo-basfw,inherit)}
 .sheet-kapat{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:999px;
   background:transparent;border:1px solid var(--kontur);color:var(--muted);font-size:1.05rem;
   display:flex;align-items:center;justify-content:center;z-index:2}
@@ -895,7 +986,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
    not 1.55 aynı oranda esner, tek mutlak değere ezilmez).
    olcu (satır uzunluğu) em cinsinden — boyutla birlikte esner, satırdaki
    KARAKTER sayısı sabit kalır. 545 kelimelik özetlerde asıl kazanç budur. */
-.oz-metin,.onto-metin,.ts-govde{line-height:calc(1.62 * var(--tipo-lh,1));
+.oz-metin,.onto-metin,.ts-govde{line-height:calc(1.62 * var(--tipo-lh,1));letter-spacing:var(--tipo-ls,normal);
   font-size:calc(.95rem * var(--tipo-oku,1));font-family:var(--sans);
   max-width:var(--tipo-olcu,none);overflow-wrap:anywhere}
 .ts-govde{white-space:pre-wrap}
@@ -959,7 +1050,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
    satır sonu SIFIR, yani pre-wrap kalsaydı da satır sonu ikilenmezdi —
    kaldırma gerekçesi mdMini yüzeylerinin TEK kural altında toplanması.
    Bedeli: satır içi arka arkaya boşluklar artık tek boşluğa iner. */
-.not-metin{font-size:calc(.9rem * var(--tipo-oku,1));line-height:calc(1.55 * var(--tipo-lh,1));
+.not-metin{font-size:calc(.9rem * var(--tipo-oku,1));line-height:calc(1.55 * var(--tipo-lh,1));letter-spacing:var(--tipo-ls,normal);
   font-family:var(--sans);max-width:var(--tipo-olcu,none);
   overflow-wrap:break-word;padding-right:26px}
 /* <p> marjı ŞART: bu kural olmasaydı tarayıcının 1em üst marjı ilk paragrafa
@@ -1036,7 +1127,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .ayg-bas::-webkit-details-marker{display:none}
 .ayg-bas:focus-visible{outline:2px solid var(--brass);outline-offset:3px;border-radius:var(--r-mini)}
 .ayg-ad{display:flex;flex-direction:column;gap:3px}
-.ayg-ust{font-family:var(--serif);font-size:1.2rem;line-height:1.2}
+.ayg-ust{font-family:var(--serif);font-size:calc(1.2rem * var(--tipo-bas,1));line-height:1.2;letter-spacing:var(--tipo-basls,normal);font-weight:var(--tipo-basfw,inherit)}
 .ayg-alt{font-family:var(--sans);font-size:.72rem;color:var(--muted2);line-height:1.35}
 .ayg-ok{flex:0 0 auto;color:var(--brass);font-size:.9rem;transition:transform .18s}
 .ayg-grup[open] .ayg-ok{transform:rotate(90deg)}
@@ -1059,7 +1150,37 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .ayd-kopuk .ayd-ikon{color:var(--muted2)}
 .tp-onizleme{border:1px solid var(--kontur);border-radius:var(--r-md);
   padding:14px 16px;background:var(--surface2);margin-bottom:16px}
-.tp-onizleme .not-kart:last-child{border-bottom:none;padding-bottom:0}
+/* v114: KONUMSAL degil ACIK sinif. Eskiden `:last-child` idi; menu seridi
+   onizlemenin sonuna eklenince kural hicbir seye uymaz oldu ve son not karti
+   alt kenarligini + dolgusunu korudu (+23px, olculdu). Onizlemenin sonuna bir
+   sey eklemek kurali sessizce dusurmesin diye isaret artik markup'ta. */
+.tp-onizleme .not-kart.tp-son{border-bottom:none;padding-bottom:0}
+/* v114 — HAZIR AYAR ŞERİDİ + KATMAN ÇUBUĞU.
+   İkisi de `.tm-dugme` reçetesine uyar: saydam zemin, seçili durum %7 pirinç.
+   Ayarlar penceresinde DOLU düğme yasak (Ciltli sözleşmesi, g48 alfa≥.5'i
+   ihlal sayıyor) — bu yüzden dolgu değil kontur+ince tint. */
+.tp-tema{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 4px}
+.tp-tema-btn,.tp-katman-btn{flex:1 1 auto;padding:9px 10px;border-radius:var(--r-sm);
+  border:1px solid var(--kontur);background:transparent;color:var(--muted);
+  font-family:var(--sans);font-size:.78rem;line-height:1.3}
+.tp-tema-btn.tp-secili,.tp-katman-btn.tp-secili{
+  background:color-mix(in srgb,var(--brass) 7%,transparent);color:var(--paper);border-color:var(--brass)}
+.tp-katman{display:flex;gap:6px;margin:2px 0 12px}
+.tp-katman-btn{flex:1}
+.tp-ayrac{border-top:1px solid var(--cizgi);margin:12px 0}
+/* Önizlemenin başlık satırı: gerçek başlık kurallarının jetonlarını BİREBİR
+   taşır ama kendi sınıfında durur — sayfadaki .kt-baslik/.al-baslik'i panelde
+   ikizlemesin (v104 dersi: gerçek sınıf önizlemede DOM ikizi üretir). */
+.tp-on-baslik{font-family:var(--serif);font-size:calc(1.28rem * var(--tipo-bas,1));
+  line-height:1.25;letter-spacing:var(--tipo-basls,normal);font-weight:var(--tipo-basfw,inherit);
+  color:var(--paper);margin-bottom:5px}
+/* Menü şeridi: sekme çubuğunun ÇEYREK sönümünü (--tipo-nav) gösteren tek yüzey.
+   Ayrı blok değil, önizlemenin son satırı — Kaan'ın 368px tavanı için. */
+.tp-on-menu{display:flex;gap:2px;border-top:1px solid var(--cizgi);margin-top:9px;padding-top:7px}
+.tp-on-nav{flex:1;text-align:center;color:var(--muted2);font-family:var(--sans);
+  font-size:calc(.66rem * var(--tipo-nav,1));letter-spacing:.05em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tp-on-nav.tp-on-aktif{color:var(--brass)}
 .tp-rozet{font-family:var(--sans);font-size:.62rem;font-weight:600;letter-spacing:.12em;
   text-transform:uppercase;color:var(--muted2);margin:14px 0 6px}
 .tp-rozet:first-child{margin-top:0}
@@ -1270,7 +1391,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   border-radius:0;box-shadow:none;padding:2px 0 2px 16px}
 /* v105: tekrar karti da OKUMA katmani (ga-metin ile ayni gerekce) */
 .tk-metin{font-family:var(--sans);font-style:italic;font-size:calc(1.02rem * var(--tipo-oku,1));
-  line-height:calc(1.65 * var(--tipo-lh,1));max-width:var(--tipo-olcu,none);
+  line-height:calc(1.65 * var(--tipo-lh,1));max-width:var(--tipo-olcu,none);letter-spacing:var(--tipo-ls,normal);
   white-space:pre-wrap;overflow-wrap:break-word}
 .tk-kaynak{font-size:.78rem;color:var(--muted);margin-top:10px;letter-spacing:.02em}
 .tk-git{color:var(--brass);margin-left:6px;font-size:.78rem}
@@ -1490,13 +1611,23 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
         </div>
       </section>
       <section class="ay-bolum" id="ayBolumTipografi">
-        <div class="ay-bolum-bas"><span class="kicker">Okuma tipografisi</span></div>
-        <p class="ay-not"><b>Yazı boyutu</b> ve <b>yazı ailesi</b> uygulamanın tamamını etkiler — liste, kart, düğme, form, menü, detay. Boyut kör çarpan değil: okuma metni tam oranda, arayüz metni yarı oranda büyür, böylece sekme çubuğu ve düğmeler taşmaz. <b>Satır yüksekliği</b>, <b>paragraf arası</b> ve <b>satır uzunluğu</b> yalnız okuma metinlerine (özet, ontoloji, not, alıntı) iner — bunlar akan metnin ölçüleridir, tek satırlık etikette karşılığı yok. Aşağıdaki örnek gerçek okuma yüzeyidir.</p>
+        <div class="ay-bolum-bas"><span class="kicker">Tipografi</span></div>
+        <p class="ay-not">Bir hazır ayar seç, yeter. Örnek gerçek okuma yüzeyi — en alttaki şerit sekme çubuğunun nasıl davrandığını gösterir: boyut büyüyünce okuma metni tam, arayüz yarı, sekme çubuğu çeyrek oranda büyür, böylece hiçbir şey taşmaz.</p>
         <div class="tp-onizleme" id="tpOnizleme"></div>
-        <div id="tpKontrol"></div>
-        <div class="ay-eylem">
-          <button class="btn btn-cerceve" data-act="tp-sifirla">Varsayılana döndür</button>
-        </div>
+        <div class="tp-tema" id="tpTema"></div>
+        <!-- v114: EKSENLER KATLANIR. 9 eksen açıkta dursa bölüm ~1,9 ekran
+             olurdu (ölçüldü: 5 eksen 1041px = 1,45 ekran). Çoğu kullanıcı bir
+             hazır ayar seçip çıkar; ince ayar isteyen kapağı açar. Kalıp yeni
+             değil — `d-katla` depoda zaten var (detay ekranı, v106 grupları). -->
+        <details class="d-katla" id="tpInce">
+          <summary><span>İnce ayar</span></summary>
+          <div class="d-katla-ic">
+            <div id="tpGlobal"></div>
+            <div class="tp-ayrac"></div>
+            <div class="tp-katman" id="tpKatman"></div>
+            <div id="tpKontrol"></div>
+          </div>
+        </details>
       </section>
       </details>
 
@@ -5117,7 +5248,13 @@ window.aydSeritCiz = aydSeritCiz;   // senkron.js durumCiz sonunda çağırır
    önizleme yalnız ölçüyü değil, v104'te not gövdesine de inen mdMini'yi de
    gösterir. Metinler kasten uzun: 545 kelimelik özetin satır ritmi tek
    cümlede görünmez. */
-const TP_ORNEK_OZET = 'Kitabın **merkezî savı** şu: bellek bir arşiv değil, her hatırlayışta yeniden kurulan bir *edim*. Yazar bunu üç vaka üzerinden yürütür ve her birinde tanığın anlatısı, anlatıldıkça kendini değiştirir.\n\nSon bölüm bu savı tarihyazımına taşır: bir toplumun geçmişi de, tıpkı bireyinki gibi, ona her dönüşte biraz başkalaşır.';
+/* v114: ornek ozet IKI paragraftan TEKE indi. Gerekce olcu: onizleme
+   panelin en buyuk blogu (368px) ve baslik satiri + menu seridi eklenirken
+   tavani asmamasi gerekiyordu (Kaan'in sarti). Paragraf-arasi ekseni tek
+   paragrafta gorunmez ama zarari yok: pb SON paragraftan sonra zaten
+   sifirlanir, yani iki paragraf da tek bir bosluk gosterirdi. */
+const TP_ORNEK_BASLIK = 'Hatırlamanın Ülkesi';
+const TP_ORNEK_OZET = 'Kitabın **merkezî savı** şu: bellek bir arşiv değil, her hatırlayışta yeniden kurulan bir *edim*. Yazar bunu üç vaka üzerinden yürütür ve her birinde tanığın anlatısı, anlatıldıkça kendini değiştirir.';
 const TP_ORNEK_ALINTI = 'Geçmiş, hatırlandıkça değişen tek ülkedir.';
 const TP_ORNEK_NOT = 'Bu bölüm *Bergson* okumasıyla birlikte düşünülmeli — **süre** kavramı burada adı konmadan çalışıyor.';
 /* Önizleme GERÇEK yüzey sınıflarını (.oz-metin / .not-kart) kullanır — taklit
@@ -5131,20 +5268,53 @@ function tipografiSil(){
   if(on) on.innerHTML = '';
   if(kt) kt.innerHTML = '';
 }
+/* v114: panel iki katmana bölündü. Katman BOYUT ve AİLE'yi kapsamaz — ikisi de
+   uygulama geneline iner, yani ne "okuma"ya ne "başlık"a aittir; çubuğun
+   ÜSTÜNDE sabit durur. Oturum içi durum, kalıcı değil (tema seçici gibi). */
+let tpKatman = 'oku';
+const TP_KATMAN_AD = { oku: 'Okuma metni', bas: 'Başlıklar' };
+
 function tipografiCiz(){
   const on = document.getElementById('tpOnizleme'), kt = document.getElementById('tpKontrol');
   if(!on || !kt) return;
   const t = window.tipografiOku ? window.tipografiOku() : {};
+  /* ÖNİZLEME BÜTÇESİ (Kaan'ın şartı: ≤368px). Özet ÖRNEĞİ tek paragrafa indi,
+     menü ayrı blok değil son satır, sekmeler dikey değil YATAY (Brewmaster'ın
+     dikey sidebar önizlemesi burada üç katı yer yerdi). */
   on.innerHTML =
-    '<div class="tp-rozet">Özet / ontoloji</div>' +
+    '<div class="tp-rozet">Başlık ve özet</div>' +
+    '<div class="tp-on-baslik">' + esc(TP_ORNEK_BASLIK) + '</div>' +
     '<div class="oz-metin">' + mdMini(TP_ORNEK_OZET) + '</div>' +
     '<div class="tp-rozet">Alıntı ve not</div>' +
     '<div class="not-kart alinti"><div class="not-metin">' + mdMini(TP_ORNEK_ALINTI) + '</div>' +
       '<div class="not-tarih">Alıntı · sf. 214</div></div>' +
-    '<div class="not-kart"><div class="not-metin">' + mdMini(TP_ORNEK_NOT) + '</div>' +
-      '<div class="not-tarih">Not · 12 Mart 2026</div></div>';
+    '<div class="not-kart tp-son"><div class="not-metin">' + mdMini(TP_ORNEK_NOT) + '</div>' +
+      '<div class="not-tarih">Not · 12 Mart 2026</div></div>' +
+    '<div class="tp-on-menu" aria-hidden="true">' +
+      ['Ana sayfa','Kütüphane','Keşfet','Alıntılar','Rakamlar'].map((a, i) =>
+        '<span class="tp-on-nav' + (i === 3 ? ' tp-on-aktif' : '') + '">' + esc(a) + '</span>').join('') +
+    '</div>';
+
+  /* HAZIR AYARLAR — şeridin sonundaki "Varsayılan" eski sıfırlama düğmesinin
+     yerini alır (data-act korundu: tp-sifirla). */
+  const tm = document.getElementById('tpTema');
+  if(tm){
+    const secili = window.tipografiTemaAdi ? window.tipografiTemaAdi() : null;
+    const temalar = [
+      { v:'uzun',   ad:'Uzun okuma' },
+      { v:'yorgun', ad:'Göz yorgunu' },
+      { v:'yogun',  ad:'Yoğun' }
+    ];
+    tm.innerHTML = temalar.map(x =>
+      '<button class="tp-tema-btn' + (secili === x.v ? ' tp-secili' : '') + '"' +
+      ' data-act="tp-tema" data-v="' + escAttr(x.v) + '"' +
+      ' aria-pressed="' + (secili === x.v ? 'true' : 'false') + '">' + esc(x.ad) + '</button>').join('') +
+      '<button class="tp-tema-btn' + (secili === 'sifir' ? ' tp-secili' : '') + '"' +
+      ' data-act="tp-sifirla" aria-pressed="' + (secili === 'sifir' ? 'true' : 'false') + '">Varsayılan</button>';
+  }
+
   const S = window.TIPO_SECENEK || {};
-  kt.innerHTML = ['fs','lh','pb','olcu','font'].map(k => {
+  const eksenCiz = k => {
     const o = S[k];
     if(!o) return '';
     /* data-v düz DİZE taşır (dataset başka türlüsünü tutamaz); tipe geri
@@ -5159,7 +5329,16 @@ function tipografiCiz(){
     return '<div class="tp-satir"><div class="tp-etiket">' + esc(o.ad) + '</div>' +
       '<div class="tp-ipucu">' + esc(o.ipucu) + '</div>' +
       '<div class="tp-secim">' + chips + '</div></div>';
-  }).join('');
+  };
+  /* Katmansız eksenler (fs, font) ÜSTTE sabit; katmanlılar çubuğun altında. */
+  const gl = document.getElementById('tpGlobal');
+  if(gl) gl.innerHTML = Object.keys(S).filter(k => !S[k].kat).map(eksenCiz).join('');
+  const kb = document.getElementById('tpKatman');
+  if(kb) kb.innerHTML = ['oku','bas'].map(v =>
+    '<button class="tp-katman-btn' + (tpKatman === v ? ' tp-secili' : '') + '"' +
+    ' data-act="tp-katman" data-v="' + v + '"' +
+    ' aria-pressed="' + (tpKatman === v ? 'true' : 'false') + '">' + esc(TP_KATMAN_AD[v]) + '</button>').join('');
+  kt.innerHTML = Object.keys(S).filter(k => S[k].kat === tpKatman).map(eksenCiz).join('');
 }
 function temaDugmeleriCiz(){
   const secili = window.temaTercihi ? window.temaTercihi() : 'sistem';
@@ -5738,7 +5917,20 @@ document.addEventListener('click', e => {
       break; }
     case 'tp-sifirla':
       window.tipografiSifirla(); tipografiCiz();
-      toast('Okuma tipografisi varsayılana döndü');
+      toast('Tipografi varsayılana döndü');
+      break;
+    /* v114 hazır ayar: TAM DEĞİŞTİRİR (birleştirmez) — gerekçe tipografiTema'da. */
+    case 'tp-tema': {
+      if(!window.tipografiTema) break;
+      window.tipografiTema(v);
+      tipografiCiz();
+      const ad = { uzun:'Uzun okuma', yorgun:'Göz yorgunu', yogun:'Yoğun' }[v];
+      if(ad) toast(ad + ' ayarı uygulandı');
+      break; }
+    /* Katman çubuğu: yalnız hangi eksenlerin ÇİZİLECEĞİNİ değiştirir, ayara
+       dokunmaz — bu yüzden depoya yazmaz, oturum içi durumdur. */
+    case 'tp-katman':
+      if(v === 'oku' || v === 'bas'){ tpKatman = v; tipografiCiz(); }
       break;
     case 'disa-aktar': disaAktar(); break;
     case 'tasima-yedek': tasimaYedegiIndir(); break;                       // v94 eski adres

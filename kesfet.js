@@ -40,7 +40,7 @@
     '#ksIcerik{padding:2px 16px 24px}',
     '.ks-ust{display:flex;align-items:flex-start;gap:10px;padding:0 0 4px}',
     '.ks-ust-ic{flex:1;min-width:0}',
-    '.ks-baslik{font-family:var(--serif);font-size:1.8rem;font-weight:400;line-height:1.15;margin-top:2px}',
+    '.ks-baslik{font-family:var(--serif);font-size:calc(1.8rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,400);line-height:1.15;margin-top:2px;letter-spacing:var(--tipo-basls,normal)}',
     '.ks-acilis{font-size:.78rem;color:var(--muted);margin-top:4px;letter-spacing:.02em;font-variant-numeric:tabular-nums}',
     '.ks-ust .zar-btn{flex:0 0 40px;height:40px;margin-top:6px}',
     '.ks-suz{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:6px 0;align-items:center}',
@@ -55,7 +55,7 @@
       'background:color-mix(in srgb,var(--brass) 7%,transparent)}',
     '.ks-item,.ks-b-item{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--cizgi)}',
     '.ks-ic{flex:1;min-width:0}',
-    '.ks-ad{display:block;font-family:var(--serif);font-size:1.05rem;font-weight:600;line-height:1.25;' +
+    '.ks-ad{display:block;font-family:var(--serif);font-size:calc(1.05rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,600);letter-spacing:var(--tipo-basls,normal);line-height:1.25;' +
       'text-align:left;overflow-wrap:break-word;padding:0;background:none;border:none;color:var(--paper)}',
     '.ks-yazar,.ks-b-yazar{font-style:italic;font-size:.78rem;color:var(--muted);margin-top:1px}',
     '.ks-neden,.ks-b-neden{font-size:.8rem;color:var(--muted2);line-height:1.5;margin-top:4px}',
@@ -78,7 +78,7 @@
     // ---- B bölümü: YENİ KİTAPLAR (kütüphane-dışı; v51) ----
     '.ks-b-bas{display:flex;align-items:center;justify-content:space-between;gap:10px;' +
       'padding:16px 0 6px;margin-top:8px;border-top:1px solid var(--cizgi)}',
-    '.ks-b-ad{display:block;font-family:var(--serif);font-size:1.05rem;font-weight:600;' +
+    '.ks-b-ad{display:block;font-family:var(--serif);font-size:calc(1.05rem * var(--tipo-bas,1));font-weight:var(--tipo-basfw,600);letter-spacing:var(--tipo-basls,normal);' +
       'line-height:1.25;overflow-wrap:break-word}',
     '.ks-b-not{font-size:.85rem;color:var(--muted);line-height:1.5;padding:10px 0}',
     '.ks-b-getir{margin-top:8px}',

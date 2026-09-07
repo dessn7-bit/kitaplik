@@ -235,8 +235,8 @@
       .rp-sayilar{display:flex;flex-wrap:wrap;row-gap:14px;margin-top:14px}
       .rp-kutu{flex:1 1 40%;min-width:0;padding:0 12px;border-left:1px solid var(--cizgi)}
       .rp-sayilar .rp-kutu:nth-child(2n+1){padding-left:0;border-left:none}
-      .rp-sayi{display:block;font-family:var(--serif);font-size:1.5rem;line-height:1.1;
-        color:var(--paper);font-variant-numeric:tabular-nums}
+      .rp-sayi{display:block;font-family:var(--serif);font-size:calc(1.5rem * var(--tipo-bas,1));line-height:1.1;
+        color:var(--paper);font-variant-numeric:tabular-nums;font-weight:var(--tipo-basfw,inherit);letter-spacing:var(--tipo-basls,normal)}
       .rp-etiket{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
         color:var(--muted);margin-top:5px}
       .rp-bolum{font-size:.72rem;color:var(--muted2);margin:16px 0 4px;
