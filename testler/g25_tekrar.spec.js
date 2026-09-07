@@ -29,7 +29,7 @@ async function alintiAc(page) {
   await expect(page.locator('#panel-alinti #alintiIcerik')).toBeVisible();
 }
 
-test.describe('G25 aralıklı alıntı tekrarı', () => {
+test.describe('G25 aralıklı tekrar', () => {
 
   test('yeni alıntı varsayılanla döngüye girer: aktif, ilk gösterim 3 gün sonra; yenilemede korunur', async ({ page }) => {
     await tohumla(page, [kitapla([])]);
@@ -139,8 +139,8 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     expect(await page.evaluate(() => window.__tekrar.bugunKuyruk().length)).toBe(0);
   });
 
-  test('ilk zamanlama yayılması: 100 eski alıntı aynı güne düşmez (günde ≤8, ≥13 güne yayılır)', async ({ page }) => {
-    // tekrar alansız 100 alıntı (Goodreads içe aktarımı senaryosu), 5 kitaba dağılı
+  test('ilk zamanlama yayılması: 100 eski kayıt günde TAM 2, 50 güne yayılır', async ({ page }) => {
+    // tekrar alansız 100 kayıt (Goodreads içe aktarımı senaryosu), 5 kitaba dağılı
     const kitaplar = [];
     for (let k = 0; k < 5; k++) {
       const notlar = [];
@@ -164,29 +164,146 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     });
     expect(dagilim.planlanmamis).toBe(0);                       // hepsi zamanlandı
     const sayilar = Object.values(dagilim.gunler);
-    expect(Math.max(...sayilar)).toBeLessThanOrEqual(8);        // günde en çok 8
-    expect(Object.keys(dagilim.gunler).length).toBeGreaterThanOrEqual(13);
+    /* v112: eşitlik iddiası — eski hâli "≤8" idi ve YAYILMA_GUNLUK 8'den 2'ye
+       inince de yeşil kalıyordu, yani sabiti KORUMUYORDU. Sabitin gerçek
+       gerekçesi işlenen kaydın 7 gün sonra GERİ GELMESİ; hız kapasiteye
+       bağlıdır ve gevşek bir üst sınır bunu sınamaz. */
+    expect(Math.max(...sayilar), 'günde TAM 2').toBe(2);
+    expect(Object.keys(dagilim.gunler).length, '100 / 2 = 50 gün').toBe(50);
     expect(Object.keys(dagilim.gunler).sort()[0]).toBe(bugunISO(3)); // en erken 3 gün sonra
-    expect(dagilim.enEskiSonraki).toBe(bugunISO(3));            // en eski alıntı ilk sırada
+    expect(dagilim.enEskiSonraki).toBe(bugunISO(3));            // en eski kayıt ilk sırada
   });
 
-  test('notlar (tip=not) varsayılan döngü dışı; "tekrara al" ile isteğe bağlı girer', async ({ page }) => {
-    const n = notYap({ tip: 'not', metin: 'Kendi düşüncem' });
-    await tohumla(page, [kitapla([n])]);
+  test('v112: NOT da ALINTI da varsayılan döngüde — tip ölçüt DEĞİL', async ({ page }) => {
+    const nt = notYap({ tip: 'not', metin: 'Kendi düşüncem' });
+    const al = notYap({ tip: 'alinti', metin: 'Bir alıntı' });
+    await tohumla(page, [kitapla([nt, al])]);
     await rafAc(page);
-    const once = await page.evaluate(id =>
-      veri.kitaplar[0].notlar.find(x => x.id === id), n.id);
-    expect(once.tekrarDurum).toBe('duraklatildi');   // normalize varsayılanı
-    expect(once.tekrarSonraki).toBe(null);           // zamanlayıcı nota dokunmadı
+    const d = await page.evaluate(() => veri.kitaplar[0].notlar
+      .map(x => ({ tip: x.tip, durum: x.tekrarDurum, sonraki: x.tekrarSonraki })));
+    expect(d.map(x => x.durum), 'ikisi de aktif').toEqual(['aktif', 'aktif']);
     await page.click('[data-act="sekme"][data-v="alinti"]');
-    const kart = page.locator(`#alintiIcerik .not-kart[data-nid="${n.id}"]`);
-    await expect(kart.locator('[data-act="tk-baslat"]')).toContainText('tekrara al');
-    await expect(kart.locator('.tk-durum')).not.toContainText('duraklatıldı'); // hiç girmedi, "duraklatıldı" yazmaz
-    await kart.locator('[data-act="tk-baslat"]').click();
-    const sonra = await page.evaluate(id =>
-      veri.kitaplar[0].notlar.find(x => x.id === id), n.id);
-    expect(sonra.tekrarDurum).toBe('aktif');
-    expect(sonra.tekrarSonraki).toBe(bugunISO(3));
+    /* YAYILMA_GUNLUK 2: ilk iki kayıt aynı güne (ILK_GUN), üçüncüsü ertesi güne */
+    const s = await page.evaluate(() => veri.kitaplar[0].notlar.map(x => x.tekrarSonraki));
+    expect(s).toEqual([bugunISO(3), bugunISO(3)]);
+    for (const n of [nt, al]) {
+      const kart = page.locator(`#alintiIcerik .not-kart[data-nid="${n.id}"]`);
+      await expect(kart.locator('.tk-durum')).toContainText('3 gün sonra');
+      await expect(kart.locator('[data-act="tk-baslat"]'), '"tekrara al" opt-in yolu KALKTI')
+        .toHaveCount(0);
+    }
+  });
+
+  test('oturum içinde eklenen NOT da reload beklemeden zamanlanır (durumOf yolu)', async ({ page }) => {
+    /* NEDEN AYRI VAKA: tekrar.js'in kendi durumOf varsayılanı YALNIZ normalize
+       henüz koşmamış kayıt için devreye girer — depodan gelen her kayıtta
+       tekrarDurum zaten yazılıdır. Tek gerçek yol bu: kullanıcı NOT ekler,
+       gözlemci aynı oturumda planlamaYap'ı çağırır. Üstteki alıntı vakasının
+       ikizi; o varken mutasyon denetiminde durumOf'un tip dalına dönüş
+       26/26 yeşil kalmıştı (not tarafı sınanmıyordu). */
+    await tohumla(page, [kitapla([])]);
+    await rafAc(page);
+    await page.click('#liste .kart');
+    await page.click('[data-act="not-tip"][data-v="not"]');
+    await page.fill('#d-not', 'Yeni eklenen NOT');
+    await page.click('[data-act="not-ekle"]');
+    await page.waitForFunction(() =>
+      veri.kitaplar[0].notlar[0] && !!veri.kitaplar[0].notlar[0].tekrarSonraki);
+    const n = await page.evaluate(() => veri.kitaplar[0].notlar[0]);
+    expect(n.tip).toBe('not');
+    expect(n.tekrarDurum, 'not da reload beklemeden döngüde').toBe('aktif');
+    expect(n.tekrarSonraki).toBe(bugunISO(3));
+  });
+
+  test('kitapNormalize kuralı TEK BAŞINA doğrulanır (tekrar.js üzerinden değil)', async ({ page }) => {
+    /* NEDEN AYRI VAKA: planlamaYap aktif saydığı her kayda tekrarDurum='aktif'
+       YAZIYOR, yani tekrar.js normalize'ın varsayılanını bellekte eziyor.
+       Arayüzden ölçen vakalar bu yüzden normalize satırını KORUMUYOR —
+       mutasyon denetiminde tip varsayılanına geri dönüş 25/25 yeşil kalmıştı.
+       Burada kitapNormalize doğrudan çağrılır. */
+    await rafAc(page);
+    const d = await page.evaluate(() => {
+      const nrm = n => kitapNormalize({ id: 'k1', ad: 'K', notlar: [n] }).notlar[0].tekrarDurum;
+      return {
+        yeniNot: nrm({ id: 'a', tip: 'not', metin: 'm' }),
+        yeniAlinti: nrm({ id: 'b', tip: 'alinti', metin: 'm' }),
+        eskiTipVarsayilani: nrm({ id: 'c', tip: 'not', metin: 'm',
+          tekrarDurum: 'duraklatildi', tekrarSayisi: 0 }),
+        kullaniciDurdurdu: nrm({ id: 'd', tip: 'not', metin: 'm',
+          tekrarDurum: 'duraklatildi', tekrarSayisi: 3 }),
+        aktifKorunur: nrm({ id: 'e', tip: 'not', metin: 'm',
+          tekrarDurum: 'aktif', tekrarSayisi: 0 })
+      };
+    });
+    expect(d).toEqual({ yeniNot: 'aktif', yeniAlinti: 'aktif', eskiTipVarsayilani: 'aktif',
+      kullaniciDurdurdu: 'duraklatildi', aktifKorunur: 'aktif' });
+  });
+
+  test('GÖÇ: kullanıcının duraklattığı KORUNUR, tip varsayılanı aktife alınır', async ({ page }) => {
+    /* Ayrım tekrarSayisi: duraklatmayı YALNIZ "Yeter" üretir ve sayacı artırır.
+       sayısı 0 + duraklatildi = eski TİP VARSAYILANI (normalize koşulsuz yazıyordu),
+       kullanıcının kararı değil → aktife alınır. */
+    const eskiVarsayilan = notYap({ tip: 'not', metin: 'Hiç dokunulmadı',
+      tekrarDurum: 'duraklatildi', tekrarSayisi: 0 });
+    const kullaniciDurdurdu = notYap({ tip: 'not', metin: 'Yeter dedim',
+      tekrarDurum: 'duraklatildi', tekrarSayisi: 2, tekrarAralik: 33 });
+    await tohumla(page, [kitapla([eskiVarsayilan, kullaniciDurdurdu])]);
+    await alintiAc(page);
+    const d = await page.evaluate(() => veri.kitaplar[0].notlar.map(x => x.tekrarDurum));
+    expect(d, 'tercih korunur, varsayılan çevrilir').toEqual(['aktif', 'duraklatildi']);
+    const durmus = page.locator(`#alintiIcerik .not-kart[data-nid="${kullaniciDurdurdu.id}"]`);
+    await expect(durmus.locator('.tk-durum')).toContainText('duraklatıldı');
+    await expect(durmus.locator('[data-act="tk-baslat"]')).toContainText('başlat');
+    /* geri açıldığında merdivendeki yeri korunur (duraklatma ceza değil) */
+    await durmus.locator('[data-act="tk-baslat"]').click();
+    await expect(durmus.locator('.tk-durum')).toContainText('33 gün sonra');
+  });
+
+  test('PARMAK İZİ: 299 kayda tekrar alanı yazmak damga ÜRETMEZ (ANLIK_SURUM turu gerekmez)',
+    async ({ page }) => {
+      /* v111'de favori alanı pozitife çevrilince o notların izi değişiyordu ve
+         ANLIK_SURUM turu şarttı. Burada risk YOK: kitapParmak tekrar* alanlarını
+         DIŞLIYOR (ANLIK_SURUM 6). Bu vaka onu davranışla ölçer — 299 kayıt
+         planlanır, depo yazılır, kitap damgası KIPIRDAMAZ. */
+      const cok = [];
+      for (let i = 0; i < 299; i++) cok.push(notYap({ tip: 'not', metin: 'Not ' + i }));
+      await tohumla(page, [kitapla(cok, { g: 777 })]);
+      await alintiAc(page);
+      const o = await page.evaluate(() => {
+        const oncekiG = veri.kitaplar[0].g;
+        const planli = veri.kitaplar[0].notlar.filter(n => n.tekrarSonraki).length;
+        depoKaydet();
+        return { oncekiG, sonraG: veri.kitaplar[0].g, planli,
+          aktif: veri.kitaplar[0].notlar.filter(n => n.tekrarDurum === 'aktif').length };
+      });
+      expect(o.aktif, '299 kayıt döngüde').toBe(299);
+      expect(o.planli, 'hepsi zamanlandı').toBe(299);
+      expect(o.sonraG, 'damga değişmedi — otomatik zamanlama LWW zehirlemez').toBe(777);
+      expect(o.oncekiG).toBe(777);
+    });
+
+  test('YAYILMA: 299 kayıt 2/gün dağılır, bugün hiçbiri çıkmaz, yığılma yok', async ({ page }) => {
+    const cok = [];
+    for (let i = 0; i < 299; i++) cok.push(notYap({ tip: 'not', metin: 'Not ' + i }));
+    await tohumla(page, [kitapla(cok)]);
+    await alintiAc(page);
+    const o = await page.evaluate(() => {
+      const g = {};
+      veri.kitaplar[0].notlar.forEach(n => { g[n.tekrarSonraki] = (g[n.tekrarSonraki] || 0) + 1; });
+      const gunler = Object.keys(g).sort();
+      return { gunSayisi: gunler.length, ilkGun: gunler[0], sonGun: gunler[gunler.length - 1],
+        enKalabalikGun: Math.max(...Object.values(g)),
+        bugunBekleyen: window.__tekrar.kuyruk().length,
+        bugunGosterilen: window.__tekrar.bugunKuyruk().length };
+    });
+    expect(o.enKalabalikGun, 'YAYILMA_GUNLUK=2').toBe(2);
+    expect(o.gunSayisi, '299 kayıt / 2 = 150 gün').toBe(150);
+    expect(o.ilkGun).toBe(bugunISO(3));
+    expect(o.sonGun, 'son kaydın ilk karşılaşması').toBe(bugunISO(152));
+    expect(o.bugunBekleyen, 'bugün hiçbiri zamanı gelmedi').toBe(0);
+    expect(o.bugunGosterilen).toBe(0);
+    await expect(page.locator('#tkKutu .tk-ist'), 'kutu yine de döngü sayısını söyler')
+      .toContainText('299 kayıt döngüde');
   });
 
   test('tekrar alanları yenilemede KORUNUR ve senkron PUT\'unda taşınır', async ({ page }) => {
@@ -284,7 +401,10 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     await tohumla(page, [kitapla(notlar)]);
     await alintiAc(page);
     const ist = page.locator('#tkKutu .tk-ist');
-    await expect(ist).toContainText('3 alıntı döngüde');       // duraklatılan sayılmaz
+    /* v112: etiket "alıntı" DEĞİL "kayıt" — sayaç zaten tipten bağımsız tüm
+       aktifleri sayıyordu, "0 alıntı · 299 not" olan kütüphanede "1 alıntı
+       döngüde" yazıyordu. Sayı doğruydu, etiket yalan söylüyordu. */
+    await expect(ist).toContainText('3 kayıt döngüde');         // duraklatılan sayılmaz
     await expect(ist).toContainText('bugün 1 bekliyor');
     await expect(ist).toContainText('en uzun aralık 73 gün');
   });
@@ -348,8 +468,11 @@ test.describe('G25 aralıklı alıntı tekrarı', () => {
     await expect(page.locator('#tkKutu .tk-kart')).toHaveCount(0); // kutu silinen kaydı göstermez
   });
 
-  test('"tekrara al" düğmesi tıklanınca aynı oturumda göstergeye dönüşür', async ({ page }) => {
-    const n = notYap({ tip: 'not', metin: 'Opt-in not' });
+  test('"başlat" düğmesi tıklanınca aynı oturumda göstergeye dönüşür', async ({ page }) => {
+    /* v112: fikstür artık KULLANICI duraklatması (tekrarSayisi ≥ 1) — "tekrara al"
+       opt-in yolu kalktı, bu dala yalnız geçmişi olan kayıt düşer. */
+    const n = notYap({ tip: 'not', metin: 'Duraklatılmış not',
+      tekrarDurum: 'duraklatildi', tekrarSayisi: 1, tekrarAralik: 3 });
     await tohumla(page, [kitapla([n])]);
     await alintiAc(page);
     const kart = page.locator(`#alintiIcerik .not-kart[data-nid="${n.id}"]`);

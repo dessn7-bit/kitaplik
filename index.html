@@ -2085,15 +2085,30 @@ function kitapNormalize(k){
            basmaz, bayat cihaz odadaki günceli ezemez. */
         ...(n.favori === 1 || n.favori === true ? { favori: 1 } : {}),
         fikir: Array.isArray(n.fikir) ? n.fikir.map(f => String(f)).filter(Boolean) : [],
-        /* tekrar*: aralıklı alıntı tekrarı (tekrar.js). Alıntılar varsayılan döngüde,
-           notlar dışında (kartından "tekrara al" ile açılır). tekrarSonraki=null =
-           henüz zamanlanmadı — yayılmayı tekrar.js yapar. Senkronla taşınır.
+        /* tekrar*: aralıklı tekrar (tekrar.js). tekrarSonraki=null = henüz
+           zamanlanmadı — yayılmayı tekrar.js yapar. Senkronla taşınır.
            Şema değişti → ANLIK_SURUM 5 (senkron.js). */
         tekrarSonraki: /^\d{4}-\d{2}-\d{2}$/.test(n.tekrarSonraki || '') ? n.tekrarSonraki : null,
         tekrarAralik: Math.min(365, Math.max(1, parseInt(n.tekrarAralik) || 3)),
         tekrarSayisi: parseInt(n.tekrarSayisi) || 0,
-        tekrarDurum: (n.tekrarDurum === 'aktif' || n.tekrarDurum === 'duraklatildi')
-          ? n.tekrarDurum : (tip === 'alinti' ? 'aktif' : 'duraklatildi')
+        /* tekrarDurum (v112): VARSAYILAN AKTİF, TİPTEN BAĞIMSIZ. Eskiden alıntı
+           'aktif', not 'duraklatildi' başlıyordu; not da alıntı da hatırlanmak
+           için yazılıyor, hangisinin döngüye gireceğini TİP belirlememeli
+           (Kaan kararı) — ayrıca 299 not/0 alıntı olan kütüphanede döngü boş
+           çalışıyordu, v110'daki "havuz ölçütü tip" kusurunun ikizi.
+           GÖÇ — kullanıcı tercihi KORUNUR: bu alan eskiden koşulsuz yazıldığı
+           için her notta 'duraklatildi' KAYITLI duruyor; varsayılanı çevirmek
+           tek başına hiçbir şeyi değiştirmezdi. Ayrım `tekrarSayisi`:
+           duraklatmayı YALNIZ "Yeter" üretir ve sayacı artırır (eylem()), yani
+           `duraklatildi` + sayısı ≥1 = KULLANICININ kararı → korunur;
+           `duraklatildi` + sayısı 0 = eski TİP VARSAYILANI → aktife alınır.
+           Kural göç sonrası da geçerli kalır (yeni duraklatma hep sayaç artırır),
+           ayrı bir göç bayrağı gerekmez.
+           Parmak izi: kitapParmak tekrar* alanlarını DIŞLIYOR (ANLIK_SURUM 6) —
+           299 nota yazmak hiçbir izi değiştirmez, toplu yeniden damgalama ve
+           ANLIK_SURUM turu GEREKMEZ (v111'deki risk burada YOK, ölçüldü). */
+        tekrarDurum: (n.tekrarDurum === 'duraklatildi' && (parseInt(n.tekrarSayisi) || 0) > 0)
+          ? 'duraklatildi' : 'aktif'
       };
     }) : []
   };

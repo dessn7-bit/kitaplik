@@ -1,7 +1,8 @@
-/* Aralıklı alıntı tekrarı (tk-) — Alıntılar sekmesinin üstünde "Tekrar zamanı" kutusu.
+/* Aralıklı tekrar (tk-) — Alıntılar sekmesinin üstünde "Tekrar zamanı" kutusu.
    FELSEFE: Bu bir ezber aracı DEĞİL. "Hatırladın mı?" sınavı yok; amaç biriktirilen
-   alıntıların unutulup gitmemesi — eski bir alıntının bugünkü düşünceyle yeniden
-   karşılaşması. Üç eylem üç niyettir: "Devam etsin" (aralık büyür), "Daha sık"
+   kayıtların unutulup gitmemesi — eski bir kaydın bugünkü düşünceyle yeniden
+   karşılaşması. v112: NOT da ALINTI da döngüde — ikisi de hatırlanmak için
+   yazılıyor, hangisinin gireceğini tip belirlemez (varsayılan AKTİF). Üç eylem üç niyettir: "Devam etsin" (aralık büyür), "Daha sık"
    (aralık küçülür), "Yeter" (duraklar; kartından geri açılır).
    Veri: not düzeyinde tekrarSonraki/tekrarAralik/tekrarSayisi/tekrarDurum —
    kitapNormalize beyaz listesinde (index.html), senkronla taşınır (ANLIK_SURUM 5).
@@ -15,11 +16,20 @@
                              // eğrisine yakın büyüme; 2'den dik, yıllık tavana ~7 adım)
   const MIN_ARALIK = 1;      // "daha sık" en fazla günde bire iner
   const MAX_ARALIK = 365;    // yılda bir yeniden karşılaşma alt sınır olarak kalır
-  const ILK_GUN = 3;         // yeni alıntı ilk kez 3 gün sonra çıkar
+  const ILK_GUN = 3;         // yeni kayıt ilk kez 3 gün sonra çıkar
   const GUNLUK_SINIR = 10;   // günde en fazla 10 gösterim: dakikalar içinde biter,
-                             // birikmiş yüzlerce alıntı kullanıcıyı boğmaz
-  const YAYILMA_GUNLUK = 8;  // ilk zamanlama yayılması: günde en çok 8 eski alıntı
-                             // (sınırın altında — yeni eklenenlere yer kalsın)
+                             // birikmiş yüzlerce kayıt kullanıcıyı boğmaz
+  const YAYILMA_GUNLUK = 2;  /* ilk zamanlama yayılması: günde en çok 2 yeni kayıt.
+     v112'de 8'den 2'ye indi. 8 "günlük sınırın altında kalsın" diye seçilmişti
+     ama HESAP EKSİKTİ: işlenen kayıt ILK_GUN sonra değil, merdivenin bir üst
+     basamağında (7 gün) GERİ GELİYOR. 299 kayıtla 10. günden itibaren talep
+     8 yeni + 8 dönen = 16, kapasite 10 → kuyruk 41. günde 203'e çıkıyordu
+     (ölçüldü). Zarar kozmetik değil: kuyruk 200 derinken kaydın gerçek aralığını
+     merdiven değil KUYRUK SIRASI belirler, aralıklı tekrar aralıklı olmaktan
+     çıkar. Kapasite: 299 kayıt × ~5 basamak ≈ 1500 gösterim ÷ 10/gün ≈ 150 gün;
+     yığılmasız tek giriş hızı 2/gün. Ölçüm (299 kayıt, 2/gün): tepe kuyruk 10,
+     borç satırı HİÇ çıkmıyor, 3. günden itibaren 2-9 kart/gün. Bedeli açık:
+     son kaydın ilk karşılaşması ~152. gün. */
   const SAYAC_ANAHTAR = 'kk_tekrar_v1';
 
   /* İkon dili: index.html'deki window.ikon(ad) inline SVG döndürür (görsel dil
@@ -34,12 +44,15 @@
       + '-' + String(d.getDate()).padStart(2, '0');
   }
 
-  /* Normalize henüz koşmadıysa (oturum içinde yeni eklenen not) alanlar eksik
-     olabilir — varsayılanlar burada da üretilir ki alıntı reload beklemeden
-     döngüye girsin. Kalıcılık yine kitapNormalize beyaz listesinin işidir. */
+  /* Normalize henüz koşmadıysa (oturum içinde yeni eklenen kayıt) alanlar eksik
+     olabilir — varsayılanlar burada da üretilir ki kayıt reload beklemeden
+     döngüye girsin. Kalıcılık yine kitapNormalize beyaz listesinin işidir.
+     v112: kural kitapNormalize'daki ile AYNI olmak zorunda (iki yerde iki
+     varsayılan = kutu ile kartın farklı şey söylemesi). Tip artık ölçüt DEĞİL;
+     duraklatma yalnız KULLANICININ "Yeter"i, o da tekrarSayisi'nı artırır. */
   function durumOf(n){
-    if(n.tekrarDurum === 'aktif' || n.tekrarDurum === 'duraklatildi') return n.tekrarDurum;
-    return n.tip === 'alinti' ? 'aktif' : 'duraklatildi';
+    return (n.tekrarDurum === 'duraklatildi' && (parseInt(n.tekrarSayisi) || 0) > 0)
+      ? 'duraklatildi' : 'aktif';
   }
   function aralikOf(n){
     return Math.min(MAX_ARALIK, Math.max(MIN_ARALIK, parseInt(n.tekrarAralik) || ILK_GUN));
@@ -74,10 +87,10 @@
   }
 
   /* ---------- ilk zamanlama + yayılma ----------
-     Planı olmayan aktif notlar tarih sırasıyla (en eski önce — en çok unutulmuş
+     Planı olmayan aktif kayıtlar tarih sırasıyla (en eski önce — en çok unutulmuş
      olan ilk karşılaşmayı hak eder) günde YAYILMA_GUNLUK olacak şekilde ILK_GUN'den
-     başlayarak ileriye dağıtılır. Tek yeni alıntı = ILK_GUN sonra; Goodreads'ten
-     gelen 200 alıntı = ~25 güne yayılır, ilk açılışta hepsi birden dayatılmaz. */
+     başlayarak ileriye dağıtılır. Tek yeni kayıt = ILK_GUN sonra; 299 kayıtlık
+     Goodreads defteri = ~150 güne yayılır, ilk açılışta hepsi birden dayatılmaz. */
   function planlamaYap(){
     const bekleyen = notListesi().filter(b => durumOf(b.n) === 'aktif' && !b.n.tekrarSonraki);
     if(!bekleyen.length) return 0;
@@ -129,7 +142,7 @@
     }else if(tur === 'yeter'){
       n.tekrarDurum = 'duraklatildi';
       n.tekrarSayisi = (parseInt(n.tekrarSayisi) || 0) + 1;
-      bildir('Duraklatıldı — alıntı kartından yeniden başlatabilirsin');
+      bildir('Duraklatıldı — kaydın kartından yeniden başlatabilirsin');
     }
     sayacArtir();
     n.ng = Date.now();   // kasıtlı not düzenlemesi: senkron not birleşiminde bu kopya kazansın
@@ -167,7 +180,12 @@
     const bugunku = bugunKuyruk();
     const islenen = sayacYukle().islenen;
     const enUzun = tum.reduce((m, b) => Math.max(m, aralikOf(b.n)), 0);
-    const ist = '<div class="tk-ist">' + ik('tekrar') + ' ' + tum.length + ' alıntı döngüde · bugün '
+    /* v112: "alıntı" DEĞİL "kayıt". Sayaç (tum) her zaman TİPTEN BAĞIMSIZ tüm
+       aktifleri sayıyordu, etiket ise "alıntı" diyordu — 299 not / 0 alıntı olan
+       kütüphanede "1 alıntı döngüde" yazıyor, altındaki özet "0 alıntı · 299 not"
+       diyordu. Veri doğruydu (kullanıcı bir NOTU "tekrara al" ile döngüye almıştı,
+       başka yol yok), YALAN SÖYLEYEN ETİKETTİ. */
+    const ist = '<div class="tk-ist">' + ik('tekrar') + ' ' + tum.length + ' kayıt döngüde · bugün '
       + tumKuyruk.length + ' bekliyor · en uzun aralık ' + enUzun + ' gün</div>';
 
     let govde = '';
@@ -176,7 +194,7 @@
       const n = b.n, k = b.k;
       govde = '<div class="tk-baslik"><span class="kicker">Tekrar zamanı</span>'
         + '<span class="tk-rozet-sayi">' + bugunku.length + '</span>'
-        + '<span class="tk-baslik-not">zamanı gelen alıntıların — sınav değil, yeniden karşılaşma</span></div>'
+        + '<span class="tk-baslik-not">zamanı gelen kayıtların — sınav değil, yeniden karşılaşma</span></div>'
         + '<div class="tk-kart" data-nid="' + escAttr(n.id) + '" data-kid="' + escAttr(k.id) + '">'
         +   '<div class="tk-metin">&ldquo;' + esc(mdDuz(n.metin)) + '&rdquo;</div>'
         +   '<div class="tk-kaynak">&mdash; ' + esc(k.ad)
@@ -198,7 +216,7 @@
         + '</div>';
     }else if(islenen > 0){
       govde = '<div class="tk-tamam">Bugünlük tamam ' + ik('onay')
-        + (tumKuyruk.length ? ' — kalan ' + tumKuyruk.length + ' alıntı yarına' : '')
+        + (tumKuyruk.length ? ' — kalan ' + tumKuyruk.length + ' kayıt yarına' : '')
         + '</div>';
     }
     /* innerHTML yazımı odaklanılan düğmeyi yok eder; klavye akışı (günde 10 karta
@@ -238,10 +256,14 @@
       }else if(durumOf(n) === 'aktif'){
         d.innerHTML = ik('tekrar') + ' planlanıyor…';
       }else{
-        const hicGirmedi = n.tip === 'not' && !(parseInt(n.tekrarSayisi) || 0);
-        d.innerHTML = (hicGirmedi ? '' : ik('durakla') + ' duraklatıldı ')
+        /* v112: "tekrara al" dalı KALKTI. Eskiden hiç döngüye girmemiş NOT
+           duraklatılmış görünüyordu (tip varsayılanı) ve opt-in düğmesi
+           gerekiyordu. Artık her kayıt aktif başlıyor; duraklatılmış olmak
+           yalnız kullanıcının "Yeter"iyle mümkün (tekrarSayisi ≥ 1), yani bu
+           dala düşen kayıt HER ZAMAN geçmişi olan bir kayıttır. */
+        d.innerHTML = ik('durakla') + ' duraklatıldı '
           + '<button class="tk-mini" data-act="tk-baslat" data-nid="' + escAttr(n.id) + '">'
-          + (hicGirmedi ? ik('tekrar') + ' tekrara al' : ik('oynat') + ' başlat') + '</button>';
+          + ik('oynat') + ' başlat</button>';
       }
     });
   }
@@ -272,7 +294,7 @@
           if(el.dataset.v === 'alinti') setTimeout(ciz, 0);
           break;
         /* Çekirdeğin not ekleme/silme yolları alintiCiz çağırmaz (yalnız detay +
-           liste çizer) — kutu bayat kalır ve yeni alıntı zamanlanmadan senkrona
+           liste çizer) — kutu bayat kalır ve yeni kayıt zamanlanmadan senkrona
            giderdi. fikir.js emsali: çekirdek aksiyonlarını gözlemek serbest. */
         case 'not-ekle':
         case 'not-sil':
