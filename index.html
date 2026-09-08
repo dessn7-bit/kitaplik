@@ -4907,6 +4907,16 @@ function istCiz(){
   }else{
     html += `<div class="mini-not">Hedef koy, tempo takibini ben yapayım.</div>`;
   }
+  /* SIKLIK (v121): "yil sonu ~17" ile "ortalama bitirme suresi 4 gun" komsu
+     bolumlerde duruyor ve okuyan CELISKI saniyordu. Ikisi FARKLI sey olcuyor:
+     17 SIKLIK (kitaplar arasi aralik), 4 HIZ (kitabi elde tutma suresi).
+     Aradaki fark okunmayan zaman. Ikisini baglayan sayi - kac gunde bir -
+     artik ekranda ACIKCA duruyor; ayrim gorunmeden celiski hissi kapanmiyor. */
+  if(buYil.length > 0){
+    const siklik = Math.max(1, Math.round(gunNo / buYil.length));
+    html += `<div class="mini-not" id="istSiklik">Yılın ${gunNo} gününde ${buYil.length} kitap —
+      ortalama <b style="color:var(--brass)">${siklik} günde bir</b>.</div>`;
+  }
   html += `<div class="hedef-satir">
       <input type="number" inputmode="numeric" min="1" id="hedefInput" placeholder="adet" value="${hedef || ''}">
       <button class="btn btn-cerceve" style="width:auto" data-act="hedef-kaydet">Hedefi kaydet</button>
@@ -4919,8 +4929,23 @@ function istCiz(){
   const sureli = bittiler.filter(k => k.baslamaTarihi && k.bitisTarihi);
   if(sureli.length){
     const ort = Math.round(sureli.reduce((t,k) => t + Math.max(1, gunFarki(k.baslamaTarihi, k.bitisTarihi)), 0) / sureli.length);
+    /* TABAN (v121): eski not yalniz "(4 kitaptan)" diyordu. Olculdu: bu 4 kitap
+       167 bitmisin 4'u VE dordu de son 18 gunde bitmis - yani rakam "ortalamam"
+       degil "son haftalardaki hizim". Ustelik o 4 kitabin ortalamasi 386 sayfa,
+       tum bitmislerinki 196: orneklem tipik kitabin iki kati uzunlukta. Sayi
+       Kaan'in karariyla DURUYOR, ama neyi kapsadigi soyleniyor (v119 taban
+       dogrusu) ve SIKLIK ile arasindaki fark ayni yerde adlandiriliyor. */
+    const bitisler = sureli.map(k => k.bitisTarihi).sort();
+    const ilk = bitisler[0], son = bitisler[bitisler.length - 1];
+    const aralik = ilk === son ? trTarih(ilk) : `${trTarih(ilk)} – ${trTarih(son)} arası`;
+    const siklikCumle = buYil.length > 0
+      ? ` — bu yıl ortalama ${Math.max(1, Math.round(gunNo / buYil.length))} günde bir kitap bitirdin.`
+      : '.';
     html += `<div class="ist-bolum-baslik" id="istBitirmeSuresi">Ortalama bitirme süresi</div>
-      <div class="mini-not"><b style="color:var(--brass)">${ort} gün</b> (${sureli.length} kitaptan; başlama-bitiş tarihi girilenler)</div>`;
+      <div class="mini-not" id="istSureTaban"><b style="color:var(--brass)">${ort} gün</b> — başlama tarihi girilen
+        ${sureli.length} kitaptan (${bittiler.length} bitmişin içinden; ${aralik}).</div>
+      <div class="mini-not" id="istSureAyrim">Kitabı elime aldıktan sonra geçen süre; kitaplar
+        <b>arasındaki</b> boşluk buna dahil değil${siklikCumle}</div>`;
   }
   html += `<div class="is-yuva" id="istYuvaSureklilik"></div>
     <div class="is-yuva" id="istYuvaAliskanlik"></div></section>`;

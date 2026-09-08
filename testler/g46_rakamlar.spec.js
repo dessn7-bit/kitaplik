@@ -235,7 +235,13 @@ test.describe('G46 Rakamlar ekranı — Ciltli', () => {
     const g = await page.locator('#istIcerik').textContent();
     // 6 puanlı bitmiş kitap var (Puansız Bitmiş hariç 6'sı puanlı)
     expect(g).toMatch(/Ortalama puan\s*\(6 kitaptan\)/);
-    expect(g).toMatch(/\(7 kitaptan; başlama-bitiş tarihi girilenler\)/);
+    /* v121: bitirme süresinin paydası genişletildi — artık yalnız "kaç kitaptan"
+       değil, "kaç bitmişin içinden" ve hangi tarih aralığından olduğu da yazılı
+       (ölçüldü: Kaan'da bu 4 kitabın dördü de 18 günlük bir pencereden geliyordu,
+       yani rakam "ortalamam" değil "son haftalardaki hızım"). Bu satır davranışı
+       kilitleyen envanter olduğu için BİLEREK güncellendi; çok satırlı şablon
+       metni \s+ ister. */
+    expect(g).toMatch(/başlama tarihi girilen\s+7 kitaptan \(7 bitmişin içinden;/);
     expect(g).toMatch(/\(1 kitaptan; sayfa bilgisi girilenler\)/);
     expect(g).toMatch(/Bitirdiğin 6 kitabın sayfa toplamı sayılır/);
     /* Yıl sonu raporunun paydası AYRI tabandan: bu yıl biten 6 kitabın 5'i
