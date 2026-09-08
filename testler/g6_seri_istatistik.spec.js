@@ -48,7 +48,11 @@ test.describe('G6 seri ve istatistik', () => {
     const yil = new Date().getFullYear();
     expect(await page.evaluate(y => veri.hedef[y], yil)).toBe(24);
     await expect(page.locator('#istIcerik')).toContainText('1 / 24');
-    await expect(page.locator('#istIcerik')).toContainText('Bu tempoyla'); // projeksiyon cümlesi
+    /* v122: cümle artık ÖLÇÜMÜ de taşıyor — "Son 60 günde N kitap → ... Bu hızla
+       yıl sonunda ~M kitap". Eski "Bu tempoyla" ifadesi yıl-başı ortalamasına
+       dayanıyordu ve ölü günleri paydaya katıyordu; envanter BİLEREK güncellendi. */
+    await expect(page.locator('#istTempo')).toContainText('Son 60 günde');
+    await expect(page.locator('#istTempo')).toContainText('Bu hızla yıl sonunda');
   });
 
   test('hedef kaydedilince okuma alışkanlığı kartı kaybolmaz', async ({ page }) => {

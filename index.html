@@ -4782,20 +4782,82 @@ function istKayit(k){
    sayılır) — ekranla birebir aynı taban.
    SAVUNMA: veri.hedef damgaSuz'dan GEÇMİYOR (index.html:1644 asimetrisi), yani
    bozuk yedekte sayı olmayan değer gelebilir — Number(...)||0 ile kapatılır. */
+/* Tempo penceresi (v122). Eskiden projeksiyon YIL BAŞINDAN ortalama alıyordu
+   (bitmiş / gunNo * 365) ve Kaan'ın verisinde ölçüldü: 2026'nın ilk kitabı
+   23 Haziran'da bitmiş, yani 173 OKUNMAYAN GÜN paydada duruyordu. Sonuç ~17,5
+   ve tavanı da o — hiçbir okuma temposu bu göstergeyi "yolunda" yapamazdı.
+
+   NEDEN 60 GÜN (76 gün boyunca günlük yeniden hesaplanarak ölçüldü):
+     pencere      bugün   min    max   aralık  günlük sıçrama
+     yıl başı      17,4    9,7   17,5    7,8    0,19   ← 76/76 gün "geride" dedi
+     son 30 g      34,8    6,0   41,4   35,4    1,01   ← hedef kararını 34 kez değiştirdi
+     son 60 g      23,4   14,2   25,6   11,5    0,55   ← SEÇİLEN
+     son 90 g      27,2   14,9   27,3   12,4    0,29
+     ilk kayıttan  29,5   22,2  320,0  297,8    4,50   ← payda ~1 güne düşüyor, elendi
+     son 6 kitap   39,4   18,9  477,5  458,6    6,71   ← aynı çöküş, elendi
+   İLKE: pencere, normal bir sessiz dönemden UZUN olmalı — yoksa olağan bir ara
+   "okumayı bıraktı" diye okunur. Kaan'ın 2026'daki en uzun arası ölçüldü:
+   7 Temmuz → 14 Ağustos = 38 gün. 60, bu arayı kesin aşan EN KISA pencere.
+
+   YIL SINIRINI AŞAR: tempo takvimin değil OKURUN özelliği. Kasım–Aralık'ta
+   okunanlar Ocak temposu hakkında kanıttır. Bu sayede eski `gunNo >= 45`
+   muafiyeti de kalktı — o muafiyet yalnız yıl-başı formülünün Ocak
+   saçmalığını (1 kitap = yılda 365) yamalamak için vardı. */
+const TEMPO_PENCERE_GUN = 60;
+/* Byar yaklaşımı — Poisson tam %95 güven aralığına çok yakın, kapalı form.
+   k=6 için [2,192 .. 13,058]; tam değer [2,202 .. 13,059]. Küçük k'de alt sınırı
+   biraz DÜŞÜK verir — yani "hedefin üstündesin" demeyi zorlaştırır, ihtiyatlı
+   yön. */
+function poissonAralik(k){
+  if(k <= 0) return [0, 3.689];
+  const alt = k * Math.pow(1 - 1/(9*k) - 1.96/(3*Math.sqrt(k)), 3);
+  const u = k + 1;
+  const ust = u * Math.pow(1 - 1/(9*u) + 1.96/(3*Math.sqrt(u)), 3);
+  return [Math.max(0, alt), ust];
+}
 function tempoDurum(yil){
-  const y = yil || new Date().getFullYear();
-  const bitmis = (veri.kitaplar || []).map(istKayit).filter(Boolean)
-    .filter(k => k.bitisTarihi && String(k.bitisTarihi).startsWith(String(y)));
+  const simdi = new Date();
+  const y = yil || simdi.getFullYear();
+  const kayitlar = (veri.kitaplar || []).map(istKayit).filter(Boolean);
+  const bitmis = kayitlar.filter(k => k.bitisTarihi && String(k.bitisTarihi).startsWith(String(y)));
   const hedef = Number((veri.hedef || {})[y]) || 0;
-  const gunNo = Math.floor((new Date() - new Date(y, 0, 0)) / 86400000);
-  const projeksiyon = gunNo > 0 ? Math.round(bitmis.length / gunNo * 365) : 0;
+  const gunNo = Math.floor((simdi - new Date(y, 0, 0)) / 86400000);
+  const kalanGun = Math.max(0, Math.floor((new Date(y, 11, 31, 23, 59) - simdi) / 86400000));
+
+  /* Tempo YIL SINIRINI AŞAR (yukarıdaki gerekçe): pencere içindeki her bitiş
+     sayılır, hangi yıla ait olduğuna bakılmaz. Taban (bitti) ise yıla özgü. */
+  const esik = new Date(simdi - TEMPO_PENCERE_GUN * 86400000);
+  const pencereN = kayitlar.filter(k => {
+    if(!k.bitisTarihi) return false;
+    const t = new Date(k.bitisTarihi + 'T12:00:00');
+    return !isNaN(t) && t >= esik && t <= simdi;
+  }).length;
+
+  const hiz = pencereN / TEMPO_PENCERE_GUN;                 // kitap/gün
+  /* Biten kitap TAHMİN DEĞİL, OLMUŞ BİTMİŞ: projeksiyon = gerçek + kalanın tahmini.
+     Eski formül (bitmiş/gunNo*365) ikisini aynı kefeye koyuyordu. */
+  const projeksiyon = Math.round(bitmis.length + hiz * kalanGun);
+  const [pAlt, pUst] = poissonAralik(pencereN);
+  const tahminAlt = bitmis.length + pAlt / TEMPO_PENCERE_GUN * kalanGun;
+  const tahminUst = bitmis.length + pUst / TEMPO_PENCERE_GUN * kalanGun;
+
+  /* ÜÇ DURUM. Eskiden iki vardı ve kesinliği kusurun kendisinden geliyordu:
+     ölçüldü, güncel tempoyu ölçen HİÇBİR pencere "hedefi kaçıracaksın"
+     diyemiyor (son 60 g: [16,2 .. 36,8], hedef 30 aralığın İÇİNDE); yalnız
+     bozuk yıl-başı penceresi [14,8 .. 21,5] ile kesin konuşuyordu. */
+  const durum = hedef <= 0 ? null
+    : (tahminAlt >= hedef ? 'ustunde' : (tahminUst < hedef ? 'altinda' : 'belirsiz'));
+
   return {
-    yil: y, hedef, gunNo, bitti: bitmis.length, projeksiyon,
+    yil: y, hedef, gunNo, kalanGun, bitti: bitmis.length, projeksiyon,
+    pencereGun: TEMPO_PENCERE_GUN, pencereN,
+    mevcutGun: pencereN > 0 ? TEMPO_PENCERE_GUN / pencereN : null,
+    gerekliGun: (hedef > bitmis.length && kalanGun > 0) ? kalanGun / (hedef - bitmis.length) : null,
+    tahminAlt, tahminUst, durum,
     yuzde: hedef > 0 ? Math.min(100, Math.round(bitmis.length / hedef * 100)) : null,
-    /* GERİDE: projeksiyon hedefin %80'inin altında. Yılın ilk 45 günü MUAF —
-       Ocak'ta 1 kitap projeksiyonu 365 yapar, 0 kitap 0 yapar; iki uç da
-       anlamsız alarm üretir. 45 gün, örneklemin anlamlı olmaya başladığı yer. */
-    geride: hedef > 0 && gunNo >= 45 && projeksiyon < hedef * 0.8
+    /* bildirim.js ve sw.js bu bayrağı okuyor: artık YALNIZ "açık ara altında"
+       durumunda kırmızı — belirsizde tetik SESSİZ kalır. */
+    geride: durum === 'altinda'
   };
 }
 /* Katlanır uzun liste üreticisi. ÖZET her zaman gerçek veriden bir cümle taşır:
@@ -4899,11 +4961,27 @@ function istCiz(){
     <div class="is-bolum-bas"><span class="kicker">${yil} hedefleri</span></div>
     <div class="ist-bolum-baslik">Kitap hedefi</div>`;
   if(hedef > 0){
-    const tempoTxt = projeksiyon >= hedef
-      ? `Bu tempoyla yıl sonunda ~<b style="color:var(--ok)">${projeksiyon}</b> kitap — hedefin üstünde.`
-      : `Bu tempoyla yıl sonu projeksiyonu ~<b style="color:var(--drop)">${projeksiyon}</b> kitap — tempo artmalı.`;
+    /* v122: cümle artık ÖLÇÜMÜ de taşıyor (kaç günde kaç kitap). Tek rakam +
+       kanıtı; ikinci bir pencere GÖSTERİLMİYOR çünkü ölçüldü: 30 ve 60 günlük
+       pencereler hedefe yetişme konusunda 76 günün 34'ünde (%45) ZIT söylüyor —
+       ikinci sayı bilgi değil, aynı çelişki hissi olurdu. */
+    const ondalik = x => { const t = x.toFixed(1); return (t.endsWith('.0') ? t.slice(0, -2) : t).replace('.', ','); };
+    const hizTxt = td.pencereN > 0
+      ? `Son ${td.pencereGun} günde ${td.pencereN} kitap → ${ondalik(td.mevcutGun)} günde bir.`
+      : `Son ${td.pencereGun} günde hiç kitap bitirmedin.`;
+    const sonucTxt = td.durum === 'ustunde'
+      ? `Bu hızla yıl sonunda ~<b style="color:var(--ok)">${projeksiyon}</b> kitap — hedefin üstünde.`
+      : td.durum === 'altinda'
+        ? `Bu hızla yıl sonunda ~<b style="color:var(--drop)">${projeksiyon}</b> kitap — bu hızla hedefe yetişmez.`
+        /* BELİRSİZ: emir kipi YOK. n=6'lık bir sayımdan "tempo artmalı" demek
+           veriyi aşan bir iddiaydı; yerine kullanılabilir sayı (gerekli hız) gelir. */
+        : `Bu hızla yıl sonunda ~<b style="color:var(--brass)">${projeksiyon}</b> kitap.`;
     html += `<div class="ilerleme"><div style="width:${hedefYuzde}%"></div></div>
-      <div class="mini-not"><b style="color:var(--brass)">${buYil.length} / ${hedef}</b> kitap (%${hedefYuzde}). ${tempoTxt}</div>`;
+      <div class="mini-not" id="istTempo"><b style="color:var(--brass)">${buYil.length} / ${hedef}</b> kitap (%${hedefYuzde}). ${hizTxt} ${sonucTxt}</div>`;
+    if(td.durum !== 'ustunde' && td.gerekliGun !== null){
+      html += `<div class="mini-not" id="istGerekliHiz">Hedefe yetişmek için kalan ${td.kalanGun} günde
+        <b style="color:var(--brass)">${hedef - td.bitti} kitap</b> gerekiyor — ${ondalik(td.gerekliGun)} günde bir.</div>`;
+    }
   }else{
     html += `<div class="mini-not">Hedef koy, tempo takibini ben yapayım.</div>`;
   }
