@@ -5473,7 +5473,9 @@ function gelenParametre(){
   }catch(e){ return null; }
 }
 function urlTemizle(){
-  try{ history.replaceState({}, '', location.pathname); }catch(e){ /* özellik kısıtlı ortam — sessiz geçiş kasıtlı */ }
+  /* v120: state'i {} ile ezmek geri tusunun derinlik sayacini (pnk) silerdi -
+     mevcut state korunur, yalniz URL temizlenir. */
+  try{ history.replaceState(history.state, '', location.pathname); }catch(e){ /* özellik kısıtlı ortam — sessiz geçiş kasıtlı */ }
 }
 function gelenListeCiz(){
   const q = katla(document.getElementById('gelen-ara').value.trim());
@@ -5877,9 +5879,15 @@ function sekmeGorunum(s){
   document.getElementById('aramaSatiri').style.display = s === 'raf' ? 'flex' : 'none';
   document.querySelector('.fab').style.display = s === 'raf' ? 'flex' : 'none';
 }
-function sekmeGec(s){
+/* gecmiseYaz (v120): YALNIZ kullanicinin kendi baslattigi gecisler gecmise
+   girer. Acilis, derin baglanti ve bildirim yollari false gecer - yoksa
+   uygulama daha acilirken geri yigini dolardi. */
+function sekmeGec(s, gecmiseYaz){
   const panel = document.getElementById('panel-' + s);
   if(!panel) return;
+  const onceki = durum.sekme;
+  if(gecmiseYaz && onceki && onceki !== s && typeof geriIt === 'function')
+    geriIt({ t:'sekme', v: onceki });
   durum.sekme = s;
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   panel.classList.add('active');
@@ -5907,7 +5915,18 @@ function ayarKapat(){
    Esc en ÜSTTEKİ açık pencereyi kapatır. Kapatma mantığını çekirdek bilmez:
    pencerenin kendi kapat düğmesine tıklar — böylece eklentiler (kamera akışını
    durdurmak, URL temizlemek gibi) kendi işlerini yapar. */
-function acikOrtuler(){ return [...document.querySelectorAll('.ortu.acik')]; }
+/* ACILIS sirasi (v120): eskiden acikOrtuler() querySelectorAll sonucunu oldugu
+   gibi donduruyordu - yani BELGE sirasi. Olculdu: Detay acikken Ayarlar
+   acilinca yigin ["ortuAyar","ortuDetay"] okunuyor ve "ust" olarak ALTTAKI
+   Detay seciliyordu (ortuKatmanlariTazele de gorunurde ustteki pencereyi inert
+   yapiyordu). Geri tusu bu siraya guvendigi icin gercek yigin tutulur; listede
+   olmayan acik pencereler belge sirasiyla sona eklenir - kendini onarir. */
+let ortuSira = [];
+function acikOrtuler(){
+  ortuSira = ortuSira.filter(o => o.isConnected && o.classList.contains('acik'));
+  document.querySelectorAll('.ortu.acik').forEach(o => { if(ortuSira.indexOf(o) < 0) ortuSira.push(o); });
+  return ortuSira.slice();
+}
 function ustOrtu(){ const a = acikOrtuler(); return a.length ? a[a.length - 1] : null; }
 function ortuKapatEt(o){
   const dugme = o.querySelector('.sheet-kapat[data-act]') || o.querySelector('[data-act$="-kapat"]');
@@ -5987,8 +6006,181 @@ new MutationObserver(kayitlar => {
       setTimeout(() => { try{ g.focus(); }catch(h){ /* odaklanamadı — kasıtlı */ } }, 0);
     }
   }
-  if(ortuDegisti) ortuKatmanlariTazele();
+  if(ortuDegisti){ ortuKatmanlariTazele(); geriPencereSenkron(); }
 }).observe(document.body, { subtree:true, attributes:true, attributeFilter:['class'] });
+
+/* ---------- geri tusu (v120) ----------
+   OLCUM (sprint oncesi): depoda tek history cagrisi vardi - urlTemizle'nin
+   replaceState'i. Hic pushState YOKTU; iki sekme gecisinden sonra history.length
+   2 -> 2 olculdu. Yani geri tusunun tuketebilecegi uygulama-ici adim yoktu ve
+   nerede olunursa olunsun ilk basis PWA'yi kapatiyordu.
+
+   TASARIM: geri, Esc ile AYNI niyeti tasir (en ustteki katmani kapat) ama bir
+   katmani fazladir - sekme. Sira:
+     1) acik pencere (acilis sirasina gore en ustteki)
+     2) coklu secim kipi
+     3) sekme gecisi - KAAN KARARI: HER gecis gecmise yazilir. Bedeli olculup
+        soylendi (5 sekme gezen cikmak icin 5 kez basar); karsiliginda sekme
+        degistirmek gercekten geri alinabilir oluyor.
+     4) cikis - "tekrar bas" onayi (Android'de kapanmanin geri almasi yok)
+
+   YIGIN DOGRUDUR, history SAYACTIR: history.state.pnk yalniz bir DERINLIK
+   tasir; ne yapilacagini geriYigin soyler. popstate o derinlige kadar geri
+   sarar - bu yuzden UI'nin kendi kapattigi katman (kapat dugmesi / Esc / fon)
+   yigindan dusurulup nobetcisi tuketildiginde dongu bosa doner, ikinci kez
+   kapatilmaya calisilmaz. */
+const CIKIS_ONAY_MS = 2500;
+const geriYigin = [];
+let geriIsliyor = false;        // katman UYGULANIRKEN yeni katman itilmesin
+let geriPencereIz = [];
+let cikisOnayZaman = 0;
+
+let geriBeklenen = 0;           // tetikledigimiz, henuz gozlenmemis popstate sayisi
+let geriKuyruk = [];            // nobetci tuketimi bitene kadar bekleyen katmanlar
+let geriZamanlayici = null;
+let geriUrl = null;             // tuketimden ONCEKI URL (go() eskisini geri getirir)
+
+function geriDerinlik(){ return { pnk: geriYigin.length }; }
+function geriYaz(k){
+  geriYigin.push(k);
+  try{ history.pushState(geriDerinlik(), '', location.href); }catch(e){ geriYigin.pop(); }
+}
+function geriIt(k){
+  if(geriIsliyor) return;
+  /* OLCULMUS TUZAK: history.go() ASENKRON. Ayni tikta hem kapanan hem acilan
+     pencere varsa (Detay -> Duzenle, toplu secim -> Sil onayi) pushState ONCE,
+     go()'nun popstate'i SONRA gelir ve YENI katmani geri sarardi - 16 mevcut
+     vaka bu yuzden kirmiziya dondu. Bekleyen tuketim varken katman kuyruga
+     alinir, tuketim gozlendikten sonra yazilir. */
+  if(geriBeklenen > 0){ geriKuyruk.push(k); return; }
+  geriYaz(k);
+}
+function geriKuyrukAkit(){
+  const bekleyen = geriKuyruk; geriKuyruk = [];
+  bekleyen.forEach(geriYaz);
+}
+/* n nobetciyi TEK cagriyla tuket: ayri ayri history.back() cagrilari tarayicida
+   birlesebiliyor, go(-n) birlesmez. */
+function geriNobetciTuket(n){
+  if(geriIsliyor || n <= 0) return;
+  geriYigin.splice(geriYigin.length - n, n);
+  geriBeklenen++;
+  /* history.go() hedef kaydin URL'INI de geri getirir. Paylas hedefi gibi
+     yollarda URL sonradan temizleniyor (urlTemizle yalniz GECERLI kaydi
+     duzeltir), yani eski nobetciler kirli URL tasiyor: tuketimden onceki
+     adres saklanip popstate'te geri yaziliyor. */
+  geriUrl = location.href;
+  try{ history.go(-n); }catch(e){ geriBeklenen--; return; }
+  /* Sigorta: go() hic popstate uretmezse (gecmisin basindaysak) sayac takili
+     kalir ve geri tusu SESSIZCE olurdu. */
+  clearTimeout(geriZamanlayici);
+  geriZamanlayici = setTimeout(() => {
+    if(geriBeklenen > 0){
+      geriBeklenen = 0;
+      try{ history.replaceState(geriDerinlik(), '', geriUrl || location.href); }catch(er){ /* kisitli ortam */ }
+      geriUrl = null;
+      geriKuyrukAkit();
+    }
+  }, 400);
+}
+/* Bir katmani UI kendi kapatti. Yalniz yiginin TEPESINDEyse nobetci tuketilir;
+   tepede degilse sessizce yigindan duser, sayaci popstate hizalar. */
+function geriDusurTip(t){
+  if(geriIsliyor) return;
+  const ust = geriYigin.length - 1;
+  if(ust >= 0 && geriYigin[ust].t === t){ geriNobetciTuket(1); return; }
+  const j = geriYigin.map(k => k.t).lastIndexOf(t);
+  if(j >= 0) geriYigin.splice(j, 1);
+}
+function geriKatmanUygula(k){
+  if(!k) return;
+  if(k.t === 'pencere'){
+    const o = document.getElementById(k.id);
+    /* Esc ile ayni yol: pencerenin KENDI kapat dugmesine tiklanir ki eklenti
+       kendi temizligini (kamera akisi, URL) yapabilsin. */
+    if(o && o.classList.contains('acik')) ortuKapatEt(o);
+    return;
+  }
+  if(k.t === 'secim'){
+    const cik = document.querySelector('[data-act="toplu-cik"]');
+    if(cik) cik.click();
+    return;
+  }
+  if(k.t === 'sekme') sekmeGec(k.v, false);
+}
+function geriSar(hedef){
+  geriIsliyor = true;
+  let kalkan = 60;
+  while(geriYigin.length > hedef && kalkan-- > 0) geriKatmanUygula(geriYigin.pop());
+  geriPencereIz = acikOrtuler().map(o => o.id || '');
+  geriIsliyor = false;
+  /* UI kapanisi yigini nobetcilerden cok azaltmissa sayaci hizala; yoksa bir
+     sonraki basis "hicbir sey yapmiyor" gorunurdu. */
+  if(geriYigin.length !== hedef){ try{ history.replaceState(geriDerinlik(), ''); }catch(e){ /* kisitli ortam */ } }
+}
+function cikisNobeti(){
+  const simdi = Date.now();
+  if(simdi - cikisOnayZaman < CIKIS_ONAY_MS){ cikisOnayZaman = 0; try{ history.back(); }catch(e){ /* kisitli ortam */ } return; }
+  cikisOnayZaman = simdi;
+  let pwa = false;
+  try{ pwa = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }catch(e){ /* kisitli ortam */ }
+  /* PWA'da gecmis bitince uygulama KAPANIR, tarayici sekmesinde onceki siteye
+     gidilir - ayni mekanizma, farkli varis; metin ortama gore yazilir. */
+  toast(pwa ? 'Cikmak icin tekrar bas' : 'Ayrilmak icin tekrar bas');
+  geriYigin.length = 0;
+  geriPencereIz = acikOrtuler().map(o => o.id || '');
+  try{ history.pushState(geriDerinlik(), '', location.href); }catch(e){ /* kisitli ortam */ }
+}
+window.addEventListener('popstate', e => {
+  /* Once BIZIM tetikledigimiz geriler tuketilir (UI kendi kapatti) - bunlar
+     katman kapatmaz, yalnizca nobetciyi harcar. */
+  if(geriBeklenen > 0){
+    geriBeklenen--;
+    if(geriBeklenen === 0){
+      clearTimeout(geriZamanlayici);
+      try{ history.replaceState(geriDerinlik(), '', geriUrl || location.href); }catch(er){ /* kisitli ortam */ }
+      geriUrl = null;
+      geriKuyrukAkit();
+    }
+    return;
+  }
+  const st = e.state;
+  if(st && typeof st.pnk === 'number'){ geriSar(st.pnk); return; }
+  cikisNobeti();     // taban nobetcisine inildi
+});
+/* Pencere acilis/kapanisini TEK yerden yakalar: 24 pencerenin hepsi .ortu +
+   .acik kullandigi icin eklentilerin hicbirine dokunmadan kapsaniyor. */
+function geriPencereSenkron(){
+  const simdi = acikOrtuler().map(o => o.id || '');
+  if(geriIsliyor){ geriPencereIz = simdi; return; }
+  let kapanan = 0;
+  for(let i = geriYigin.length - 1; i >= 0; i--){
+    const k = geriYigin[i];
+    if(k.t !== 'pencere' || simdi.indexOf(k.id) >= 0) break;   // yalniz TEPEDEKI pencereler
+    kapanan++;
+  }
+  if(kapanan) geriNobetciTuket(kapanan);
+  simdi.forEach(id => { if(geriPencereIz.indexOf(id) < 0) geriIt({ t:'pencere', id }); });
+  geriPencereIz = simdi;
+}
+/* Eklenti arayuzu: cekirdek disi katmanlar (gorunum.js coklu secim) buradan
+   baglanir - pencereler zaten .ortu uzerinden otomatik. */
+window.__geri = {
+  it: geriIt,
+  dusur: geriDusurTip,
+  varMi: t => geriYigin.some(k => k.t === t),
+  derinlik: () => geriYigin.length
+};
+/* Acilista TEK taban nobetcisi: uygulamanin yasadigi kayit onun USTUNDE durur,
+   boylece "geri ile tabana inildi" yakalanabilir ve kaza cikisi onaya baglanir. */
+function geriKur(){
+  try{
+    history.replaceState({ pnkTaban: 1 }, '', location.href);
+    history.pushState(geriDerinlik(), '', location.href);
+  }catch(e){ /* ozellik kisitli ortam - geri eski davranisina duser, kasitli */ }
+  geriPencereIz = [];
+  geriPencereSenkron();   // paylas hedefi acilista pencere actiysa o da katman olur
+}
 
 /* ---------- olaylar ---------- */
 document.addEventListener('click', e => {
@@ -5997,14 +6189,14 @@ document.addEventListener('click', e => {
   const act = el.dataset.act, v = el.dataset.v;
 
   switch(act){
-    case 'sekme': sekmeGec(v); break;
+    case 'sekme': sekmeGec(v, true); break;
     case 'ayar-ac': ayarAc(); ozDepoBilgiTazele(); tsDurumTazele(); sdGeriKartTazele(); break;
     case 'ayar-kapat': ayarKapat(); break;
     /* Ana sayfa köprüleri — hepsi mevcut yollara bağlanır, yeni mantık yok.
        (ana-okunuyor v47'de emekli: "Tümü" düğmesi kalktı, devam bölümü
        Kütüphane'yle ortak bileşen oldu.) */
-    case 'ana-tekrar': sekmeGec('alinti'); break;
-    case 'ana-ist': sekmeGec('ist'); break;
+    case 'ana-tekrar': sekmeGec('alinti', true); break;
+    case 'ana-ist': sekmeGec('ist', true); break;
     case 'ana-barkod':
       /* Barkod tarayıcı formu DOLDURUR, açmaz (barkod.js:formuDoldur). Ana
          sayfadan doğrudan açılsaydı okunan kitap görünmeyen bir forma yazılır,
@@ -6023,13 +6215,13 @@ document.addEventListener('click', e => {
       durum.filtre = 'puansiz';
       document.querySelectorAll('#durumChips .chip').forEach(c =>
         c.classList.toggle('active', c.dataset.v === 'puansiz'));
-      sekmeGec('raf'); listeCiz(); break;
+      sekmeGec('raf', true); listeCiz(); break;
     case 'ozetsiz-git':
       // istatistikteki "özetsiz bitmişler" köprüsü: puansiz-git deseninin eşi
       durum.filtre = 'ozetsiz';
       document.querySelectorAll('#durumChips .chip').forEach(c =>
         c.classList.toggle('active', c.dataset.v === 'ozetsiz'));
-      sekmeGec('raf'); listeCiz(); break;
+      sekmeGec('raf', true); listeCiz(); break;
     case 'zar': {
       const adaylar = veri.kitaplar.filter(k => k.durum === 'okunacak');
       if(!adaylar.length){ toast('Okunacak listen boş — önce kitap ekle'); break; }
@@ -6144,7 +6336,7 @@ document.addEventListener('click', e => {
       }
       break; }
     /* kt- (v42): Kütüphane üst bloklarının eylemleri */
-    case 'kt-ist': sekmeGec('ist'); break;
+    case 'kt-ist': sekmeGec('ist', true); break;
     case 'kt-git': detayAc(el.dataset.id); break;
     case 'kt-sayfa-ac': {
       const id = el.dataset.id;
@@ -6188,7 +6380,7 @@ document.addEventListener('click', e => {
       durum.detayId = null;
       durum.arama = v;
       document.getElementById('arama').value = v;
-      if(durum.sekme !== 'raf') sekmeGec('raf');
+      if(durum.sekme !== 'raf') sekmeGec('raf', true);
       listeCiz();
       toast('Rafta "' + v + '" serisi gösteriliyor');
       break; }
@@ -6649,6 +6841,9 @@ function seriRafAc(ad){
     if(document.getElementById('panel-' + s)){ sekmeGec(s); urlTemizle(); }
   }catch(e){ /* bozuk derin bağlantı — sessiz geçiş kasıtlı */ }
 })();
+/* Geri tusu EN SON kurulur: derin baglanti yolu urlTemizle ile replaceState
+   cagiriyor, taban nobetcisi onun ustune oturmali. */
+geriKur();
 </script>
 <!-- tekrar.js senkron.js'ten ÖNCE yüklenir. Asıl koruma kitapParmak'ın tekrar*
      alanlarını dışlaması (senkron.js v6): otomatik zamanlama hiçbir yolda damga

@@ -379,15 +379,24 @@
   }
 
   function secimAc(id){
+    const yeni = !secimModu;
     secimModu = true;
     secilenler = new Set(id ? [id] : []);
     cubukCiz(); secimGorselTazele();
+    /* v120: coklu secim geri tusunun bir KATMANI (Esc'in ikinci basamagiyla
+       ayni sira). Pencereler .ortu uzerinden otomatik kapsaniyor, bu kip
+       degil - cekirdegin __geri arayuzune elle baglanir. */
+    if(yeni && window.__geri && !window.__geri.varMi('secim')) window.__geri.it({ t:'secim' });
   }
   function secimKapat(){
+    const vardi = secimModu;
     secimModu = false; secilenler.clear();
     const c = document.getElementById('topluCubuk');
     if(c) c.remove();
     secimGorselTazele();
+    /* Geri tusu bu kipi kendisi kapattiginda cekirdek zaten yigindan dusurmus
+       olur (__geri.dusur geriIsliyor sirasinda bos doner) - cift dusme yok. */
+    if(vardi && window.__geri) window.__geri.dusur('secim');
   }
   function secimGorselTazele(){
     document.querySelectorAll('#liste .kart').forEach(kart => {
