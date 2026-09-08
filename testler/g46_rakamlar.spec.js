@@ -210,7 +210,13 @@ test.describe('G46 Rakamlar ekranı — Ciltli', () => {
       ['tür/yazar puan analizi', /Neyden keyif alıyorsun/],
       ['puan dağılımı', /Puan dağılımı/],
       ['en çok bitirdiğin yazarlar', /En çok bitirdiğin yazarlar/],
-      ['türlere göre', /Türlere göre \(tüm raf\)/],
+      /* v119: "(tüm raf)" KALDIRILDI — iddia yanlıştı. Çubuk iki kez daralıyordu
+         (türü boş kitaplar + yalnız ilk 8 tür), ölçümde raf 299 iken çizilen 219'du.
+         Başlığın yerine tabanı AÇIKÇA yazan not geldi; envanter onu da kilitler. */
+      ['türlere göre', /Türlere göre/],
+      /* \s+ ZORUNLU: not çok satırlı şablon dizesinden geliyor, textContent
+         satır sonunu ve girintiyi aynen taşıyor (tek boşluk beklemek düşer). */
+      ['tür taban notu', /Çubuklar \d+ kitabı gösteriyor\s+\(raftaki \d+ kitaptan\)/],
       ['en yüksek puanlılar', /En yüksek puanlılar/],
       ['yıllara göre', /Yıllara göre kitap/],
       ['aylık sayfa', /Aylık sayfa \(son 12 ay\)/],
