@@ -1791,6 +1791,18 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
         <div class="ay-eylem">
           <button class="btn btn-cerceve" data-act="zg-tara">Taramayı başlat</button>
         </div>
+        <!-- YAZAR VARYANT DENETİMİ (yv-, v118) — YENİ .ay-bolum AÇILMADI:
+             g48 sekiz bölüm id'sini ve kicker sayısını kilitliyor (v82 taslak
+             bloğunun emsali). Onaysız hiçbir kayıt değişmez. -->
+        <h3 class="ay-baslik">Yazar adı varyantları</h3>
+        <p class="ay-not">Aynı kişinin iki farklı yazımla kayıtlı olması (<b>Jean-Paul Sartre</b> /
+      <b>Jean Paul Sartre</b>) mükerrer korumasının kaçırmasına yol açar — iki kayıt ayrı yazar
+      sayılır. Denetim noktalama farkını ve yakın yazımları (harf çevirisi dâhil) bulur.
+      <b>Otomatik birleştirme yoktur</b>: hangi adın doğru olduğuna sen karar verirsin,
+      onaylamadan hiçbir kayıt değişmez.</p>
+        <div class="ay-eylem">
+          <button class="btn btn-cerceve" data-act="yv-denetle">Yazar adlarını denetle</button>
+        </div>
         <!-- TASLAK / KİTAP AÇIKLAMASI (ts-, v82; v84'te model→kaynak) — YENİ
              .ay-bolum AÇILMADI: g48 sekiz bölüm id'sini ve kicker sayısını
              kilitliyor. Onaysız hiçbir metin kütüphaneye yazılmaz. -->
@@ -2626,20 +2638,31 @@ function ozetDepoBaslat(){
 }
 /* M4 bütçe: Ayarlar ▸ Depolama kartı + %80 eşik uyarısı (dolmadan ÖNCE —
    v17 şeridi ancak iş işten geçince görünürdü). */
+/* v118 BAYAT YANIT KALKANI: estimate() askıdayken satır yeniden tazelenirse
+   ESKİ yanıt geç dönüp YENİ metni eziyordu (son-yazan kazanıyor). Yük altında
+   ölçüldü: ret yolunun yazdığı "hesaplanamadı", önceki gerçek yanıt geç
+   dönünce siliniyordu. Sıra numarası: yalnız EN SON çağrının yanıtı yazar
+   (kapak.js'teki "await SONRASI taze kitapBul" dersinin dengi). */
+let ozDepoSira = 0;
 function ozDepoBilgiTazele(){
   const kutu = document.getElementById('ozDepoBilgi');
   if(!kutu) return;
   const { n, bayt } = window.__ozet.sayim();
   let metin = n + ' özet · ' + (bayt / (1024 * 1024)).toFixed(2) + ' MB';
+  const sira = ++ozDepoSira;
   if(navigator.storage && navigator.storage.estimate){
     navigator.storage.estimate().then(t => {
+      if(sira !== ozDepoSira) return;   // bayat yanıt — daha yenisi koştu
       if(t && t.quota){
         const oran = Math.round((t.usage || 0) / t.quota * 100);
         metin += ' · cihaz deposu: %' + oran + ' dolu';
         if(oran >= 80) metin += ' — YER AZALIYOR, yedek almayı düşün';
       }
       kutu.textContent = metin;
-    }).catch(() => { kutu.textContent = metin + ' · cihaz deposu: hesaplanamadı'; });
+    }).catch(() => {
+      if(sira !== ozDepoSira) return;
+      kutu.textContent = metin + ' · cihaz deposu: hesaplanamadı';
+    });
   }else kutu.textContent = metin;
 }
 function ozKotaDenetle(){

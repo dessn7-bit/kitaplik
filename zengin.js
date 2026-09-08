@@ -288,6 +288,45 @@
       return (B && typeof B.workerIsbn === 'function') ? await B.workerIsbn(isbn) : null;
     }catch(e){ return null; }
   }
+  /* v118 KAPAK WORKER YEDEGI — Google Books'un Turkce katalogunda kapak gorseli
+     cogu baskida YOK. Olcum (8 Eylul yedegi, kapaksiz 46 kayit): Google 2 kapak
+     buldu; worker /ara (Goodreads + 1000Kitap) 45 buldu.
+     AMA yalniz-baslik eslesmede o 45'in 5'i YANLIS KITAPTI:
+       "Atis" (Puskin)                -> "Atistirmaliklar Kitabi" (Ebru Omurcali)
+       "the room" (Sartre)            -> "The Room on Rue Amelie" (Kristin Harmel)
+       "The Coffin Maker" (Puskin)    -> "The Coffin Maker's Garden" (S. MacBride)
+       "Yasamin Kiyisinda" (Zimmer)   -> (Frances Ashcroft)
+       "DNA-Genetik Devrimin Oykusu"  -> (Kevin Davies)
+     Besinin de ortak noktasi: YAZAR tutmuyordu. Bu yuzden IKI kapi birden
+     zorunlu: baslikUyar (mevcut baslik kapisi) + yazarUyar. Yazari BOS olan
+     kayitta kapi kurulamaz -> hic denenmez (sessizce yanlis kapak yazmaktansa
+     alan bos kalir; v102 "uydurma yok" cizgisinin aynisi).
+     Her ariza '' doner: Google yolunun "art arda hata" sayacini KIRLETMEZ. */
+  function yazarUyar(a, b){
+    const A = kunyeKatla(a), B = kunyeKatla(b);
+    if(!A || !B) return false;
+    if(A === B) return true;
+    /* Kayitta cok yazar olabilir ("John Gribbin, Mary Gribbin"), kaynakta tek
+       ("John Gribbin"). Kisa adin TUM anlamli parcalari uzun adda geciyorsa ayni
+       eser sayilir. Yukaridaki 5 yanlisin hicbiri bu kapiyi gecmez (ortak parca yok). */
+    const pa = A.split(' ').filter(x => x.length > 2);
+    const pb = B.split(' ').filter(x => x.length > 2);
+    if(!pa.length || !pb.length) return false;
+    const kisa = pa.length <= pb.length ? pa : pb;
+    const uzun = pa.length <= pb.length ? pb : pa;
+    return kisa.every(t => uzun.indexOf(t) >= 0);
+  }
+  async function workerKapakSessiz(k){
+    try{
+      const A = window.__ara;
+      if(!A || typeof A.worker !== 'function') return '';
+      if(!k || !k.ad || !String(k.yazar || '').trim()) return '';
+      const s = await A.worker(k.ad);
+      const a = (s || []).find(x => x && x.kapak &&
+        baslikUyar(k.ad, x.ad) && yazarUyar(k.yazar, x.yazar));
+      return a ? kapakTemizle(a.kapak) : '';
+    }catch(e){ return ''; }
+  }
   /* ---------- Google Books sorgusu (categories DAHİL — mevcut aramaGoogle
      categories okumadığı için burada kendi ayrıştırıcımız var) ---------- */
   async function gbSor(q, sinyal){
@@ -731,9 +770,14 @@
     /* KAPAK (künye DEĞİL — Kaan istisnası): `isbn:` sonucu öncelikli, yoksa
        başlık-eşleşen aday. İkisi de yoksa alan BOŞ kalır, uydurma kapak yok. */
     if(kapakIster){
-      const kpk = kapakAdayBul(isbnAdaylar)
+      let kpk = kapakAdayBul(isbnAdaylar)
         || (aday && aday.imageLinks && aday.imageLinks.thumbnail ? kapakTemizle(aday.imageLinks.thumbnail) : '')
         || (kunye && !kunyeIsbnli ? '' : (kunye && kunye.kapak) || '');
+      /* v118: Google gorsel vermediyse worker yedegi (yazar kapili) */
+      if(!kpk){
+        const wkpk = await workerKapakSessiz(k);
+        if(wkpk){ kpk = wkpk; red.push('kapak 1000Kitap/Goodreads kaynağından alındı'); }
+      }
       if(kpk){ bulunan.kapak = kpk; if(kapakOlu) bulunan.__kapakOlu = true; }
     }
     const gercek = ALANLAR.some(a => bulunan[a] !== undefined);
@@ -2900,6 +2944,22 @@
             taramaBaslat();
           }
           break; }
+        case 'yv-denetle':
+          ortuKur('yvDenetim', 'Yazar adı varyantları');
+          yvCiz();
+          ac('yvDenetim');
+          break;
+        case 'yv-birlestir': {
+          const gi = parseInt(el.getAttribute('data-yv'), 10);
+          const hi = parseInt(el.getAttribute('data-yv-hedef'), 10);
+          const gr = yvSon[gi];
+          if(!gr) break;
+          const hedef = gr.adlar[hi];
+          const n = yvBirlestir(hedef, gr.adlar);
+          bildir(n ? (n + ' kitabın yazar adı "' + hedef + '" olarak birleştirildi')
+                   : 'Değişiklik yok');
+          yvCiz();
+          break; }
         case 'zg-durdur':
           if(calisiyor){ durdur = true; }
           else kapat('zgTarama');
@@ -2981,6 +3041,118 @@
 
   /* test kancaları + otoTur (v65: ekleme akışlarının kayıt-anı tür motoru)
      + v66: açılış taraması / geri alma yüzeyi */
+  /* ══════ v118 YAZAR ADI VARYANT DENETIMI (yv- ad alani) ══════
+     NEDEN: ayni kisinin iki yazimi v116 mukerrer korumasini (katla(ad)+yazar)
+     KACIRTIR — iki kayit ayri yazar sayilir, kopya uyarisi cikmaz.
+     OLCUM (8 Eylul yedegi, 135 farkli yazar dizgisi): 2 gercek varyant,
+     0 yanlis pozitif:
+       "Jean-Paul Sartre" (11) ~ "Jean Paul Sartre" (1)   <- noktalama
+       "Alexander Pushkin" (15) ~ "Alexandr Puskin" (1)   <- transliterasyon
+     IKI olcut: (1) noktalama/bosluk katlamasi, (2) Levenshtein <= 2.
+     OTOMATIK BIRLESTIRME YOK (karar): kutuphane buyudukce Levenshtein yanlis
+     pozitif uretir ("Alexander Pushkin" ~ "Alexandra Ripley" gibi) — yanlis
+     birlestirme iki yazari geri donusu zor bicimde kaynastirir. Denetim yalniz
+     ONAY KARTI sunar; birlestirmeyi kullanici tek tek onaylar.
+     Azinlik cogunluga katilir (kitap sayisi); esitlikte kart iki yonu de sunar. */
+  const YV_LEV_ESIK = 2;
+  function yvKat(s){
+    return katla(String(s || '')).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+  function yvLev(a, b){
+    const m = a.length, n = b.length;
+    if(Math.abs(m - n) > YV_LEV_ESIK) return YV_LEV_ESIK + 1;
+    const d = [];
+    for(let i = 0; i <= m; i++){ d[i] = [i]; }
+    for(let j = 0; j <= n; j++){ d[0][j] = j; }
+    for(let i = 1; i <= m; i++)
+      for(let j = 1; j <= n; j++)
+        d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1,
+                           d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    return d[m][n];
+  }
+  /* Gruplar: once anahtar esitligi (olcut 1), sonra Levenshtein (olcut 2);
+     ikisi de ayni birlesim-bul yapisina yazar -> zincirleme gruplar dogru birlesir. */
+  function yvGruplar(){
+    const say = {};
+    (veri.kitaplar || []).forEach(k => {
+      const y = String((k && k.yazar) || '').trim();
+      if(y) say[y] = (say[y] || 0) + 1;
+    });
+    const adlar = Object.keys(say);
+    const kok = {};
+    adlar.forEach(a => { kok[a] = a; });
+    function bul(x){ while(kok[x] !== x) x = kok[x]; return x; }
+    function birles(x, y){ const rx = bul(x), ry = bul(y); if(rx !== ry) kok[rx] = ry; }
+    const anah = adlar.map(yvKat);
+    for(let i = 0; i < adlar.length; i++){
+      if(!anah[i]) continue;
+      for(let j = i + 1; j < adlar.length; j++){
+        if(!anah[j]) continue;
+        if(anah[i] === anah[j] || yvLev(anah[i], anah[j]) <= YV_LEV_ESIK) birles(adlar[i], adlar[j]);
+      }
+    }
+    const harita = {};
+    adlar.forEach(a => { const r = bul(a); (harita[r] = harita[r] || []).push(a); });
+    return Object.values(harita).filter(g => g.length > 1).map(g => {
+      const sirali = g.slice().sort((x, y) => say[y] - say[x] || x.localeCompare(y, 'tr'));
+      return {
+        adlar: sirali,
+        say: sirali.map(a => say[a]),
+        hedef: sirali[0],
+        esitlik: say[sirali[0]] === say[sirali[1]]
+      };
+    });
+  }
+  /* Birlestirme: SECILEN hedef disindaki adlar hedefe donusur. Her degisen
+     kitap k.g damgasi alir (senkron tasisin — otoGeriAl emsali). */
+  function yvBirlestir(hedef, kaynaklar){
+    if(!hedef || !Array.isArray(kaynaklar) || !kaynaklar.length) return 0;
+    const kume = kaynaklar.filter(a => a !== hedef);
+    if(!kume.length) return 0;
+    let n = 0;
+    (veri.kitaplar || []).forEach(k => {
+      if(!k || !k.yazar) return;
+      if(kume.indexOf(String(k.yazar).trim()) < 0) return;
+      k.yazar = hedef; k.g = Date.now(); n++;
+    });
+    if(n){
+      if(typeof depoKaydet === 'function') depoKaydet();
+      if(typeof hepsiniCiz === 'function') hepsiniCiz();
+    }
+    return n;
+  }
+  let yvSon = [];
+  function yvCiz(){
+    const g = document.getElementById('yvDenetimGovde');
+    if(!g) return;
+    yvSon = yvGruplar();
+    if(!yvSon.length){
+      g.innerHTML = '<div class="zg-satir">Yazar adlarında varyant bulunamadı — ' +
+        'kütüphanendeki her yazar tek yazımla kayıtlı.</div>';
+      return;
+    }
+    g.innerHTML = '<div class="zg-satir">' + yvSon.length +
+      ' olası varyant bulundu. Aynı kişi olduklarından eminsen birleştir; ' +
+      '<b>hiçbir şey onayın olmadan değişmez</b>.</div>' +
+      yvSon.map((gr, i) =>
+        '<div class="zg-satir">' +
+          gr.adlar.map((a, j) => '<div>' + (a === gr.hedef ? '<b>' : '') + esc(a) +
+            (a === gr.hedef ? '</b>' : '') + ' <span class="ay-not">' + gr.say[j] +
+            ' kitap</span></div>').join('') +
+          '<div class="ay-not">' + (gr.esitlik
+            ? 'Kitap sayıları eşit — hangisinin doğru yazım olduğunu sen seç.'
+            : ('Birleştirilirse ' + esc(gr.adlar.slice(1).join(', ')) + ' → ' +
+               esc(gr.hedef) + ' olur.')) + '</div>' +
+          '<div class="ay-eylem">' +
+            gr.adlar.map((a, j) =>
+              '<button class="btn btn-cerceve" data-act="yv-birlestir" data-yv="' + i +
+              '" data-yv-hedef="' + j + '">' + esc(a) + ' olarak birleştir</button>').join('') +
+          '</div>' +
+        '</div>').join('');
+  }
+
+  window.__yv = { gruplar: yvGruplar, birlestir: yvBirlestir, kat: yvKat, lev: yvLev, ESIK: YV_LEV_ESIK };
   window.__zengin = { eksikSayim, alanBos, turCevir, turCevirHam, kategoriTopla, kurguIsaret, baslikUyarlama, baslikUyar, kitapSorgula, uygula,
     kuyrukYukle, kuyrukKaydet, kuyrukTemizle, puanlanacaklar, tarihsizler, durumTazele,
     otoTur, otoAdaylar, atananGecerli, taksonomiKur: t => { taksonomi = t; },
@@ -2990,6 +3162,7 @@
        barkod.js, arama→kayıt, form kaydı) bunu çağırır — mevcut bir kayıt da
        elle kaydedildiğinde aynı yoldan geçip temizlenir. */
     metinTemizle, metinCoz, varlikCoz, mojibakeOnar, bozukMetin,
+    yazarUyar, workerKapakSessiz,   // v118 kapak yedegi kapilari (test kancasi)
     ciltGB, ciltWorker, ciltUyumsuzlugu, yayineviGecersiz, isbnGecersiz,
     isbnUlke, isbnGrup, yayineviTurkMu, beklenenDil, kunyeKatla, metinCelisir,
     ARALIK_MS, ALANLAR, KUNYE, KUYRUK_ANAHTAR, OTO_DENEME_ANAHTAR, OTO_ATANAN_ANAHTAR };
