@@ -1,6 +1,6 @@
 'use strict';
 const { test, expect, tohumla, sahteKitap,
-  onaylariKabulEt, rafAc, rafYenile, ayarlarAc, ayrintilarAc } = require('./yardim');
+  onaylariKabulEt, rafAc, rafYenile, ayarlarAc, ayrintilarAc, silOnayla } = require('./yardim');
 
 /* G23 — kendi kapak fotoğrafı (kapak.js, kp- ad alanı)
    Fotoğraflar IndexedDB'de (kk_kapak_v1), localStorage ve senkron gövdesine girmez;
@@ -147,6 +147,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     await page.click('#liste .kart');
     await page.click('#dDigerKatla summary');  // Sil nadir bölümde katlı
     await page.click('#detayIcerik [data-act="kitap-sil"]');
+    await silOnayla(page);   // v117: silme onay penceresinden gecer
     await expect(page.locator('#toast')).toContainText('Kitap silindi');
     await expect.poll(() => idbAnahtarlari(page)).toEqual([]);
   });
@@ -163,6 +164,7 @@ test.describe('G23 kendi kapak fotoğrafı', () => {
     await page.click('#secimBtn');
     await page.click('[data-act="toplu-tumu"]');
     await page.click('[data-act="toplu-sil"]');
+    await silOnayla(page);   // v117: silme onay penceresinden gecer
     await expect(page.locator('#toast')).toContainText('2 kitap silindi');
     await expect.poll(() => idbAnahtarlari(page)).toEqual([]);
   });

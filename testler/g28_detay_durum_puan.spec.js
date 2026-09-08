@@ -6,7 +6,7 @@
    form açmadan yazar; "en çok" iddiaları n>=2 eşiğine, ortalamalar görünür
    paydaya bağlı. */
 const { test, expect, tohumla, sahteKitap,
-  onaylariKabulEt, bugunISO, rafAc } = require('./yardim');
+  onaylariKabulEt, bugunISO, rafAc, silOnayla } = require('./yardim');
 
 const YIL = new Date().getFullYear();
 
@@ -45,6 +45,7 @@ test.describe('G28 M1 — detay hiyerarşisi', () => {
     await page.click('#dDigerKatla summary');
     await expect(page.locator('#detayIcerik [data-act="kitap-sil"]')).toBeVisible();
     await page.click('#detayIcerik [data-act="kitap-sil"]');
+    await silOnayla(page);   // v117: silme onay penceresinden gecer
     await expect(page.locator('#toast')).toContainText('Kitap silindi');
     expect(await page.evaluate(() => veri.kitaplar.length)).toBe(0);
   });

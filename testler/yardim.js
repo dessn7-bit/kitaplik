@@ -299,6 +299,13 @@ function jsonDosya(govde, ad) {
   return { name: ad || 'veri.json', mimeType: 'application/json', buffer };
 }
 
+/* v117: silme artik onay penceresinden geciyor (sd-). Cagri yerleri tek satirla
+   onaylasin diye yardimci; pencerenin GORUNDUGUNU de dogrular — kapinin
+   kalkmasi (mutasyon) burada degil, kendi vakasinda kirmizi verir. */
+async function silOnayla(page) {
+  await expect(page.locator('#ortuSil')).toBeVisible();
+  await page.click('#ortuSil [data-act="sd-onay"]');
+}
 module.exports = { test, expect, tohumla, sahteKitap, agTaklit, kameraTaklit, kameraYok,
   onaylariKabulEt, bugunISO, rafAc, rafaGec, rafYenile, ayarlarAc, gruplariAc, tehlikeAc,
-  ayrintilarAc, dosyadanYukle, jsonDosya };
+  ayrintilarAc, dosyadanYukle, jsonDosya, silOnayla };

@@ -1,6 +1,6 @@
 'use strict';
 const { test, expect, tohumla, sahteKitap,
-  onaylariKabulEt, bugunISO, rafAc, ayrintilarAc } = require('./yardim');
+  onaylariKabulEt, bugunISO, rafAc, ayrintilarAc, silOnayla } = require('./yardim');
 
 test.describe('G1 çekirdek', () => {
 
@@ -70,6 +70,7 @@ test.describe('G1 çekirdek', () => {
     await page.click('#liste .kart');
     await page.click('#dDigerKatla summary');  // Sil nadir bölümde katlı
     await page.click('[data-act="kitap-sil"]');
+    await silOnayla(page);   // v117: silme onay penceresinden gecer
     await expect(page.locator('#toast')).toContainText('Kitap silindi');
     await expect(page.locator('#liste')).toContainText('Raf henüz boş.');
     const depo = await page.evaluate(() => JSON.parse(localStorage.getItem('kk_kitaplik_v1')));

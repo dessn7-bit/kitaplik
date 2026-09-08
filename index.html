@@ -835,6 +835,31 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   color:var(--paper);display:block}
 .ik-kunye{font-size:.78rem;color:var(--muted);margin-top:3px}
 .ik-not{font-size:.82rem;color:var(--muted);line-height:1.55;margin:0 0 4px}
+/* KAYIT SİLME ONAYI (sd-, v117) — ky- (kütüphane dosyası) kalıbının tekil eşi:
+   sayıları KOYU, uyarıyı pirinç hatlı şeritte. Kaybın büyüklüğü okunabilir
+   olmalı ki onay bilinçli olsun. */
+.sd-ad{font-family:var(--serif);font-size:calc(1.15rem * var(--tipo-bas,1));
+  font-weight:var(--tipo-basfw,600);letter-spacing:var(--tipo-basls,normal);line-height:1.25;
+  color:var(--paper);display:block}
+.sd-kunye{font-size:.78rem;color:var(--muted);margin-top:3px}
+.sd-kart{border-left:1px solid var(--drop);padding:2px 0 2px 14px;margin:4px 0 10px}
+.sd-liste{list-style:none;padding:0;margin:10px 0 0;font-size:.85rem;line-height:1.7}
+.sd-liste li{display:flex;gap:10px;align-items:baseline;color:var(--muted);
+  padding:5px 0;border-bottom:1px solid var(--cizgi)}
+.sd-liste li:last-child{border-bottom:0}
+.sd-say{color:var(--paper);font-weight:600;font-variant-numeric:tabular-nums;
+  min-width:2.4em;text-align:right;flex:0 0 auto}
+.sd-bos{font-size:.85rem;color:var(--muted);line-height:1.55;margin:10px 0 0}
+.sd-uyari{font-size:.8rem;line-height:1.55;margin-top:12px;padding:10px 12px;
+  border:1px solid var(--kontur);border-left:3px solid var(--drop);border-radius:var(--r-md);color:var(--paper)}
+.sd-geri-blok{padding:16px 0 0;border-top:1px solid var(--cizgi)}
+.sd-geri-blok[hidden]{display:none}
+.sd-geri{margin-top:12px;padding:10px 12px;border:1px solid var(--kontur);
+  border-radius:var(--r-md);font-size:.8rem;color:var(--muted);line-height:1.55}
+.sd-geri b{color:var(--paper)}
+.sd-geri .btn{margin-top:8px}
+.sd-geri[hidden]{display:none}
+
 #alintiArama{margin-bottom:4px}
 
 /* ---------- Ayarlar penceresi (ay-, v56 Ciltli) — dönüşümün SON parçası ----------
@@ -1807,6 +1832,18 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
            boyut) hemen üstünde. Tehlikeli bölge GERİ ALINAMAZ ve TÜM kütüphaneyi
            etkileyen tek eyleme ayrılmış — iki kalem koysaydım oraya girmek
            sıradanlaşır ve uyarı gücünü yitirirdi. -->
+      <!-- SON SİLME (sd-, v117): tek adım geri alma kartı, v100 kyGeriKart'ın eşi.
+           Tehlikeli bölgenin İÇİNE konmadı: geri alma kurtarma yoludur, bölümün
+           kendisi ise "geri alınamaz, tüm kütüphaneyi etkiler" uyarısına ayrılmış;
+           ayrıca geri alma AÇILMADAN görünmeli, katlanmış bölümün içinde bulunmazdı.
+           Geri alınacak bir şey yokken gizli durur.
+           `ay-bolum`/`kicker` sınıflarını BİLEREK taşımıyor: g48 ve g86 ayarlar
+           bölüm envanterini (9 bölüm, 9 kicker) kilitliyor ve bu blok bir ayar
+           bölümü değil, kendi kendine gelip giden bir kurtarma kartı — Hakkında
+           dipnotunun (hk-blok) envanter dışı kalmasıyla aynı gerekçe. -->
+      <div class="sd-geri-blok" id="sdGeriBolum" hidden>
+        <div class="sd-geri" id="sdGeriKart"></div>
+      </div>
       <details class="ay-bolum ay-tehlike ayg-tekil" id="ayBolumTehlike">
         <summary>
           <span class="kicker">Tehlikeli bölge</span>
@@ -2054,6 +2091,29 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
     </div>
     <div class="form-alt" style="margin-top:8px">
       <button class="btn btn-cerceve" data-act="ik-vazgec" style="flex:1">Vazgeç</button>
+    </div>
+  </div>
+</div>
+<!-- ===== KAYIT SİLME ONAYI (sd-, v117) =====
+     NEDEN çıplak confirm() DEĞİL: silinen kayıt notları, alıntıları, okuma
+     oturumlarını, okuma geçmişini, özeti ve ontolojiyi de götürüyor. Eski
+     confirm metni ("Notları ve seansları da silinir") ne KADAR olduğunu
+     söylemiyordu — kaybın büyüklüğünü bilmeden verilen onay bilinçli onay
+     değildir. Kalıp v100 kütüphane dosyası önizlemesinden alındı: ne gideceği
+     SAYIYLA yazılır, yalnız GERÇEKTEN var olan kalemler listelenir.
+     Aynı pencere tekil (detay) ve toplu (çoklu seçim) silmeye hizmet eder —
+     v116 dersi: iki yerde iki kopya kural, mutasyonun sağ kalmasına yol açar. -->
+<div class="ortu" id="ortuSil">
+  <div class="sheet">
+    <div class="tutamac"></div>
+    <button class="sheet-kapat" data-act="sd-kapat" aria-label="Kapat">✕</button>
+    <div class="sheet-baslik" id="sdBaslik">Kaydı sil</div>
+    <div class="sd-kart" id="sdKart"></div>
+    <div id="sdNe"></div>
+    <p class="sd-uyari" id="sdUyari"></p>
+    <div class="form-alt" style="margin-top:14px">
+      <button class="btn btn-cerceve" data-act="sd-vazgec" style="flex:1">Vazgeç</button>
+      <button class="btn btn-tehlike" data-act="sd-onay" style="flex:1" id="sdOnayBtn">Sil</button>
     </div>
   </div>
 </div>
@@ -2473,6 +2533,19 @@ window.__ozet = {
     ozBellekKoy(id, m, g, oSon);
     const k = (veri.kitaplar || []).find(x => x.id === id);
     if(k){ k.ozetVar = !!m; k.ozetUzunluk = String(m || '').length; k.ozetG = parseInt(g) || 0; }
+    return true;
+  },
+  /* v117: kitap silinince özet + ontoloji de gider. Bu metot ÖNCE yoktu —
+     silme yolları (detay + toplu) IDB kaydını yerinde bırakıyordu: yetim özet
+     kotayı yiyor, hepsiDisa üzerinden JSON yedeğine ve senkron özet düğümüne
+     girmeye devam ediyordu. okuHam ile geri alma defterine kopyalanabilir. */
+  okuHam(id){ const k = ozetBellek.get(String(id)); return k ? { m: k.m, g: k.g, o: k.o } : null; },
+  async sil(id){
+    try{ await ozIslem('readwrite', st => st.delete(String(id))); }
+    catch(e){ return false; }   // yazılamazsa kayıt yerinde kalır; kitap yine silinir
+    ozetBellek.delete(String(id));
+    ozetKatli.delete(String(id));
+    ozDepoBilgiTazele();
     return true;
   },
   hepsiDisa(){   // JSON yedeğe: { id: {m,g,o} } — özet SENKRONLANAN veridir, yedeğe girer
@@ -4106,7 +4179,7 @@ function detayAc(id){
     </div>
     ${seriHtml}
     ${gecmisHtml}
-    <details class="d-katla" id="dDigerKatla"><summary><span>Kapak, düzenle &amp; diğer</span></summary><div class="d-katla-ic">
+    <details class="d-katla" id="dDigerKatla"><summary><span>Kapak, düzenle &amp; sil</span></summary><div class="d-katla-ic">
       ${k.durum === 'okunuyor' ? `<div class="d-durum-sec" style="justify-content:flex-start;margin:0 0 6px">
         <button class="d-sessiz" data-act="yarim-birak">Yarım bıraktım</button>
         <button class="d-sessiz" data-act="okunacak-al">Okunacağa geri al</button>
@@ -4265,6 +4338,268 @@ function ikizSor(varOlan, isbn){
   const o = document.getElementById('ortuIkiz');
   if(o){ o.classList.add('acik'); ortuAriaKur(o); }
 }
+/* ================= KAYIT SİLME (sd-, v117) — TEK OTORİTE =================
+   Önce silme İKİ yerde ayrı yazılmıştı: detay ekranı (bu dosya) ve çoklu seçim
+   toplu çubuğu (gorunum.js). İkisi AYNI işi FARKLI yapıyordu — detay yolu
+   `veri.silinenler` mezar taşını HİÇ yazmıyordu ve yalnız damgala()'nın
+   otomatik ağına güveniyordu (senkron.js: kaybolan parmak izi → mezar). O ağ
+   göç turunda atlanır (`if(!goc)`), yani şema göçüyle aynı ana denk gelen silme
+   öbür cihazdan geri dirilirdi. Hiçbir yol da özeti/ontolojiyi silmiyordu:
+   yetim kayıt IDB'de, JSON yedeğinde ve özet senkron düğümünde yaşıyordu.
+   Kural buraya taşındı; gorunum.js sarmalayıcı olarak delege eder.
+   (v116 `__kopya` dersinin aynısı: iki yerde iki kopya kural = mutasyon sağ kalır.) */
+const SD_DB_AD = 'kk_silgeri_v1', SD_MAGAZA = 'geri', SD_ANAHTAR = 'son';
+let sdDbSoz = null;
+let sdBekleyen = [];      // onay penceresinde bekleyen id'ler
+function sdDbAc(){
+  if(sdDbSoz) return sdDbSoz;
+  sdDbSoz = new Promise((cozul, kir) => {
+    let istek;
+    try{ istek = indexedDB.open(SD_DB_AD, 1); }
+    catch(e){ kir(e); return; }
+    istek.onupgradeneeded = () => {
+      const db = istek.result;
+      if(!db.objectStoreNames.contains(SD_MAGAZA)) db.createObjectStore(SD_MAGAZA);
+    };
+    istek.onsuccess = () => {
+      const db = istek.result;
+      db.onclose = () => { sdDbSoz = null; };
+      db.onversionchange = () => { try{ db.close(); }catch(e){} sdDbSoz = null; };
+      cozul(db);
+    };
+    istek.onerror = () => kir(istek.error || new Error('IDB açılamadı'));
+    istek.onblocked = () => kir(new Error('IDB engellendi'));
+  });
+  sdDbSoz.catch(() => { sdDbSoz = null; });
+  return sdDbSoz;
+}
+function sdIslem(mod, gorev){
+  return sdDbAc().then(db => new Promise((cozul, kir) => {
+    let sonuc, tx;
+    try{ tx = db.transaction(SD_MAGAZA, mod); sonuc = gorev(tx.objectStore(SD_MAGAZA)); }
+    catch(e){ sdDbSoz = null; kir(e); return; }
+    tx.oncomplete = () => cozul(sonuc ? sonuc.result : undefined);
+    tx.onerror = () => kir(tx.error || new Error('işlem hatası'));
+    tx.onabort = () => kir(tx.error || new Error('işlem iptal'));
+  }));
+}
+function sdGeriOku(){ return sdIslem('readonly', st => st.get(SD_ANAHTAR)).catch(() => null); }
+function sdGeriYaz(kayit){ return sdIslem('readwrite', st => st.put(kayit, SD_ANAHTAR)); }
+function sdGeriTemizle(){ return sdIslem('readwrite', st => st.delete(SD_ANAHTAR)).catch(() => {}); }
+
+/* Ne gidecek — SAYARAK. Yalnız gerçekten var olan kalemler döner: sıfır satır
+   yazmak listeyi gürültüye boğar, hiç sayı yazmamak da onayı bilinçsiz bırakır
+   (eski confirm metninin kusuru buydu: "Notları ve seansları da silinir" ne
+   KADAR olduğunu söylemiyordu, özetten/ontolojiden hiç bahsetmiyordu). */
+function sdKayip(kitaplar){
+  const say = { not: 0, alinti: 0, fikir: 0, oturum: 0, seans: 0, okuma: 0,
+    odunc: 0, ozet: 0, onto: 0, kapak: 0, puan: 0, etiket: 0 };
+  const fikirler = new Set();
+  for(const k of kitaplar){
+    for(const n of (k.notlar || [])){
+      if(n.tip === 'alinti') say.alinti++; else say.not++;
+      (n.fikir || []).forEach(f => fikirler.add(String(f)));
+    }
+    say.oturum += (k.oturumlar || []).length;
+    say.seans  += (k.seanslar || []).length;
+    say.okuma  += (k.okumalar || []).length;
+    say.odunc  += (k.odunc || []).length;
+    say.etiket += (k.etiketler || []).length;
+    if(k.puan >= 1) say.puan++;
+    if(k.kapakYerel) say.kapak++;
+    const oz = (window.__ozet && window.__ozet.oku(k.id)) || String(k.ozet || '');
+    const on = (window.__ozet && window.__ozet.okuOnto(k.id)) || '';
+    if(oz) say.ozet += oz.length;
+    if(on) say.onto += on.length;
+  }
+  say.fikir = fikirler.size;
+  const sayi = n => n.toLocaleString('tr-TR');
+  const satirlar = [];
+  const ekle = (n, ad) => { if(n > 0) satirlar.push({ n: sayi(n), ad }); };
+  ekle(say.not, 'not');
+  ekle(say.alinti, 'alıntı');
+  ekle(say.fikir, 'fikir etiketi (yalnız bu kayıtlardaki kullanımı)');
+  ekle(say.oturum, 'okuma oturumu');
+  ekle(say.seans, 'sayfa kaydı');
+  ekle(say.okuma, 'arşivlenmiş okuma (yeniden okuma geçmişi)');
+  ekle(say.odunc, 'ödünç kaydı');
+  ekle(say.etiket, 'etiket');
+  ekle(say.puan, 'puan');
+  if(say.ozet) satirlar.push({ n: sayi(say.ozet), ad: 'karakterlik özet' });
+  if(say.onto) satirlar.push({ n: sayi(say.onto), ad: 'karakterlik ontoloji' });
+  ekle(say.kapak, 'kendi çektiğin kapak fotoğrafı');
+  return { say, satirlar };
+}
+
+/* Onay penceresi. Tekil (detay) ve toplu (çoklu seçim) TEK yerden geçer. */
+function sdSor(idler){
+  const ids = (Array.isArray(idler) ? idler : [idler]).map(String).filter(Boolean);
+  const kitaplar = ids.map(id => kitapBul(id)).filter(Boolean);
+  if(!kitaplar.length){ toast('Silinecek kayıt bulunamadı'); return; }
+  sdBekleyen = kitaplar.map(k => k.id);
+  const cok = kitaplar.length > 1;
+  const bas = document.getElementById('sdBaslik');
+  if(bas) bas.textContent = cok ? kitaplar.length + ' kayıt silinsin mi?' : 'Bu kayıt silinsin mi?';
+  const btn = document.getElementById('sdOnayBtn');
+  if(btn) btn.textContent = cok ? kitaplar.length + ' kaydı sil' : 'Sil';
+  const kart = document.getElementById('sdKart');
+  if(kart){
+    if(cok){
+      /* Toplu silmede TAM liste: "40 kitap" diye onaylatıp neyin gittiğini
+         göstermemek, çoklu seçimde en çok korkulan hatayı (yanlış kart seçili)
+         görünmez kılardı. Uzun liste kendi içinde kaydırılır. */
+      kart.innerHTML = '<span class="sd-ad">' + kitaplar.length + ' kayıt</span>' +
+        '<span class="sd-kunye" style="max-height:26vh;overflow-y:auto;display:block">' +
+        kitaplar.map(k => esc(k.ad) + (k.yazar ? ' — ' + esc(k.yazar) : '')).join('<br>') + '</span>';
+    }else{
+      const k = kitaplar[0];
+      kart.innerHTML = '<span class="sd-ad">' + esc(k.ad) + '</span>' +
+        '<span class="sd-kunye">' + esc(k.yazar || 'yazarı yazılmamış') +
+        (k.yil ? ' · ' + k.yil : '') +
+        (k.yayinevi ? ' · ' + esc(k.yayinevi) : '') +
+        (k.isbn ? ' · ISBN ' + esc(k.isbn) : '') + '</span>';
+    }
+  }
+  const { satirlar } = sdKayip(kitaplar);
+  const ne = document.getElementById('sdNe');
+  if(ne) ne.innerHTML = satirlar.length
+    ? '<ul class="sd-liste">' + satirlar.map(r =>
+        '<li><span class="sd-say">' + r.n + '</span><span>' + r.ad + '</span></li>').join('') + '</ul>'
+    : '<p class="sd-bos">Bu ' + (cok ? 'kayıtlara' : 'kayda') +
+      ' bağlı not, alıntı, oturum veya özet yok — yalnız künye gidiyor.</p>';
+  const uy = document.getElementById('sdUyari');
+  if(uy) uy.innerHTML = 'Silme <b>öbür cihazlara da gider</b>: kayda mezar taşı bırakılır, ' +
+    'senkron onu geri getirmez. Silmeden hemen önce tam kopyası saklanır — ' +
+    'Ayarlar ▸ <b>Son silme</b>’den tek adımda geri alınabilir. Kopya bu cihazda kalır, ' +
+    'senkrona ve yedeğe girmez.';
+  const o = document.getElementById('ortuSil');
+  if(o){ o.classList.add('acik'); ortuAriaKur(o); }
+}
+function sdKapat(){
+  sdBekleyen = [];
+  const o = document.getElementById('ortuSil');
+  /* ortuKapatEt KULLANILMAZ — v116 dersi: o, `.sheet-kapat[data-act]` düğmesine
+     TIKLAYARAK kapatıyor; kapat düğmemizin eylemi buraya döndüğü için
+     özyineleme olurdu. Sınıf doğrudan düşürülür. */
+  if(o) o.classList.remove('acik');
+}
+
+/* Silmeyi UYGULAR. Sıra önemli: geri alma defteri ÖNCE yazılır — yazılamazsa
+   silme yine sürer (kullanıcının istediği iş engellenmez) ama toast "geri alma
+   kopyası yazılamadı" der; sessizce geri alınabilir sanmaktan iyidir. */
+async function sdUygula(){
+  const ids = sdBekleyen.slice();
+  sdKapat();
+  const kitaplar = ids.map(id => kitapBul(id)).filter(Boolean);
+  if(!kitaplar.length){ toast('Silinecek kayıt bulunamadı'); return; }
+
+  // 1) Geri alma defteri: kitap gövdesi + özet kaydı + kapak blob'u
+  const kopya = { tarih: Date.now(), kitaplar: kitaplar.map(k => JSON.parse(JSON.stringify(k))),
+    ozetler: {}, kapaklar: {} };
+  for(const k of kitaplar){
+    const oz = (window.__ozet && window.__ozet.okuHam) ? window.__ozet.okuHam(k.id) : null;
+    if(oz && (oz.m || oz.o)) kopya.ozetler[k.id] = oz;
+    if(k.kapakYerel && window.__kapak && window.__kapak.oku){
+      try{ const b = await window.__kapak.oku(k.id); if(b) kopya.kapaklar[k.id] = b; }
+      catch(e){ /* blob okunamadı: kapak geri gelmez, kayıt yine geri gelir */ }
+    }
+  }
+  let geriVar = true;
+  try{ await sdGeriYaz(kopya); }
+  catch(e){ geriVar = false; if(window._iz) window._iz('sdGeriYaz', e); }
+
+  // 2) Mezar taşı + kayıt düşür (tekil ve toplu yol AYNI satırlar)
+  veri.silinenler = veri.silinenler || {};
+  const t = Date.now();
+  const kume = new Set(kitaplar.map(k => k.id));
+  kitaplar.forEach(k => { veri.silinenler[k.id] = t; });
+  veri.kitaplar = veri.kitaplar.filter(k => !kume.has(k.id));
+  depoKaydet();
+
+  // 3) Bağlı depolar: özet/ontoloji (IDB) + kapak fotoğrafı (IDB)
+  for(const id of kume){
+    if(window.__ozet && window.__ozet.sil){ try{ await window.__ozet.sil(id); }catch(e){} }
+    if(window.__kapak && window.__kapak.sil){ try{ await window.__kapak.sil(id); }catch(e){} }
+  }
+
+  // 4) Ekran
+  if(kume.has(durum.detayId)){
+    document.getElementById('ortuDetay').classList.remove('acik');
+    durum.detayId = null;
+  }
+  hepsiniCiz();
+  sdGeriKartTazele();
+  const n = kitaplar.length;
+  const kuyruk = geriVar ? ' — Ayarlar ▸ Son silme’den geri alınabilir'
+                         : ' (geri alma kopyası yazılamadı)';
+  /* Toast sözcüğü "kitap": uygulamanın her yerinde kayıtlar kitap diye anılıyor;
+     onay kartı "kayıt" diyor çünkü orada notu/özeti/oturumu da sayıyoruz. */
+  toast((n === 1 ? 'Kitap silindi' : n + ' kitap silindi') + kuyruk);
+}
+
+/* Geri alma. Mezar taşı YEREL olarak kaldırılır, ama asıl iş `k.g` damgasıdır:
+   odadaki kopyada mezar hâlâ durabilir ve birleşme `mezar >= k.g` ise kaydı
+   eler (senkron.js). Diriltme ŞİMDİ olduğu için taze damga mezarı geçer. */
+async function sdGeriBaslat(){
+  const kopya = await sdGeriOku();
+  if(!kopya || !Array.isArray(kopya.kitaplar) || !kopya.kitaplar.length){
+    toast('Geri alınacak kayıt yok'); sdGeriKartTazele(); return;
+  }
+  const t = Date.now();
+  veri.silinenler = veri.silinenler || {};
+  let geri = 0;
+  for(const ham of kopya.kitaplar){
+    const k = kitapNormalize(ham);
+    if(kitapBul(k.id)) continue;          // arada senkronla döndüyse ikinci kopya YARATMA
+    delete veri.silinenler[k.id];
+    k.g = t;
+    veri.kitaplar.push(k);
+    geri++;
+  }
+  depoKaydet();
+  for(const [id, oz] of Object.entries(kopya.ozetler || {})){
+    if(window.__ozet && window.__ozet.kaydetHam){
+      try{ await window.__ozet.kaydetHam(id, oz.m, oz.g || t, oz.o); }catch(e){}
+    }
+  }
+  for(const [id, blob] of Object.entries(kopya.kapaklar || {})){
+    if(window.__kapak && window.__kapak.yaz){
+      try{ await window.__kapak.yaz(id, blob); }catch(e){}
+    }
+  }
+  await sdGeriTemizle();
+  hepsiniCiz();
+  sdGeriKartTazele();
+  toast(geri ? (geri === 1 ? 'Kayıt geri alındı' : geri + ' kayıt geri alındı')
+             : 'Kayıtlar zaten yerinde');
+}
+function sdTarih(ms){
+  const d = new Date(ms);
+  if(isNaN(d)) return '';
+  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) + ' ' +
+    d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+async function sdGeriKartTazele(){
+  const bolum = document.getElementById('sdGeriBolum');
+  const kart = document.getElementById('sdGeriKart');
+  if(!bolum || !kart) return;
+  const kopya = await sdGeriOku();
+  if(!kopya || !Array.isArray(kopya.kitaplar) || !kopya.kitaplar.length){
+    bolum.hidden = true; kart.innerHTML = ''; return;
+  }
+  const n = kopya.kitaplar.length;
+  const ad = n === 1 ? '“' + esc(kopya.kitaplar[0].ad || 'adsız kayıt') + '”'
+                     : n + ' kayıt';
+  kart.innerHTML = '<b>Geri alınabilir:</b> ' + esc(sdTarih(kopya.tarih)) + ' — ' + ad +
+    ' silindi. Notları, alıntıları, oturumları, özeti ve kapak fotoğrafı da birlikte geri gelir.' +
+    '<br>Kopya yalnız bu cihazda saklanır, senkrona ve yedeğe girmez; <b>bir sonraki silmede ' +
+    'üzerine yazılır</b>.' +
+    '<div><button class="btn btn-cerceve" data-act="sd-geri">Geri al</button></div>';
+  bolum.hidden = false;
+}
+window.__sil = { sor: sdSor, uygula: sdUygula, kapat: sdKapat, kayip: sdKayip,
+  geriOku: sdGeriOku, geriBaslat: sdGeriBaslat, kartTazele: sdGeriKartTazele };
+
 function ikizKapat(){
   durum.ikizId = null;
   const o = document.getElementById('ortuIkiz');
@@ -5608,7 +5943,7 @@ document.addEventListener('click', e => {
 
   switch(act){
     case 'sekme': sekmeGec(v); break;
-    case 'ayar-ac': ayarAc(); ozDepoBilgiTazele(); tsDurumTazele(); break;
+    case 'ayar-ac': ayarAc(); ozDepoBilgiTazele(); tsDurumTazele(); sdGeriKartTazele(); break;
     case 'ayar-kapat': ayarKapat(); break;
     /* Ana sayfa köprüleri — hepsi mevcut yollara bağlanır, yeni mantık yok.
        (ana-okunuyor v47'de emekli: "Tümü" düğmesi kalktı, devam bölümü
@@ -5690,16 +6025,14 @@ document.addEventListener('click', e => {
       document.getElementById('ortuDetay').classList.remove('acik');
       formAc(durum.detayId);
       break;
-    case 'kitap-sil': {
-      const k = kitapBul(durum.detayId);
-      if(k && confirm(`"${k.ad}" silinsin mi? Notları ve seansları da silinir.`)){
-        veri.kitaplar = veri.kitaplar.filter(x => x.id !== durum.detayId);
-        if(window.__kapak) window.__kapak.sil(k.id); // kapak fotoğrafı yetim kalmasın
-        depoKaydet();
-        document.getElementById('ortuDetay').classList.remove('acik');
-        durum.detayId = null; hepsiniCiz(); toast('Kitap silindi');
-      }
-      break; }
+    /* v117: çıplak confirm() ve buradaki elle silme KALDIRILDI — mezar taşı
+       yazılmıyordu, özet/ontoloji yerinde kalıyordu, ne gideceği sayılmıyordu.
+       Tek otorite window.__sil (sd- bloğu); toplu silme de aynı kapıdan geçer. */
+    case 'kitap-sil': sdSor([durum.detayId]); break;
+    case 'sd-kapat':
+    case 'sd-vazgec': sdKapat(); break;
+    case 'sd-onay': sdUygula(); break;
+    case 'sd-geri': sdGeriBaslat(); break;
     case 'yeniden-oku': {
       const k = kitapBul(durum.detayId);
       if(k){

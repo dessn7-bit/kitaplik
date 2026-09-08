@@ -7,7 +7,7 @@
    M3 çok-sekme: yazım duyurusu + yazım-önü diskle birleşme — bayat belleğe
       taze damga basılıp öbür sekmenin kaydı ezilmez
    M4 toplu işlemler yalnız EKRANDA duran seçime uygulanır */
-const { test, expect, tohumla, sahteKitap, rafAc, onaylariKabulEt } = require('./yardim');
+const { test, expect, tohumla, sahteKitap, rafAc, onaylariKabulEt, silOnayla } = require('./yardim');
 
 test.describe('G85 veri kaybı düzeltmeleri', () => {
 
@@ -154,7 +154,8 @@ test.describe('G85 veri kaybı düzeltmeleri', () => {
     await expect(page.locator('#liste .kart')).toHaveCount(1);
     await expect(page.locator('#topluSayi')).toHaveText('1 seçili');   // kesişim çubuğa yansıdı
     await page.click('[data-act="toplu-sil"]');
-    await expect(page.locator('#toast')).toContainText('1 kitap silindi');
+    await silOnayla(page);   // v117: silme onay penceresinden gecer
+    await expect(page.locator('#toast')).toContainText('Kitap silindi');   /* v117: tekil/toplu yol birleşti, tek kayıtta metin de tekil */
     expect(await page.evaluate(() => veri.kitaplar.map(k => k.ad))).toEqual(['Armut Kitabı']);
     // görünmeyen kitap mezar taşı da almadı
     expect(await page.evaluate(() =>

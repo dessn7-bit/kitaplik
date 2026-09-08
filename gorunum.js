@@ -611,12 +611,28 @@
         secimGorunenKesistir();   // v86: ekranda olmayan kitap silinemez
         const n = secilenler.size;
         if(!n){ bildir('Önce kitap seç'); return; }
+        /* v117: silme kuralı ARTIK BURADA DEĞİL — çekirdekteki window.__sil
+           tek otorite (mezar taşı + özet/ontoloji + kapak + geri alma defteri
+           + sayılı onay). Buradaki kopya, detay yolundan sessizce ayrışmıştı
+           (o yol mezar taşı yazmıyordu); v116'nın __kopya dersinin aynısı.
+           Seçim, onay penceresi AÇILIRKEN kapatılır: kullanıcı Vazgeç derse
+           seçimi kaybetmesin diye DEĞİL — tersine, pencere seçilenlerin tam
+           listesini gösterdiği için kart artık bağlamı kendisi taşıyor ve
+           bayat seçim üstünde ikinci kez çalışmak imkânsız hale geliyor. */
+        const idler = [...secilenler];
+        if(window.__sil){
+          secimKapat();
+          window.__sil.sor(idler);
+          return;
+        }
+        /* Çekirdek modül yoksa (eski önbellek) eski davranışa düş: silme
+           yolunun tamamen kaybolması, kusurlu çalışmasından kötü. */
         if(!confirm(n + ' kitap kalıcı olarak silinsin mi? Notları ve oturumları da silinir.')) return;
         veri.silinenler = veri.silinenler || {};
         const t = Date.now();
         secilenler.forEach(id => {
           veri.silinenler[id] = t;
-          if(window.__kapak) window.__kapak.sil(id); // kapak fotoğrafları yetim kalmasın
+          if(window.__kapak) window.__kapak.sil(id);
         });
         veri.kitaplar = veri.kitaplar.filter(k => !secilenler.has(k.id));
         secilenler.clear();

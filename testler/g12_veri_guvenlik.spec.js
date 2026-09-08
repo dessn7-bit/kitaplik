@@ -1,6 +1,6 @@
 'use strict';
 const { test, expect, tohumla, sahteKitap,
-  onaylariKabulEt, rafAc, rafYenile, ayarlarAc, dosyadanYukle, jsonDosya } = require('./yardim');
+  onaylariKabulEt, rafAc, rafYenile, ayarlarAc, dosyadanYukle, jsonDosya, silOnayla } = require('./yardim');
 
 /* G12 — keşif raporunun kritik veri/güvenlik maddeleri (M1-M5).
    Her vaka, düzeltme geri alındığında KIRMIZI olacak şekilde yazıldı. */
@@ -62,6 +62,7 @@ test.describe('G12 M2 — mezar taşları yenilemede korunur', () => {
     await page.click('#liste .kart');
     await page.click('#dDigerKatla summary');  // Sil nadir bölümde katlı
     await page.click('[data-act="kitap-sil"]');
+    await silOnayla(page);   // v117: silme onay penceresinden gecer
     await expect(page.locator('#toast')).toContainText('Kitap silindi');
     await rafYenile(page);
     const mezarlar = await page.evaluate(() => Object.keys(veri.silinenler || {}));
@@ -76,6 +77,7 @@ test.describe('G12 M2 — mezar taşları yenilemede korunur', () => {
     await page.click('#liste .kart');
     await page.click('#dDigerKatla summary');  // Sil nadir bölümde katlı
     await page.click('[data-act="kitap-sil"]');
+    await silOnayla(page);   // v117: silme onay penceresinden gecer
     await expect(page.locator('#toast')).toContainText('Kitap silindi');
     await rafYenile(page);
     const adlar = await page.evaluate(kid => window.__senkron.birlestir(veri,

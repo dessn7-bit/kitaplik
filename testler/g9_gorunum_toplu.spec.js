@@ -1,6 +1,6 @@
 'use strict';
 const { test, expect, tohumla, sahteKitap,
-  onaylariKabulEt, bugunISO, rafAc } = require('./yardim');
+  onaylariKabulEt, bugunISO, rafAc, silOnayla } = require('./yardim');
 
 test.describe('G9 görünüm ve toplu işlem', () => {
 
@@ -137,6 +137,7 @@ test.describe('G9 görünüm ve toplu işlem', () => {
     await page.click('#secimBtn');
     await page.click('[data-act="toplu-tumu"]');
     await page.click('[data-act="toplu-sil"]');
+    await silOnayla(page);   // v117: silme onay penceresinden gecer
     await expect(page.locator('#toast')).toContainText('2 kitap silindi');
     expect(await page.evaluate(() => veri.kitaplar.length)).toBe(0);
     const mezarlar = await page.evaluate(() => Object.keys(veri.silinenler || {}).sort());
