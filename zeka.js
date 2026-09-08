@@ -225,32 +225,70 @@
      Oturum sayfaları yalnız kronometre kullanılan günlerde var (Goodreads geçmişinde yok),
      karıştırılsa yıllık ilerleme olduğundan çok düşük görünürdü. Oturum tabanlı bakış
      ayrı kartta (Fiilen okuduğun sayfa) duruyor. */
+  /* v124: projeksiyon KITAP hedefiyle AYNI kusuru tasiyordu (ilerleme/gunNo*365)
+     - yani okunmayan gunleri paydaya katiyordu. Kaan'in verisinde olculdu: 2026'nin
+     ilk 173 gunu bos, o formulun tavani ~%48'lik bir yillik hiz. Kart bugun
+     cizilmiyor (sayfa hedefi konmamis) ama hedef konuldugu an ayni yanlis ogudu
+     verecekti. Ayni cozum: 60 gunluk pencere + uc durum.
+     Pencere ve aralik matematigi CEKIRDEKTEN okunur (window.__tempo) - kopya yok. */
   function sayfaHedefDurum(){
     const yil = new Date().getFullYear();
     const hedef = ((typeof veri === 'object' && veri && veri.hedefSayfa) || {})[yil] || 0;
     const bitenler = bitmisKayitlar().filter(k => k.bitisTarihi
       && String(k.bitisTarihi).startsWith(String(yil)));
     const ilerleme = bitenler.reduce((t, k) => t + (k.sayfa || 0), 0);
-    const gunNo = Math.floor((new Date() - new Date(yil, 0, 0)) / 86400000);
+    const T = (typeof window === 'object' && window.__tempo) || null;
+    const pencereGun = T ? T.pencereGun() : 60;
+    const pencere = T ? T.pencereKitaplari() : [];
+    const pencereN = pencere.length;
+    const pencereSayfa = pencere.reduce((t, k) => t + (k.sayfa || 0), 0);
+    const kalanGun = T ? T.kalanGun(yil) : 0;
+    const hiz = pencereSayfa / pencereGun;                       // sayfa/gun
+    /* Okunan sayfa TAHMIN DEGIL, OLMUS: projeksiyon = gercek + kalanin tahmini. */
+    const projeksiyon = Math.round(ilerleme + hiz * kalanGun);
+    /* Belirsizligin kaynagi sayfa degil KITAP sayisi (sayfalar bagimsiz olay
+       degil, kitap uzunlugu tasiyor): Poisson araligi kitap sayimina uygulanir,
+       pencerenin ortalama kitap kalinligiyla olceklenir. */
+    const ortSayfa = pencereN ? pencereSayfa / pencereN : 0;
+    const ar = (T && T.poissonAralik) ? T.poissonAralik(pencereN) : [0, 0];
+    const tahminAlt = ilerleme + ar[0] / pencereGun * kalanGun * ortSayfa;
+    const tahminUst = ilerleme + ar[1] / pencereGun * kalanGun * ortSayfa;
+    const durum = hedef <= 0 ? null
+      : (tahminAlt >= hedef ? 'ustunde' : (tahminUst < hedef ? 'altinda' : 'belirsiz'));
     return {
-      yil, hedef, ilerleme,
+      yil, hedef, ilerleme, projeksiyon, durum, kalanGun,
+      pencereGun, pencereN, pencereSayfa, tahminAlt, tahminUst,
+      gunlukHiz: pencereGun ? Math.round(pencereSayfa / pencereGun) : 0,
+      gerekliGunluk: (hedef > ilerleme && kalanGun > 0)
+        ? Math.round((hedef - ilerleme) / kalanGun) : null,
       // payda dürüstlüğü: metin "N kitabın sayfa toplamı" diyor — N, toplama
       // fiilen katılan (sayfası girilmiş) kitapları saymalı, tümünü değil
       kitapSayisi: bitenler.filter(k => k.sayfa > 0).length,
-      yuzde: hedef > 0 ? Math.min(100, Math.round(ilerleme / hedef * 100)) : null,
-      projeksiyon: gunNo > 0 ? Math.round(ilerleme / gunNo * 365) : 0
+      yuzde: hedef > 0 ? Math.min(100, Math.round(ilerleme / hedef * 100)) : null
     };
   }
   function sayfaHedefKartHtml(){
     const d = sayfaHedefDurum();
     let h = '<div class="zk-blok" id="zkSayfaHedefKart"><div class="ist-bolum-baslik">Sayfa hedefi</div>';
     if(d.hedef > 0){
-      const tempo = d.projeksiyon >= d.hedef
-        ? 'Bu tempoyla yıl sonunda ~<b class="zk-iyi">' + d.projeksiyon.toLocaleString('tr') + '</b> sayfa — hedefin üstünde.'
-        : 'Bu tempoyla yıl sonu projeksiyonu ~<b class="zk-dusuk">' + d.projeksiyon.toLocaleString('tr') + '</b> sayfa — tempo artmalı.';
+      const sn = x => x.toLocaleString('tr');
+      const hizTxt = d.pencereN > 0
+        ? 'Son ' + d.pencereGun + ' günde ' + sn(d.pencereSayfa) + ' sayfa → günde ' + sn(d.gunlukHiz) + '.'
+        : 'Son ' + d.pencereGun + ' günde hiç kitap bitirmedin.';
+      const sonuc = d.durum === 'ustunde'
+        ? 'Bu hızla yıl sonunda ~<b class="zk-iyi">' + sn(d.projeksiyon) + '</b> sayfa — hedefin üstünde.'
+        : d.durum === 'altinda'
+          ? 'Bu hızla yıl sonunda ~<b class="zk-dusuk">' + sn(d.projeksiyon) + '</b> sayfa — bu hızla hedefe yetişmez.'
+          /* BELIRSIZ: emir kipi YOK - kitap hedefiyle ayni gerekce. */
+          : 'Bu hızla yıl sonunda ~<b class="zk-vurgu">' + sn(d.projeksiyon) + '</b> sayfa.';
+      const gerek = (d.durum !== 'ustunde' && d.gerekliGunluk !== null)
+        ? '<br id="zkSayfaGerekBr">Hedefe yetişmek için kalan ' + d.kalanGun + ' günde '
+          + '<b class="zk-vurgu">' + sn(d.hedef - d.ilerleme) + ' sayfa</b> gerekiyor — günde '
+          + sn(d.gerekliGunluk) + '.'
+        : '';
       h += '<div class="ilerleme" id="zkSayfaBar"><div style="width:' + d.yuzde + '%"></div></div>'
-        + '<div class="zk-not"><b class="zk-vurgu">' + d.ilerleme.toLocaleString('tr') + ' / '
-        + d.hedef.toLocaleString('tr') + '</b> sayfa (%' + d.yuzde + '). ' + tempo
+        + '<div class="zk-not" id="zkSayfaTempo"><b class="zk-vurgu">' + sn(d.ilerleme) + ' / '
+        + sn(d.hedef) + '</b> sayfa (%' + d.yuzde + '). ' + hizTxt + ' ' + sonuc + gerek
         + '<br>Bitirdiğin ' + d.kitapSayisi + ' kitabın sayfa toplamı sayılır (sayfa sayısı girilmiş olanlar).</div>';
     }else{
       h += '<div class="zk-not">Sayfa hedefi koyarsan kalın kitaplar da hakkını alır — '

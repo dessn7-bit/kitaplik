@@ -4815,6 +4815,30 @@ function poissonAralik(k){
   const ust = u * Math.pow(1 - 1/(9*u) + 1.96/(3*Math.sqrt(u)), 3);
   return [Math.max(0, alt), ust];
 }
+/* Tempo penceresindeki bitişler. Kitap hedefi (çekirdek) ile SAYFA hedefi
+   (zeka.js) AYNI pencereyi kullansın diye TEK yerde — v63 dersi: iki kopya iki
+   farklı "yıl sonunda ~N" üretir.
+   Pencere YIL SINIRINI AŞAR: içindeki her bitiş sayılır, hangi yıla ait
+   olduğuna bakılmaz (tempo takvimin değil okurun özelliği). */
+function tempoPencereKitaplari(simdi){
+  const s = simdi || new Date();
+  const esik = new Date(s - TEMPO_PENCERE_GUN * 86400000);
+  return (veri.kitaplar || []).map(istKayit).filter(Boolean).filter(k => {
+    if(!k.bitisTarihi) return false;
+    const t = new Date(k.bitisTarihi + 'T12:00:00');
+    return !isNaN(t) && t >= esik && t <= s;
+  });
+}
+function tempoKalanGun(y, simdi){
+  return Math.max(0, Math.floor((new Date(y, 11, 31, 23, 59) - (simdi || new Date())) / 86400000));
+}
+/* zeka.js buradan okur — pencere/aralık matematiği kopyalanmaz. */
+window.__tempo = {
+  pencereGun: () => TEMPO_PENCERE_GUN,
+  pencereKitaplari: tempoPencereKitaplari,
+  kalanGun: tempoKalanGun,
+  poissonAralik: k => poissonAralik(k)
+};
 function tempoDurum(yil){
   const simdi = new Date();
   const y = yil || simdi.getFullYear();
@@ -4822,16 +4846,8 @@ function tempoDurum(yil){
   const bitmis = kayitlar.filter(k => k.bitisTarihi && String(k.bitisTarihi).startsWith(String(y)));
   const hedef = Number((veri.hedef || {})[y]) || 0;
   const gunNo = Math.floor((simdi - new Date(y, 0, 0)) / 86400000);
-  const kalanGun = Math.max(0, Math.floor((new Date(y, 11, 31, 23, 59) - simdi) / 86400000));
-
-  /* Tempo YIL SINIRINI AŞAR (yukarıdaki gerekçe): pencere içindeki her bitiş
-     sayılır, hangi yıla ait olduğuna bakılmaz. Taban (bitti) ise yıla özgü. */
-  const esik = new Date(simdi - TEMPO_PENCERE_GUN * 86400000);
-  const pencereN = kayitlar.filter(k => {
-    if(!k.bitisTarihi) return false;
-    const t = new Date(k.bitisTarihi + 'T12:00:00');
-    return !isNaN(t) && t >= esik && t <= simdi;
-  }).length;
+  const kalanGun = tempoKalanGun(y, simdi);
+  const pencereN = tempoPencereKitaplari(simdi).length;
 
   const hiz = pencereN / TEMPO_PENCERE_GUN;                 // kitap/gün
   /* Biten kitap TAHMİN DEĞİL, OLMUŞ BİTMİŞ: projeksiyon = gerçek + kalanın tahmini.

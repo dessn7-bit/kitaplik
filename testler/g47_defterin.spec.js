@@ -162,11 +162,17 @@ test.describe('G47 Defterin — Alıntılar ekranı Ciltli', () => {
         return { gunun: oku('.ga-metin'), tekrar: oku('.tk-metin'),
           liste: oku('.not-kart.alinti .not-metin'), baslik: oku('.al-baslik'), yuzler };
       });
-      for (const [ad, o] of [['günün', f.gunun], ['tekrar', f.tekrar], ['liste', f.liste]]) {
+      for (const [ad, o] of [['tekrar', f.tekrar], ['liste', f.liste]]) {
         expect(o.stil, ad + ' alıntısı italik').toBe('italic');
         expect(o.aile, ad + ' alıntısı Lora').toMatch(/Lora/);
         expect(o.aile, ad + ' alıntısı Cormorant DEĞİL').not.toMatch(/Cormorant/);
       }
+      /* "Günün notu" bloğu bu vakada SINANMAZ — hangi kaydı seçtiği GÜN
+         tohumuna bağlı (yıl*1000 + yılın günü) ve fikstürdeki 5 kaydın 1'i
+         not. Not, v110/v113 sözleşmesi gereği BİLEREK dik dizilir; eski hâli
+         "her zaman italik" varsaydığı için 5 günde 1 kırmızı veren uyuyan bir
+         vakaydı (2026-09-09'da patladı, v119'da da kırmızıydı). Sözleşmenin
+         iki yüzü aşağıda TAKVİMDEN BAĞIMSIZ sınanıyor. */
       // ekran başlığı Cormorant DÜZ
       expect(f.baslik.aile).toMatch(/Cormorant/);
       expect(f.baslik.stil).toBe('normal');
@@ -176,6 +182,41 @@ test.describe('G47 Defterin — Alıntılar ekranı Ciltli', () => {
       expect(f.yuzler.some(y => /Lora/.test(y) && /italic/.test(y)),
         'Lora italik gömülü').toBe(true);
     });
+
+  /* Günün notu bloğunun TİP SÖZLEŞMESİ (v110/v113): tip biçimi taşır —
+     alıntı italik + tırnaklı, not dik + tırnaksız ("not alıntı değildir,
+     öyleymiş gibi dizilemez"). Havuzu tek tipe indirerek gün tohumundan
+     bağımsız sınanır; yoksa vaka yılın gününe göre kırmızı/yeşil olur. */
+  /* İki AYRI vaka: tohumla aynı sayfada bir kez tohumluyor (__kk_tohumlandi),
+     ikinci fikstür yazılmazdı. */
+  const gunTekTip = uret => [sahteKitap({
+    ad: 'Tek Tip', yazar: 'Deneme', durum: 'bitti', puan: 8, bitisTarihi: BUGUN,
+    notlar: [uret('Birinci kayıt.'), uret('İkinci kayıt.'), uret('Üçüncü kayıt.')]
+  })];
+  const gunOku = p => p.evaluate(() => {
+    const e = document.querySelector('.ga-metin');
+    return e ? { stil: getComputedStyle(e).fontStyle, aile: getComputedStyle(e).fontFamily,
+      metin: e.textContent, notMu: e.classList.contains('ga-not') } : null;
+  });
+
+  test('TİPOGRAFİ: Günün notu — ALINTI italik ve tırnaklı', async ({ page }) => {
+    await alintiAc(page, gunTekTip(alinti));
+    const a = await gunOku(page);
+    expect(a, 'günün bloğu çizilmeli').not.toBeNull();
+    expect(a.notMu, 'havuz sadece alıntıysa NOT seçilemez').toBe(false);
+    expect(a.stil, 'alıntı italik').toBe('italic');
+    expect(a.aile, 'alıntı Lora').toMatch(/Lora/);
+    expect(a.metin, 'alıntı tırnaklı').toMatch(/[“”]/);
+  });
+
+  test('TİPOGRAFİ: Günün notu — NOT dik ve tırnaksız', async ({ page }) => {
+    await alintiAc(page, gunTekTip(not_));
+    const n = await gunOku(page);
+    expect(n, 'günün bloğu notla da çizilmeli').not.toBeNull();
+    expect(n.notMu, 'havuz sadece notsa NOT seçilir').toBe(true);
+    expect(n.stil, 'not DİK — alıntı gibi dizilemez').toBe('normal');
+    expect(n.metin, 'not tırnaksız').not.toMatch(/[“”]/);
+  });
 
   /* ---------- hiyerarşi ---------- */
   test('HİYERARŞİ: tekrar en üstte, sonra günün alıntısı → fikirler → liste', async ({ page }) => {
