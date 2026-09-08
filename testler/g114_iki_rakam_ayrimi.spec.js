@@ -68,11 +68,26 @@ test.describe('G114 iki rakamın ayrımı (v121)', () => {
     await istAc(page);
     const ayrim = page.locator('#istSureAyrim');
     await expect(ayrim).toBeVisible();
-    await expect(ayrim).toContainText('arasındaki');
-    await expect(ayrim).toContainText('dahil değil');
-    /* Köprü: bitirme süresinin yanında SIKLIK da yazılı olmalı, yoksa okuyan
-       iki sayıyı yine ayrı ayrı okur. */
-    await expect(ayrim).toContainText(`${Math.max(1, Math.round(gunNo / 3))} günde bir`);
+    await expect(ayrim).toContainText('farklı şey ölçüyor');
+    await expect(ayrim).toContainText('elinde tuttuğun süre');
+    await expect(ayrim).toContainText('iki kitap arasındaki aralık');
+    /* Köprü: iki sayı AYNI cümlede, yan yana adlandırılmış olmalı — yoksa
+       okuyan onları yine ayrı ayrı okur ve çelişki sanır. */
+    await expect(ayrim).toContainText(`${Math.max(1, Math.round(gunNo / 3))} gün`);
+  });
+
+  test('C2) sıklık HEDEF kartında değil, karıştırıldığı sayının YANINDA durur', async ({ page }) => {
+    /* v123: v121'de sıklık hedef kartına konmuştu; v122 tempo ve gerekli hız
+       satırlarını da oraya getirince kartta ÜÇ ayrı "günde bir" alt alta
+       yığıldı — kapatmak istediğimiz karışıklığın ta kendisi. Hedef bölümü
+       ileriye dönük, alışkanlık bölümü geriye dönük. */
+    await tohumla(page, [
+      bitmis('A', g(3, 1)), bitmis('B', g(4, 1)),
+      bitmis('C', g(8, 21), g(8, 18))
+    ]);
+    await istAc(page);
+    await expect(page.locator('#istBolumAliskanlik #istSiklik')).toHaveCount(1);
+    await expect(page.locator('#istBolumHedef #istSiklik')).toHaveCount(0);
   });
 
   test('D) süreli kitap yoksa bitirme süresi bloğu HİÇ çıkmaz (uydurulmaz)', async ({ page }) => {

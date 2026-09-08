@@ -4985,16 +4985,6 @@ function istCiz(){
   }else{
     html += `<div class="mini-not">Hedef koy, tempo takibini ben yapayım.</div>`;
   }
-  /* SIKLIK (v121): "yil sonu ~17" ile "ortalama bitirme suresi 4 gun" komsu
-     bolumlerde duruyor ve okuyan CELISKI saniyordu. Ikisi FARKLI sey olcuyor:
-     17 SIKLIK (kitaplar arasi aralik), 4 HIZ (kitabi elde tutma suresi).
-     Aradaki fark okunmayan zaman. Ikisini baglayan sayi - kac gunde bir -
-     artik ekranda ACIKCA duruyor; ayrim gorunmeden celiski hissi kapanmiyor. */
-  if(buYil.length > 0){
-    const siklik = Math.max(1, Math.round(gunNo / buYil.length));
-    html += `<div class="mini-not" id="istSiklik">Yılın ${gunNo} gününde ${buYil.length} kitap —
-      ortalama <b style="color:var(--brass)">${siklik} günde bir</b>.</div>`;
-  }
   html += `<div class="hedef-satir">
       <input type="number" inputmode="numeric" min="1" id="hedefInput" placeholder="adet" value="${hedef || ''}">
       <button class="btn btn-cerceve" style="width:auto" data-act="hedef-kaydet">Hedefi kaydet</button>
@@ -5004,6 +4994,17 @@ function istCiz(){
   /* ---- 2) OKUMA ALIŞKANLIĞI: hız + bırakma + saat (son ikisi zeka.js) ---- */
   html += `<section class="is-bolum" id="istBolumAliskanlik">
     <div class="is-bolum-bas"><span class="kicker">Okuma alışkanlığı</span></div>`;
+  /* SIKLIK burada (v123): v121'de hedef kartına konmuştu, ama v122 tempo ve
+     gerekli hız sayılarını da oraya getirince kartta ÜÇ ayrı "günde bir"
+     (10 / 6,3 / 21) alt alta yığıldı — tam da kapatmak istediğimiz karışıklık.
+     Sıklık, karıştırıldığı sayının (bitirme süresi) YANINDA duruyor: hedef
+     bölümü ileriye dönük, alışkanlık bölümü geriye dönük. */
+  const siklik = buYil.length > 0 ? Math.max(1, Math.round(gunNo / buYil.length)) : null;
+  if(siklik !== null){
+    html += `<div class="ist-bolum-baslik" id="istSiklikBaslik">Ne sıklıkla okuyorsun</div>
+      <div class="mini-not" id="istSiklik">Yılın ${gunNo} gününde ${buYil.length} kitap —
+        ortalama <b style="color:var(--brass)">${siklik} günde bir</b>.</div>`;
+  }
   const sureli = bittiler.filter(k => k.baslamaTarihi && k.bitisTarihi);
   if(sureli.length){
     const ort = Math.round(sureli.reduce((t,k) => t + Math.max(1, gunFarki(k.baslamaTarihi, k.bitisTarihi)), 0) / sureli.length);
@@ -5016,14 +5017,14 @@ function istCiz(){
     const bitisler = sureli.map(k => k.bitisTarihi).sort();
     const ilk = bitisler[0], son = bitisler[bitisler.length - 1];
     const aralik = ilk === son ? trTarih(ilk) : `${trTarih(ilk)} – ${trTarih(son)} arası`;
-    const siklikCumle = buYil.length > 0
-      ? ` — bu yıl ortalama ${Math.max(1, Math.round(gunNo / buYil.length))} günde bir kitap bitirdin.`
-      : '.';
+    const ayrimCumle = siklik !== null
+      ? `İki sayı farklı şey ölçüyor: <b>${ort} gün</b> kitabı elinde tuttuğun süre,
+         <b>${siklik} gün</b> iki kitap arasındaki aralık. Aradaki fark okumadığın zaman.`
+      : `Kitabı elime aldıktan sonra geçen süre; kitaplar <b>arasındaki</b> boşluk buna dahil değil.`;
     html += `<div class="ist-bolum-baslik" id="istBitirmeSuresi">Ortalama bitirme süresi</div>
       <div class="mini-not" id="istSureTaban"><b style="color:var(--brass)">${ort} gün</b> — başlama tarihi girilen
         ${sureli.length} kitaptan (${bittiler.length} bitmişin içinden; ${aralik}).</div>
-      <div class="mini-not" id="istSureAyrim">Kitabı elime aldıktan sonra geçen süre; kitaplar
-        <b>arasındaki</b> boşluk buna dahil değil${siklikCumle}</div>`;
+      <div class="mini-not" id="istSureAyrim">${ayrimCumle}</div>`;
   }
   html += `<div class="is-yuva" id="istYuvaSureklilik"></div>
     <div class="is-yuva" id="istYuvaAliskanlik"></div></section>`;
