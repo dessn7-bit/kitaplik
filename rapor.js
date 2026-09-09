@@ -261,6 +261,19 @@
     document.head.appendChild(s);
   }
 
+  /* v125 TABAN: rapor YIL bazlı bir olay listesidir; bitiş tarihi olmayan
+     bitmiş kitap hiçbir yılın raporuna giremez. Sayım ÇEKİRDEKTEN okunur
+     (window.__tarihsiz) — ikinci kopya iki farklı sayı söylerdi (v63 dersi).
+     0 iken satır kendini gizler. */
+  function tarihsizNotHtml(){
+    const t = (typeof window === 'object' && window.__tarihsiz && window.__tarihsiz.ozet)
+      ? window.__tarihsiz.ozet() : null;
+    if(!t || !t.adet) return '';
+    return '<div class="rp-not" id="rpTarihsiz">' + t.adet
+      + ' bitmiş kitapta bitiş tarihi yok — hiçbir yılın raporunda görünmüyorlar'
+      + (t.sayfa ? ' (' + t.sayfa.toLocaleString('tr') + ' sayfa)' : '') + '.</div>';
+  }
+
   function kartHtml(){
     const ys = yillar();
     if(!seciliYil || ys.indexOf(seciliYil) < 0) seciliYil = ys[0];
@@ -275,7 +288,8 @@
     if(!o.veriVar){
       return h + '<div class="rp-not" id="rpBos">' + seciliYil
         + ' yılında bitirilmiş kitap ya da okuma oturumu kaydı yok. '
-        + 'Kitapları bitiş tarihiyle işaretledikçe bu rapor dolar.</div></div>';
+        + 'Kitapları bitiş tarihiyle işaretledikçe bu rapor dolar.</div>'
+        + tarihsizNotHtml() + '</div>';
     }
 
     h += '<div class="rp-sayilar" id="rpSayilar">'
@@ -289,6 +303,8 @@
 
     if(o.yenidenSayisi) h += '<div class="rp-not" id="rpYeniden">Bunların ' + o.yenidenSayisi
       + ' tanesi yeniden okuma.</div>';
+
+    h += tarihsizNotHtml();
 
     if(k) h += '<div class="rp-not" id="rpKarsilastirma">' + k.oncekiYil + '\'a göre: '
       + '<b class="' + (k.kitap >= 0 ? 'rp-tuttu' : 'rp-tutmadi') + '">'

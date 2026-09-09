@@ -267,6 +267,16 @@
       yuzde: hedef > 0 ? Math.min(100, Math.round(ilerleme / hedef * 100)) : null
     };
   }
+  /* v125: tarihsiz bitmişlerin sayfaları hiçbir yıl toplamında yok. Sayı
+     ÇEKİRDEKTEN okunur, burada yeniden sayılmaz (v63 dersi); 0 iken cümle
+     kendini gizler. */
+  function tarihsizTabanTxt(){
+    const t = (typeof window === 'object' && window.__tarihsiz && window.__tarihsiz.ozet)
+      ? window.__tarihsiz.ozet() : null;
+    if(!t || !t.adet) return '';
+    return ' Tarihi olmayan ' + t.adet + ' bitmiş kitap ('
+      + t.sayfa.toLocaleString('tr') + ' sayfa) bu toplamda yok.';
+  }
   function sayfaHedefKartHtml(){
     const d = sayfaHedefDurum();
     let h = '<div class="zk-blok" id="zkSayfaHedefKart"><div class="ist-bolum-baslik">Sayfa hedefi</div>';
@@ -289,7 +299,10 @@
       h += '<div class="ilerleme" id="zkSayfaBar"><div style="width:' + d.yuzde + '%"></div></div>'
         + '<div class="zk-not" id="zkSayfaTempo"><b class="zk-vurgu">' + sn(d.ilerleme) + ' / '
         + sn(d.hedef) + '</b> sayfa (%' + d.yuzde + '). ' + hizTxt + ' ' + sonuc + gerek
-        + '<br>Bitirdiğin ' + d.kitapSayisi + ' kitabın sayfa toplamı sayılır (sayfa sayısı girilmiş olanlar).</div>';
+        + '<br>Bitirdiğin ' + d.kitapSayisi + ' kitabın sayfa toplamı sayılır (sayfa sayısı girilmiş olanlar).'
+        /* v125: ilerleme YIL süzgecinden geçiyor, yani tarihsiz bitmişler bu
+           toplamın dışında. Sayım çekirdekten (window.__tarihsiz) — kopya yok. */
+        + tarihsizTabanTxt() + '</div>';
     }else{
       h += '<div class="zk-not">Sayfa hedefi koyarsan kalın kitaplar da hakkını alır — '
         + 'adet hedefinde 900 sayfalık kitap da 90 sayfalık kitap da 1 sayılıyor.</div>';

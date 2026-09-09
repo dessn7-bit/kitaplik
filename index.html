@@ -568,6 +568,10 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 70%
 .kt-hedef-ic .ilerleme{margin-top:7px}
 .kt-hedef-sayi{font-family:var(--serif);font-size:.95rem;font-weight:600;color:var(--paper);
   font-variant-numeric:tabular-nums;white-space:nowrap}
+/* v125: şeridin TABAN satırı — "12 / 30" yalnız tarihli bitişleri sayar.
+   Şeridin kendisi zaten İstatistik'e götürüyor (tam açıklama ve "yıl ata"
+   orada); burada ikinci bir düğme YOK, tek dokunma hedefi korunuyor. */
+.kt-hedef-not{font-size:.72rem;color:var(--muted);margin-top:6px;line-height:1.45}
 .kt-devam-kart{display:flex;gap:14px;text-align:left}
 .kt-dkapak{width:88px;height:132px}
 .kt-devam-ic{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -3170,11 +3174,22 @@ function ktHedefHtml(){
   const biten = veri.kitaplar.map(istKayit).filter(Boolean)
     .filter(k => k.bitisTarihi && String(k.bitisTarihi).startsWith(String(yil))).length;
   const p = Math.min(100, Math.round(biten / hedef * 100));
+  /* v125 TABAN: bu şerit Kaan'ın en sık gördüğü yıl sayısı ve yalnız TARİHLİ
+     bitişleri sayıyor. Tarihsiz bitmişler yıla yazılamaz (uydurulmaz), ama
+     sessizce yok sayılmaları da dürüst değildi. Satır 0'da kendini gizler —
+     yani v126/v127 boşluğu kapattıkça kendiliğinden kaybolur. */
+  const tz = tarihsizOzet();
+  /* id YOK, yalnız sınıf: bu şerit Ana Sayfa (#asYil) ve Kütüphane (#ktHedef)
+     bloklarında AYNI ANDA DOM'da duruyor — id verilseydi belgede iki kez
+     geçerdi (kt-sayfa kutusunun data-kid kararıyla aynı gerekçe, v47). */
+  const tzNot = tz.adet
+    ? `<div class="kt-hedef-not">${tz.adet} bitmiş kitapta tarih yok — bu sayıya girmiyorlar.</div>`
+    : '';
   return `<button class="kt-hedef" data-act="kt-ist" title="İstatistik'te hedefini düzenle">
       <span class="kt-hedef-ic"><span class="kicker">${yil} hedefi</span>
         <span class="ilerleme" style="display:block" aria-hidden="true"><span style="display:block;height:100%;background:var(--brass);width:${p}%"></span></span></span>
       <span class="kt-hedef-sayi">${biten} / ${hedef}</span>
-    </button>`;
+    </button>${tzNot}`;
 }
 function ktDevamKartHtml(k){
   const sayfaVar = k.sayfa > 0;
@@ -4774,6 +4789,26 @@ function istKayit(k){
   return { ...k, durum:'bitti', bitisTarihi: son.bit, baslamaTarihi: son.bas || null,
     puan: (son.puan >= 1 && son.puan <= 10) ? son.puan : null };
 }
+/* ---------- tarihsiz bitmişler (v125) ----------
+   TEK SAYAÇ. Bitmiş ama bitiş tarihi olmayan kitap hiçbir YIL'a ait değildir:
+   yıl sayımına, tempoya, aylık şeride ve yıl raporuna giremez — hangi yıla
+   yazılacağı bilinmiyor ve sayı UYDURULMAZ. Kusur bu dışarıda kalma değil,
+   SESSİZ olmasıydı: ekran "2026 · 12 kitap" derken 12'nin neyi dışarıda
+   bıraktığını söylemiyordu.
+   ÖLÇÜM (2026-09-08 yedeği, 299 kitap): 237 bitmiş, 167'sinde tarih VAR,
+   70'inde YOK — yani her üç bitmiş kitaptan biri (%29,5) ve 22.185 sayfa
+   yıl-bazlı hiçbir sayıda görünmüyor. 70'in 2'si 2026'da eklenmiş: boşluk
+   yalnız 2020 devri değil, bugün de büyüyor (kaçakları v126 kapatır).
+   TEK YER olması v63 dersi: iki kopya iki farklı sayı söyler. */
+function tarihsizBitmisler(){
+  return (veri.kitaplar || []).map(istKayit).filter(Boolean).filter(k => !k.bitisTarihi);
+}
+function tarihsizOzet(){
+  const ks = tarihsizBitmisler();
+  return { adet: ks.length, sayfa: ks.reduce((t,k) => t + (k.sayfa || 0), 0) };
+}
+/* Eklentiler (rapor.js, zeka.js) buradan okur — sayım kopyalanmaz. */
+window.__tarihsiz = { ozet: tarihsizOzet, liste: tarihsizBitmisler };
 /* ---------- yıl tempo durumu (v63) ----------
    İstatistik ekranı ve bildirim tetiği AYNI sayıyı kullansın diye tek yerde.
    Önceden bu hesap istCiz içinde satır içiydi; tempo bildirimi için ikinci bir
@@ -4933,6 +4968,17 @@ function istCiz(){
       <div class="is-hucre"><span class="is-hero-sayi" id="istHeroHedef">${hedefYuzde === null ? '—' : '%' + hedefYuzde}</span>
         <span class="is-hucre-ad">${hedefYuzde === null ? 'hedef koymadın' : yil + ' hedefi'}</span></div>
     </div>`;
+  /* v125 TABAN: hero'nun üç sayısı da YIL-bazlı, yani tarihsiz bitmişleri
+     sayamaz. Not en üstte duruyor çünkü aşağıdaki her yıl/tempo sayısı aynı
+     tabandan besleniyor; sayı DEĞİŞMİYOR, neyin dışarıda kaldığı söyleniyor
+     (v63/v119 emsali). 0 iken satır kendini gizler. */
+  const tz = tarihsizOzet();
+  if(tz.adet){
+    html += `<div class="mini-not" id="tzHeroNot"><b>${sy(tz.adet)} bitmiş kitapta bitiş tarihi yok</b>
+      (${sy(tz.sayfa)} sayfa) — tarih olmadan hangi yıla ait oldukları bilinmiyor, bu yüzden
+      yukarıdaki ${yil} sayılarına, tempoya, aylık şeride ve yıl raporuna girmiyorlar.
+      <button class="d-link" data-act="zg-tarih">yıl ata</button></div>`;
+  }
 
   /* ---- TOPLAM: tüm zamanlar; payda ("N kitaptan") burada yaşar ---- */
   // puanYok ("hatırlamıyorum", v72) sayımdan düşer — köprü ile kuyruk aynı kümeyi görsün
@@ -4992,8 +5038,14 @@ function istCiz(){
         /* BELİRSİZ: emir kipi YOK. n=6'lık bir sayımdan "tempo artmalı" demek
            veriyi aşan bir iddiaydı; yerine kullanılabilir sayı (gerekli hız) gelir. */
         : `Bu hızla yıl sonunda ~<b style="color:var(--brass)">${projeksiyon}</b> kitap.`;
+    /* v125: oranın TABANI aynı cümlede söylenir. Ayrı satır AÇILMADI — v123'te
+       ölçüldü, bu kartta alt alta yığılan sayılar tam da karışıklığın kendisi;
+       taban bir yan cümle, yeni bir rakam değil. */
+    const tabanTxt = tz.adet
+      ? ` Sayım tarihli bitişlerden: ${sy(tz.adet)} tarihsiz bitmiş bu orana da tempoya da girmiyor.`
+      : '';
     html += `<div class="ilerleme"><div style="width:${hedefYuzde}%"></div></div>
-      <div class="mini-not" id="istTempo"><b style="color:var(--brass)">${buYil.length} / ${hedef}</b> kitap (%${hedefYuzde}). ${hizTxt} ${sonucTxt}</div>`;
+      <div class="mini-not" id="istTempo"><b style="color:var(--brass)">${buYil.length} / ${hedef}</b> kitap (%${hedefYuzde}). ${hizTxt} ${sonucTxt}<span id="tzTempoTaban">${tabanTxt}</span></div>`;
     if(td.durum !== 'ustunde' && td.gerekliGun !== null){
       html += `<div class="mini-not" id="istGerekliHiz">Hedefe yetişmek için kalan ${td.kalanGun} günde
         <b style="color:var(--brass)">${hedef - td.bitti} kitap</b> gerekiyor — ${ondalik(td.gerekliGun)} günde bir.</div>`;
@@ -5122,10 +5174,12 @@ function istCiz(){
   }
   /* Tarihsiz bitmişler bu histograma ve yıl raporuna SESSİZCE girmiyordu —
      dürüst not + yıl atama akışı (zengin.js, v63). Otomatik tarih YAZILMAZ. */
-  const tarihsizBitmis = bittiler.filter(k => !k.bitisTarihi).length;
-  if(tarihsizBitmis){
-    html += `<div class="mini-not" id="istTarihsiz">${tarihsizBitmis} bitmiş kitapta bitiş tarihi yok —
-      yıl istatistiklerine ve yıl raporuna girmiyorlar.
+  /* v125: sayım artık tarihsizOzet()'ten — hero notuyla AYNI sayı (v63 dersi).
+     Çubuğun TABANI da söyleniyor (v119 emsali): kaç tarihli bitiş çizildi. */
+  if(tz.adet){
+    html += `<div class="mini-not" id="istTarihsiz">${sy(tz.adet)} bitmiş kitapta bitiş tarihi yok —
+      yukarıdaki yıl çubukları ${sy(bittiler.length - tz.adet)} tarihli bitişi gösteriyor,
+      ${tz.adet === 1 ? 'o kitap yıl istatistiklerine ve yıl raporuna girmiyor' : 'onlar yıl istatistiklerine ve yıl raporuna girmiyorlar'}.
       <button class="d-link" data-act="zg-tarih">yıl ata</button></div>`;
   }
   const aylikSayfa = {};
