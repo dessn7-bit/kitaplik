@@ -125,6 +125,12 @@
           '<div><label for="seriRaf">Raf konumu</label>' +
             '<input id="seriRaf" placeholder="ör. üst raf" autocomplete="off"></div>' +
         '</div>' +
+        /* v126: "Bitti" seçilirse her okutulan kitaba BUGÜN yazılıyor. Seri
+           tarama hızlı bir akış — kitap başına uyarı gürültü olurdu, bu yüzden
+           kural SEÇİMİN yanında, taramaya başlamadan ÖNCE söyleniyor. */
+        '<div id="seriDurumNot" style="font-size:.78rem;color:var(--muted);margin-top:6px">' +
+          '"Bitti" seçersen her kitaba bitiş tarihi olarak BUGÜN yazılır — eski ' +
+          'kitaplarda tarihi sonra İstatistik ekranından düzeltebilirsin.</div>' +
         '<div style="margin-top:12px;border-radius:12px;overflow:hidden;background:var(--kamera-zemin);position:relative">' +
           '<video id="seriVideo" playsinline muted style="width:100%;max-height:38vh;object-fit:cover;display:block"></video>' +
           '<div style="position:absolute;inset:24% 12%;border:2px solid var(--kamera-cerceve);border-radius:10px;pointer-events:none"></div>' +

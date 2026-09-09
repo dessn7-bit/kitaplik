@@ -3767,7 +3767,12 @@ function formKaydet(){
   let bas = document.getElementById('f-bas').value || null;
   let bit = document.getElementById('f-bit').value || null;
   if(durum.formDurum === 'okunuyor' && !bas) bas = bugun();
-  if(durum.formDurum === 'bitti' && !bit) bit = bugun();
+  /* v126: "bitti" seçilip tarih alanı boş bırakılınca BUGÜN yazılıyor —
+     doğru bir varsayılan ama SESSİZDİ; eski bir kitabı işaretleyen kullanıcı
+     yanlış bir tarihi fark etmeden kaydediyordu. Davranış değişmedi, kayıt
+     mesajı artık ne yazıldığını söylüyor (v127 bunu SORUYA çevirecek). */
+  let bugunDamgalandi = false;
+  if(durum.formDurum === 'bitti' && !bit){ bit = bugun(); bugunDamgalandi = true; }
   if(durum.formDurum === 'okunacak'){ bas = null; bit = null; }
   if(durum.formDurum === 'okunuyor') bit = null;
   if(bas && bit && bit < bas){ toast('Bitiş tarihi başlamadan önce olamaz'); return; }
@@ -3834,13 +3839,13 @@ function formKaydet(){
       if(k.guncelSayfa !== eskiGS) k.gsG = Date.now();   // kullanıcı eliyle sayfa değişti
     }
     kayitId = durum.formDuzenId;
-    toast('Kitap güncellendi' + ikizUyari);
+    toast('Kitap güncellendi' + ikizUyari + (bugunDamgalandi ? ' · ' + bugunDamgaCumle() : ''));
   }else{
     const yeni = kitapNormalize({ ...ortak, id: uid(), eklenme: Date.now(),
       guncelSayfa: durum.formDurum === 'bitti' && sayfa ? sayfa : 0 });
     veri.kitaplar.push(yeni);
     kayitId = yeni.id;
-    toast('Kitap rafa eklendi' + ikizUyari);
+    toast('Kitap rafa eklendi' + ikizUyari + (bugunDamgalandi ? ' · ' + bugunDamgaCumle() : ''));
     taslakAday(yeni.id);   // v82: yeni kitap taslak özet adayı (ayar kapalıysa sessiz no-op)
     /* Otomatik tür (v65): YENİ kitapta tür boşsa zengin.js motoru arkadan
        doldurur (aynı motor — kod kopyası yok). Kayıt BEKLEMEZ: kuyruk asenkron,
@@ -4809,6 +4814,20 @@ function tarihsizOzet(){
 }
 /* Eklentiler (rapor.js, zeka.js) buradan okur — sayım kopyalanmaz. */
 window.__tarihsiz = { ozet: tarihsizOzet, liste: tarihsizBitmisler };
+/* ---------- tarih kaçakları: ortak cümleler (v126) ----------
+   v125 dışarıda kalanı SÖYLEDİ; v126 boşluğun BÜYÜDÜĞÜ anları söylüyor.
+   Ölçüldü (koşularak): sekiz yolun dördü tarihsiz kaydı sessizce içeri
+   alıyor (Goodreads CSV 'Date Read' boş · JSON yedeği birleştir · JSON tam
+   değiştir · senkron), dördü de sormadan BUGÜN damgalıyor (form · toplu
+   durum · ISBN seri tarama · detayda "Bitirdim").
+   KARAR: hiçbir tarih UYDURULMUYOR ve hiçbiri engellenmiyor — yalnız o an
+   ne olduğu yazılıyor. Cümleler tek yerde ki yedi yüzey aynı dili konuşsun;
+   damga cümlesi v127'de yerini SORUYA bırakacak. */
+function tarihsizGirenCumle(n){
+  return n ? ` — ${n} tanesinde bitiş tarihi yok, İstatistik'ten yıl atayabilirsin` : '';
+}
+function bugunDamgaCumle(){ return 'Bitiş tarihi bugün olarak yazıldı'; }
+window.__tarihKacak = { girenCumle: tarihsizGirenCumle, damgaCumle: bugunDamgaCumle };
 /* ---------- yıl tempo durumu (v63) ----------
    İstatistik ekranı ve bildirim tetiği AYNI sayıyı kullansın diye tek yerde.
    Önceden bu hesap istCiz içinde satır içiydi; tempo bildirimi için ikinci bir
@@ -5420,7 +5439,7 @@ function iceAktar(dosya){
     try{
       const y = JSON.parse(okuyucu.result);
       if(!y || !Array.isArray(y.kitaplar)) throw new Error('biçim');
-      let eklendi = 0, notSayisi = 0;
+      let eklendi = 0, notSayisi = 0, tarihsizGiren = 0;
       const anah = k => katla(k.ad + '|' + (k.yazar||''));
       const mevcut = new Set(veri.kitaplar.map(anah));
       const mevcutIdler = new Set(veri.kitaplar.map(k => k.id));
@@ -5448,6 +5467,9 @@ function iceAktar(dosya){
         veri.kitaplar.push(kayit);
         mevcutIdler.add(kayit.id);
         mevcut.add(anah(k)); eklendi++;
+        /* v126: dosyadan tarihsiz bitmiş geliyorsa SAYILIR — tarih uydurulmaz
+           ama sessizce de girmez; sayı aşağıdaki toast'ta söylenir. */
+        if(kayit.durum === 'bitti' && !kayit.bitisTarihi) tarihsizGiren++;
         notSayisi += (kayit.notlar || []).length;   // v94: taşıma doğrulama özeti
         taslakAday(kayit.id);   // v82: kuyruk sıralı + 3 sn aralıklı, toplu geri yükleme worker'ı dövmez
       });
@@ -5524,7 +5546,9 @@ function iceAktar(dosya){
           { if(typeof tipografiCiz === 'function') tipografiCiz(); }
       }catch(e){}
       depoKaydet(); hepsiniCiz();
-      toast(eklendi ? `${eklendi} kitap geri yüklendi` : 'Yeni kitap yok — hepsi zaten kayıtlı');
+      toast(eklendi
+        ? `${eklendi} kitap geri yüklendi${tarihsizGirenCumle(tarihsizGiren)}`
+        : 'Yeni kitap yok — hepsi zaten kayıtlı');
       /* v94: doğrulama özeti — asenkron yazımlar bitince olayla duyurulur;
          taşıma karşılaması bunu rakam ekranına çevirir. Hata da duyurur
          (dinleyen yoksa zararsız). */
@@ -5580,7 +5604,7 @@ function goodreadsAktar(dosya){
       const anah = k => katla(k.ad + '|' + (k.yazar||''));
       const mevcut = new Set(veri.kitaplar.map(anah));
       const RAF = { 'read':'bitti', 'currently-reading':'okunuyor', 'to-read':'okunacak' };
-      let eklendi = 0, atlandi = 0;
+      let eklendi = 0, atlandi = 0, tarihsizGiren = 0;
       for(const row of tablo.slice(1)){
         const ad = al(row, 'Title');
         if(!ad){ continue; }
@@ -5610,12 +5634,17 @@ function goodreadsAktar(dosya){
           notlar: yorum ? [{ id: uid(), tip:'not', metin: yorum, tarih: bitis || bugun() }] : []
         });
         veri.kitaplar.push(k);
+        /* v126: Goodreads'te "read" rafında olup "Date Read" sütunu BOŞ olan
+           kitap tarihsiz bitmiş olarak giriyor (koşularak doğrulandı). Tarih
+           uydurulmaz — Date Added okuma tarihi değildir — ama kaç tanesinin
+           böyle geldiği artık söyleniyor. */
+        if(k.durum === 'bitti' && !k.bitisTarihi) tarihsizGiren++;
         mevcut.add(anah(k)); eklendi++;
         taslakAday(k.id);   // v82: sıralı kuyruk, kitap başına ≥3 sn ara
       }
       depoKaydet(); hepsiniCiz();
       toast(eklendi
-        ? `Goodreads'ten ${eklendi} kitap aktarıldı${atlandi ? `, ${atlandi} zaten kayıtlıydı` : ''}`
+        ? `Goodreads'ten ${eklendi} kitap aktarıldı${atlandi ? `, ${atlandi} zaten kayıtlıydı` : ''}${tarihsizGirenCumle(tarihsizGiren)}`
         : (atlandi ? 'Hepsi zaten kayıtlı — yeni kitap yok' : 'Aktarılacak kitap bulunamadı'));
     }catch(e){ toast('Dosya okunamadı — Goodreads Export Library CSV dosyası olmalı'); }
   };
@@ -6575,7 +6604,10 @@ document.addEventListener('click', e => {
         if(window.__oturum && window.__oturum.durumKapat) window.__oturum.durumKapat(k.id, true);
         depoKaydet(); hepsiniCiz();
         // Detayda kal: puan sorusu artık formda değil, birincil blokta (puan şeridi).
-        detayAc(k.id); toast('Tebrikler! İstersen puanını hemen verebilirsin'); }
+        /* v126: damga SESSİZ değil. "Bitirdim" bugünü yazar — çoğu zaman
+           doğrudur, ama dün/geçen hafta bitmiş bir kitapta yanlış tarih
+           fark edilmeden kaydediliyordu. v127 burada tarihi SORACAK. */
+        detayAc(k.id); toast('Tebrikler! ' + bugunDamgaCumle() + ' — puanını hemen verebilirsin'); }
       break; }
     case 'yarim-birak': {
       const k = kitapBul(durum.detayId);

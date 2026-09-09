@@ -529,6 +529,14 @@
       }else k = c.u || c.y;
       const mezar = silinenler[id];
       if(mezar && mezar >= (k.g||0)) continue;
+      /* v126 — SEKİZİNCİ TARİH KAÇAĞI, BİLEREK AÇIK BIRAKILDI.
+         Uzak cihazdan bitmiş ama bitiş tarihi olmayan kayıt gelebilir. Burada
+         uyarı BASILMIYOR, iki gerekçeyle: (1) kapı kaydı ÜRETEN cihazda —
+         orada da aynı yedi kapı çalışıyor, ikinci uyarı aynı olayı iki kez
+         söylerdi; (2) senkron arka planda ve sık koşuyor, her birleşmede
+         toast atmak gürültü olurdu. Sessiz KALMIYOR: gelen kayıt İstatistik'in
+         v125 sayacına anında giriyor ("N bitmiş kitapta bitiş tarihi yok").
+         Tarih burada da UYDURULMAZ. */
       const kayit = (typeof kitapNormalize === 'function') ? kitapNormalize(k) : k;
       kayit.g = k.g || 0;
       kitaplar.push(kayit);

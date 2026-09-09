@@ -679,11 +679,12 @@
         const d = (document.getElementById('topluDurumSec')||{}).value || 'okunacak';
         const ks = secilenKitaplar();
         const bgn = typeof bugun === 'function' ? bugun() : null;
+        let damgalanan = 0;   // v126: kaç kitaba BUGÜN yazıldı
         ks.forEach(k => {
           const eskiGS = k.guncelSayfa;
           k.durum = d;
           if(d === 'bitti'){
-            if(!k.bitisTarihi) k.bitisTarihi = bgn;
+            if(!k.bitisTarihi){ k.bitisTarihi = bgn; damgalanan++; }
             if(k.sayfa) k.guncelSayfa = k.sayfa;
           }
           if(d === 'okunuyor' && !k.baslamaTarihi) k.baslamaTarihi = bgn;
@@ -691,7 +692,13 @@
           if(k.guncelSayfa !== eskiGS) k.gsG = Date.now();  // kullanıcı eliyle sayfa değişti (senkron gsG)
           k.g = Date.now();
         });
-        kaydetVeTazele(ks.length + ' kitabın durumu değişti');
+        /* v126: toplu işaretleme rafın tamamına BUGÜN yazabiliyor — 20 eski
+           kitabı "bitti" yapan kullanıcı aynı anda 20 yanlış tarih üretiyordu
+           ve hiçbir yerde yazmıyordu. Davranış aynı, cümle çekirdekten. */
+        const damgaC = (window.__tarihKacak && window.__tarihKacak.damgaCumle)
+          ? window.__tarihKacak.damgaCumle() : 'Bitiş tarihi bugün olarak yazıldı';
+        kaydetVeTazele(ks.length + ' kitabın durumu değişti'
+          + (damgalanan ? ' · ' + damgalanan + ' kitaba ' + damgaC.toLocaleLowerCase('tr') : ''));
         return;
       }
     });

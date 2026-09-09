@@ -1903,6 +1903,11 @@
     const silAnah = new Set(plan.sil.map(anah));
     plan.idDegisen = plan.ekle.filter(e => silAnah.has(anah(e))).length;
     plan.hedefDegisir = kyHedefDegisirMi(veri.hedef, y.hedef) || kyHedefDegisirMi(veri.hedefSayfa, y.hedefSayfa);
+    /* v126: dosyadaki tarihsiz bitmişler ONAYDAN ÖNCE sayılır. Tam değiştirme
+       kütüphaneyi dosyadaki hâle getiriyor; dosya 70 tarihsiz kayıt taşıyorsa
+       yıl sayımlarının bir bölümü o an sessizce kayboluyordu. Tarih
+       UYDURULMAZ, yalnız kaç tane olduğu önizlemede yazılır. */
+    plan.tarihsiz = y.kitaplar.filter(r => r && r.durum === 'bitti' && !r.bitisTarihi).length;
     if(y.ozetler && typeof y.ozetler === 'object' && !Array.isArray(y.ozetler)){
       plan.ozetToplam = Object.keys(y.ozetler).length;
       plan.ozetYazilacak = kyOzetGirisleri(y, dosyaIdler, zorla).length;
@@ -1986,6 +1991,8 @@
     const ozet2 = ['<b>' + plan.ekle.length + '</b> eklenecek', '<b>' + plan.guncelle.length + '</b> güncellenecek',
       '<b>' + plan.sil.length + '</b> silinecek', plan.ayni + ' aynı kalacak'];
     if(plan.idDegisen) ozet2.push(plan.idDegisen + ' kayıt ad + yazar aynı ama id farklı (silinip yeniden eklenecek)');
+    if(plan.tarihsiz) ozet2.push('<b id="kyTarihsiz">' + plan.tarihsiz
+      + '</b> bitmiş kayıtta bitiş tarihi yok — yıl sayımlarına ve yıl raporuna girmezler');
     if(plan.hedefDegisir) ozet2.push('yıl hedefleri ' + (geri ? 'kopyadaki' : 'dosyadaki') + ' değerlerle değişecek');
     if(plan.ozetToplam) ozet2.push(plan.ozetYazilacak
       ? '<b>' + plan.ozetYazilacak + '</b> özet ' + (geri ? 'kopyadan geri gelecek' : 'dosyadan yazılacak (damgası yereldekinden yeni)')
