@@ -979,6 +979,18 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
 .d-etiket-giris-satir{display:flex;gap:8px;margin-top:10px;align-items:center}
 .d-etiket-giris-satir[hidden]{display:none}
 .d-etiket-giris-satir input{flex:1;width:auto}
+/* v127 bitiş tarihi satırı (bt-): bitmiş kitabın tarihi GÖRÜNÜR ve tek
+   dokunuşla değişir. Etiket giriş satırının deseni birebir izlenir (açılır
+   satır + [hidden] kuralı), yeni ad alanı kendi öneki. */
+.bt-satir{display:flex;gap:8px;align-items:baseline;justify-content:space-between;
+  margin-top:12px;font-size:.8rem;color:var(--muted);line-height:1.5}
+.bt-satir b{color:var(--paper);font-weight:600}
+.bt-giris{margin-top:8px}
+.bt-giris[hidden]{display:none}
+.bt-hizli{display:flex;gap:8px}
+.bt-hizli .btn{flex:1}
+.bt-elle{display:flex;gap:8px;margin-top:8px;align-items:center}
+.bt-elle input{flex:1;width:auto}
 /* v46: eylem alanı diyeti — İlerleme→künye arası iki tasarım satırını aşmaz */
 .d-eylem-satir{display:flex;gap:8px}
 .d-eylem-satir .btn{flex:1;width:auto}
@@ -3035,6 +3047,13 @@ function trTarih(iso){
   const aylar = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
   return `${parseInt(p[2])} ${aylar[parseInt(p[1])-1]} ${p[0]}`;
 }
+/* v127: gün kaydırmalı ISO tarih — "dün" düğmesi ve gelecek kapısı buradan
+   okur; ay/yıl sınırını Date kendisi çözsün diye elle aritmetik YAPILMAZ. */
+function isoGun(kayma){
+  const d = new Date();
+  if(kayma) d.setDate(d.getDate() + kayma);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 function gunFarki(a, b){ return Math.round((new Date(b) - new Date(a)) / 86400000); }
 function kitapBul(id){ return veri.kitaplar.find(k => k.id === id); }
 /* aktifOdunc v40'ta kaldırıldı (ödünç UI söküldü); veri modeli (kitapNormalize.odunc)
@@ -3767,12 +3786,14 @@ function formKaydet(){
   let bas = document.getElementById('f-bas').value || null;
   let bit = document.getElementById('f-bit').value || null;
   if(durum.formDurum === 'okunuyor' && !bas) bas = bugun();
-  /* v126: "bitti" seçilip tarih alanı boş bırakılınca BUGÜN yazılıyor —
-     doğru bir varsayılan ama SESSİZDİ; eski bir kitabı işaretleyen kullanıcı
-     yanlış bir tarihi fark etmeden kaydediyordu. Davranış değişmedi, kayıt
-     mesajı artık ne yazıldığını söylüyor (v127 bunu SORUYA çevirecek). */
-  let bugunDamgalandi = false;
-  if(durum.formDurum === 'bitti' && !bit){ bit = bugun(); bugunDamgalandi = true; }
+  /* v126'da burası boş alana sessizce BUGÜN yazıyordu; v127 sözleşmeyi
+     BİLEREK değiştirdi: tarih artık "bitti"ye basıldığı anda alana GÖRÜNÜR
+     olarak dolduruluyor (f-durum eylemi). Bu yüzden kaydetme anında hâlâ
+     boşsa bu bir kaza değil, kullanıcının alanı BOŞALTMASIDIR — cevabına
+     saygı gösterilir, tarih uydurulmaz. Kayıt tarihsiz kalır ve bunu
+     mesaj söyler (v125 sayacına da anında girer). */
+  let tarihsizBirakildi = false;
+  if(durum.formDurum === 'bitti' && !bit) tarihsizBirakildi = true;
   if(durum.formDurum === 'okunacak'){ bas = null; bit = null; }
   if(durum.formDurum === 'okunuyor') bit = null;
   if(bas && bit && bit < bas){ toast('Bitiş tarihi başlamadan önce olamaz'); return; }
@@ -3839,13 +3860,13 @@ function formKaydet(){
       if(k.guncelSayfa !== eskiGS) k.gsG = Date.now();   // kullanıcı eliyle sayfa değişti
     }
     kayitId = durum.formDuzenId;
-    toast('Kitap güncellendi' + ikizUyari + (bugunDamgalandi ? ' · ' + bugunDamgaCumle() : ''));
+    toast('Kitap güncellendi' + ikizUyari + (tarihsizBirakildi ? ' · ' + tarihsizBirakildiCumle() : ''));
   }else{
     const yeni = kitapNormalize({ ...ortak, id: uid(), eklenme: Date.now(),
       guncelSayfa: durum.formDurum === 'bitti' && sayfa ? sayfa : 0 });
     veri.kitaplar.push(yeni);
     kayitId = yeni.id;
-    toast('Kitap rafa eklendi' + ikizUyari + (bugunDamgalandi ? ' · ' + bugunDamgaCumle() : ''));
+    toast('Kitap rafa eklendi' + ikizUyari + (tarihsizBirakildi ? ' · ' + tarihsizBirakildiCumle() : ''));
     taslakAday(yeni.id);   // v82: yeni kitap taslak özet adayı (ayar kapalıysa sessiz no-op)
     /* Otomatik tür (v65): YENİ kitapta tür boşsa zengin.js motoru arkadan
        doldurur (aynı motor — kod kopyası yok). Kayıt BEKLEMEZ: kuyruk asenkron,
@@ -3960,6 +3981,52 @@ function metinBolumHtml(k){
   </div>`;
 }
 
+/* ---------- bitiş tarihi satırı (bt-, v127) ----------
+   İLERİYE DÖNÜK SORU. v126'ya kadar "Bitirdim" bugünü SESSİZCE yazıyordu;
+   v126 bunu söyledi ama düzeltme yolu hâlâ Düzenle formundan geçiyordu —
+   yani doğru tarih FRİKSİYONLU, yanlış tarih bedavaydı. Burada tersine
+   çevriliyor: yaygın durum (bugün bitirdim) hâlâ sıfır dokunuş, düzeltme
+   TEK dokunuş, ve tarih artık bitmiş kitabın kendi ekranında GÖRÜNÜR.
+   Aynı satır 70 eski kaydın per-kitap onarım yolu: tarihi olmayan bitmişte
+   "tarih ekle" der. Gelecek tarih ve başlamadan önceki tarih REDDEDİLİR
+   (form ile aynı kural); "tarihi kaldır" bilinçli bir cevaptır — kayıt
+   tarihsize döner ve v125 sayacına girer, uydurma tarihten iyidir. */
+function btSatirHtml(k){
+  const bugunT = bugun(), dunT = isoGun(-1);
+  const varT = !!k.bitisTarihi;
+  const metin = varT
+    ? `Bitiş tarihi: <b>${trTarih(k.bitisTarihi)}</b>${k.bitisTarihi === bugunT ? ' (bugün)' : ''}`
+    : `Bitiş tarihi <b>yok</b> — yıl sayımlarına girmiyor`;
+  return `<div id="dBitisBlok">
+    <div class="bt-satir"><span id="dBitisMetin">${metin}</span>
+      <button class="d-ghost" data-act="bt-ac">${varT ? 'değiştir' : 'tarih ekle'}</button></div>
+    <div class="bt-giris" id="dBitisGiris" hidden>
+      <div class="bt-hizli">
+        <button class="btn btn-cerceve btn-kucuk" data-act="bt-hizli" data-v="${bugunT}">Bugün</button>
+        <button class="btn btn-cerceve btn-kucuk" data-act="bt-hizli" data-v="${dunT}">Dün</button>
+      </div>
+      <div class="bt-elle">
+        <input type="date" id="dBitisTarih" max="${bugunT}" value="${k.bitisTarihi || ''}" aria-label="Bitiş tarihi">
+        <button class="btn btn-cerceve btn-kucuk" data-act="bt-kaydet">Kaydet</button>
+      </div>
+      ${varT ? `<button class="d-ghost" data-act="bt-sil" style="margin-top:8px">tarihi kaldır</button>` : ''}
+    </div>
+  </div>`;
+}
+function btYaz(t){
+  const k = kitapBul(durum.detayId);
+  if(!k) return;
+  if(t){
+    if(t > bugun()){ toast('Bitiş tarihi gelecekte olamaz'); return; }
+    if(k.baslamaTarihi && t < k.baslamaTarihi){ toast('Bitiş tarihi başlamadan önce olamaz'); return; }
+  }
+  k.bitisTarihi = t || null;
+  k.g = Date.now();
+  depoKaydet(); hepsiniCiz(); detayAc(k.id);
+  toast(t ? 'Bitiş tarihi: ' + trTarih(t)
+          : 'Bitiş tarihi kaldırıldı — bu kitap yıl sayımlarına girmez');
+}
+
 function detayAc(id){
   const k = kitapBul(id);
   if(!k) return;
@@ -4069,6 +4136,7 @@ function detayAc(id){
   if(k.durum === 'bitti'){
     eylemHtml = `<div class="d-blok d-eylem">
       ${puanHtml()}
+      ${btSatirHtml(k)}
       <button class="btn btn-brass" style="margin-top:14px" data-act="yeniden-oku">Yeniden oku</button>
       <div class="mini-not">Bu okuman geçmişe kaydedilir; tarihlerin ve puanın korunur.</div>
     </div>`;
@@ -4827,6 +4895,9 @@ function tarihsizGirenCumle(n){
   return n ? ` — ${n} tanesinde bitiş tarihi yok, İstatistik'ten yıl atayabilirsin` : '';
 }
 function bugunDamgaCumle(){ return 'Bitiş tarihi bugün olarak yazıldı'; }
+/* v127: tarih alanı bilerek boş bırakıldığında kullanılan cümle — damganın
+   eşi. "Uydurmadım" demek yetmez, sonucunu da söyler. */
+function tarihsizBirakildiCumle(){ return 'Bitiş tarihi boş — yıl sayımlarına girmez'; }
 window.__tarihKacak = { girenCumle: tarihsizGirenCumle, damgaCumle: bugunDamgaCumle };
 /* ---------- yıl tempo durumu (v63) ----------
    İstatistik ekranı ve bildirim tetiği AYNI sayıyı kullansın diye tek yerde.
@@ -6446,7 +6517,20 @@ document.addEventListener('click', e => {
       if(gir.value.trim().length >= 3) canliAra(gir.value.trim());
       break; }
     case 'kapak-kaldir': durum.formKapak = null; kapakOnizleCiz(); break;
-    case 'f-durum': durum.formDurum = v; if(v !== 'bitti' && v !== 'yarim') durum.formPuan = null; formDurumCiz(); puanCiz(); break;
+    case 'f-durum': {
+      durum.formDurum = v;
+      if(v !== 'bitti' && v !== 'yarim') durum.formPuan = null;
+      /* v127: "Bitti" seçmek tarihi GÖRÜNÜR kılar. Eskiden alan boş kalıyor,
+         bugün kaydetme anında sessizce yazılıyordu (v126 bunu söyledi ama
+         yazıldıktan SONRA). Artık kullanıcı kaydetmeden önce tarihi görüyor
+         ve değiştirebiliyor; boşaltırsa bu bir CEVAPTIR (tarihsiz kalır).
+         Yalnız kullanıcı bu formda "bitti"ye BASINCA dolar — formu açmak
+         eski bir kaydın tarihini kendiliğinden bugüne çekmez. */
+      if(v === 'bitti'){
+        const bitEl = document.getElementById('f-bit');
+        if(bitEl && !bitEl.value) bitEl.value = bugun();
+      }
+      formDurumCiz(); puanCiz(); break; }
     case 'f-puan': durum.formPuan = parseInt(v); puanCiz(); break;
     case 'form-kaydet': formKaydet(); break;
     case 'detay': detayAc(el.dataset.id); break;
@@ -6607,7 +6691,7 @@ document.addEventListener('click', e => {
         /* v126: damga SESSİZ değil. "Bitirdim" bugünü yazar — çoğu zaman
            doğrudur, ama dün/geçen hafta bitmiş bir kitapta yanlış tarih
            fark edilmeden kaydediliyordu. v127 burada tarihi SORACAK. */
-        detayAc(k.id); toast('Tebrikler! ' + bugunDamgaCumle() + ' — puanını hemen verebilirsin'); }
+        detayAc(k.id); toast('Tebrikler! ' + bugunDamgaCumle() + ' — aşağıdan değiştirebilirsin'); }
       break; }
     case 'yarim-birak': {
       const k = kitapBul(durum.detayId);
@@ -6657,6 +6741,23 @@ document.addEventListener('click', e => {
         depoKaydet(); hepsiniCiz(); detayAc(k.id); toast('Puan kaldırıldı');
       }
       break; }
+    /* v127 bitiş tarihi eylemleri — puan şeridiyle AYNI kalıp: form açılmaz,
+       yazım tek dokunuşta, damga (k.g) yalnız gerçekten yazınca basılır. */
+    case 'bt-ac': {
+      const g = document.getElementById('dBitisGiris');
+      if(g){
+        g.hidden = !g.hidden;
+        if(!g.hidden){ const i = document.getElementById('dBitisTarih'); if(i) i.focus(); }
+      }
+      break; }
+    case 'bt-hizli': btYaz(v); break;
+    case 'bt-kaydet': {
+      const i = document.getElementById('dBitisTarih');
+      const t = i ? i.value : '';
+      if(!t){ toast('Önce bir tarih seç'); break; }
+      btYaz(t);
+      break; }
+    case 'bt-sil': btYaz(null); break;
     /* Özet eylemleri (M2) — doğrudan-puanlama kalıbı: form AÇILMAZ, damga
        YALNIZ değer değiştiyse basılır (hedef-kaydet dersi: yalnız-eksikse-bas
        başka cihazın eskisini yenemiyordu). ozetG = alan damgası (senkron). */

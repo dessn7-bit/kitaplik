@@ -486,7 +486,15 @@
         '<option value="bitti">Bitti</option>' +
         '<option value="yarim">Yarım kaldı</option>' +
       '</select>' +
-      '<div class="mini-not">Bitti seçersen bitiş tarihi bugün olarak yazılır (tarihi olmayanlara).</div>',
+      /* v127: toplu işaretleme, yanlış tarihin EN ÇOK üretildiği yer — tek
+         dokunuşla onlarca eski kitaba bugün yazılabiliyordu. Tarih artık
+         seçilebilir ve GÖRÜNÜR (varsayılan bugün, davranış değişmedi);
+         alan boşaltılırsa tarih YAZILMAZ — uydurmak yerine tarihsiz kalır. */
+      '<label for="topluBitTarih" style="margin-top:10px">Bitiş tarihi (yalnız "Bitti" için)</label>' +
+      '<input type="date" id="topluBitTarih" max="' + (typeof bugun === 'function' ? bugun() : '') + '"' +
+        ' value="' + (typeof bugun === 'function' ? bugun() : '') + '">' +
+      '<div class="mini-not">Zaten tarihi olan kitaplar değişmez. Alanı boşaltırsan tarih ' +
+        'yazılmaz — kitaplar yıl sayımlarına girmez, ama yanlış tarih de almazlar.</div>',
       'toplu-durum-uygula');
   }
 
@@ -679,12 +687,25 @@
         const d = (document.getElementById('topluDurumSec')||{}).value || 'okunacak';
         const ks = secilenKitaplar();
         const bgn = typeof bugun === 'function' ? bugun() : null;
-        let damgalanan = 0;   // v126: kaç kitaba BUGÜN yazıldı
+        /* v127: yazılacak tarih artık PENCEREDEN geliyor (varsayılan bugün).
+           Boş bırakıldıysa hiçbir tarih yazılmaz — kullanıcının "bilmiyorum"
+           cevabı, uydurmanın yerine geçer. Gelecek tarih kapıda düşer. */
+        const secTarih = (document.getElementById('topluBitTarih')||{}).value || '';
+        if(d === 'bitti' && secTarih && bgn && secTarih > bgn){
+          bildir('Bitiş tarihi gelecekte olamaz');   // pencere AÇIK kalır, hiçbir kayıt değişmez
+          return;
+        }
+        const yazilacak = secTarih || null;
+        let damgalanan = 0;      // kaç kitaba tarih yazıldı
+        let tarihsizKalan = 0;   // kaç kitap bilerek tarihsiz bırakıldı
         ks.forEach(k => {
           const eskiGS = k.guncelSayfa;
           k.durum = d;
           if(d === 'bitti'){
-            if(!k.bitisTarihi){ k.bitisTarihi = bgn; damgalanan++; }
+            if(!k.bitisTarihi){
+              if(yazilacak){ k.bitisTarihi = yazilacak; damgalanan++; }
+              else tarihsizKalan++;
+            }
             if(k.sayfa) k.guncelSayfa = k.sayfa;
           }
           if(d === 'okunuyor' && !k.baslamaTarihi) k.baslamaTarihi = bgn;
@@ -692,13 +713,14 @@
           if(k.guncelSayfa !== eskiGS) k.gsG = Date.now();  // kullanıcı eliyle sayfa değişti (senkron gsG)
           k.g = Date.now();
         });
-        /* v126: toplu işaretleme rafın tamamına BUGÜN yazabiliyor — 20 eski
-           kitabı "bitti" yapan kullanıcı aynı anda 20 yanlış tarih üretiyordu
-           ve hiçbir yerde yazmıyordu. Davranış aynı, cümle çekirdekten. */
-        const damgaC = (window.__tarihKacak && window.__tarihKacak.damgaCumle)
-          ? window.__tarihKacak.damgaCumle() : 'Bitiş tarihi bugün olarak yazıldı';
-        kaydetVeTazele(ks.length + ' kitabın durumu değişti'
-          + (damgalanan ? ' · ' + damgalanan + ' kitaba ' + damgaC.toLocaleLowerCase('tr') : ''));
+        /* v126 ne olduğunu söylemeye başlamıştı; v127'de cümle SEÇİLEN tarihi
+           taşıyor ve "tarihsiz bırakıldı" da açıkça yazılıyor — iki sonuç da
+           kullanıcının kendi cevabı, ikisi de görünür. */
+        const trT = (typeof trTarih === 'function' && yazilacak) ? trTarih(yazilacak) : yazilacak;
+        const ek = damgalanan
+          ? ' · ' + damgalanan + ' kitaba bitiş tarihi ' + trT + ' yazıldı'
+          : (tarihsizKalan ? ' · ' + tarihsizKalan + ' kitap tarihsiz bırakıldı (yıl sayımlarına girmez)' : '');
+        kaydetVeTazele(ks.length + ' kitabın durumu değişti' + ek);
         return;
       }
     });

@@ -125,12 +125,18 @@
           '<div><label for="seriRaf">Raf konumu</label>' +
             '<input id="seriRaf" placeholder="ör. üst raf" autocomplete="off"></div>' +
         '</div>' +
-        /* v126: "Bitti" seçilirse her okutulan kitaba BUGÜN yazılıyor. Seri
-           tarama hızlı bir akış — kitap başına uyarı gürültü olurdu, bu yüzden
-           kural SEÇİMİN yanında, taramaya başlamadan ÖNCE söyleniyor. */
+        /* v126 kuralı taramadan ÖNCE söylüyordu; v127 tarihi SEÇİLEBİLİR
+           yaptı (varsayılan bugün). Rafı okutup "bitti" işaretleyen kullanıcı
+           genelde ESKİ okumaları giriyor — alan boşaltılırsa tarih yazılmaz,
+           uydurma tarih yerine tarihsiz kayıt (v125 sayacında görünür). */
+        '<div><label for="seriBitTarih">Bitiş tarihi (yalnız "Bitti" için)</label>' +
+          '<input type="date" id="seriBitTarih"' +
+          (typeof bugun === 'function' ? ' max="' + bugun() + '" value="' + bugun() + '"' : '') +
+          '></div>' +
         '<div id="seriDurumNot" style="font-size:.78rem;color:var(--muted);margin-top:6px">' +
-          '"Bitti" seçersen her kitaba bitiş tarihi olarak BUGÜN yazılır — eski ' +
-          'kitaplarda tarihi sonra İstatistik ekranından düzeltebilirsin.</div>' +
+          '"Bitti" seçersen okuttuğun her kitaba bu tarih yazılır (varsayılan BUGÜN). ' +
+          'Alanı boşaltırsan tarih yazılmaz — kitaplar yıl sayımlarına girmez, ' +
+          'tarihi sonra kitabın kendi ekranından ekleyebilirsin.</div>' +
         '<div style="margin-top:12px;border-radius:12px;overflow:hidden;background:var(--kamera-zemin);position:relative">' +
           '<video id="seriVideo" playsinline muted style="width:100%;max-height:38vh;object-fit:cover;display:block"></video>' +
           '<div style="position:absolute;inset:24% 12%;border:2px solid var(--kamera-cerceve);border-radius:10px;pointer-events:none"></div>' +
@@ -251,7 +257,9 @@
       durum: durumSec, kapak: k.kapak || null,
       cevirmen: k.cevirmen || '', dil: k.dil || '',   // v97: 1000Kitap künyesinden (kitapNormalize alanları)
       guncelSayfa: durumSec === 'bitti' && k.sayfa ? k.sayfa : 0,
-      bitisTarihi: durumSec === 'bitti' && typeof bugun === 'function' ? bugun() : null
+      /* v127: tarih paneldeki alandan (varsayılan bugün); boşsa YAZILMAZ. */
+      bitisTarihi: durumSec === 'bitti'
+        ? (((document.getElementById('seriBitTarih')||{}).value) || null) : null
     });
     kayit.raf = raf; kayit.isbn = t; kayit.g = simdi;
     kayit.sahiplik = 'sahip';   // fiziksel kitabı okutuyorsun: istek listesi değil

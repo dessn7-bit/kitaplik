@@ -20,6 +20,10 @@
  * cihazda, gelen kayıt zaten v125 sayacına düşüyor (kaynak kilidiyle
  * belgelendi). Damga cümlesi v127'de yerini SORUYA bırakacak.
  *
+ * v127 GÖÇÜ: 5-8 numaralı yollarda "bugün" artık SORULUYOR (g119). Buradaki
+ * F, H, I vakaları o sözleşmeye niyet-koruyucu güncellendi — kilitledikleri
+ * kural değişmedi: damga sessiz olamaz.
+ *
  * MUTASYON DENETİMİ (koşuldu):
  *   M-a  tarihsizGirenCumle → '' sabiti        → A, C kırmızı
  *   M-b  cümle koşulsuz eklensin (0'da da)     → B, D kırmızı
@@ -117,17 +121,21 @@ test.describe('G118 tarih kaçakları (v126)', () => {
       veri.kitaplar.find(k => k.ad === 'Değişen Tarihsiz').bitisTarihi)).toBe(null);
   });
 
-  /* ---- 5) Form ---- */
-  test('F) Form: tarih boşken BUGÜN yazılır ve bu SÖYLENİR', async ({ page }) => {
+  /* ---- 5) Form ----
+     v127 GÖÇÜ (niyet-koruyucu): bu vaka v126'da "alan boşken bugün yazılır ve
+     SÖYLENİR" diyordu. v127 sözleşmeyi bilerek değiştirdi — tarih artık
+     "Bitti"ye basılınca ALANA yazılıyor, yani kaydetmeden ÖNCE görülüyor;
+     alanın boş kalması ise kullanıcının cevabı sayılıyor (g119-G/H).
+     Vakanın NİYETİ aynı kaldı: form yolunda SESSİZ damga yok. */
+  test('F) Form: damga sessiz değil — tarih kaydetmeden önce alanda görünür', async ({ page }) => {
     await rafAc(page);
     await page.click('.fab[data-act="yeni"]');
     await ayrintilarAc(page);
     await page.fill('#f-ad', 'Formdan Bitmiş');
     await page.click('[data-act="f-durum"][data-v="bitti"]');
-    await page.fill('#f-bit', '');
+    await expect(page.locator('#f-bit')).toHaveValue(bugunISO());   // GÖRÜNÜR
     await page.click('[data-act="form-kaydet"]');
     await expect(page.locator('#toast')).toContainText('Kitap rafa eklendi');
-    await expect(page.locator('#toast')).toContainText('Bitiş tarihi bugün olarak yazıldı');
     expect(await page.evaluate(() =>
       veri.kitaplar.find(k => k.ad === 'Formdan Bitmiş').bitisTarihi)).toBe(bugunISO());
   });
@@ -159,7 +167,9 @@ test.describe('G118 tarih kaçakları (v126)', () => {
     await page.selectOption('#topluDurumSec', 'bitti');
     await page.click('[data-act="toplu-durum-uygula"]');
     await expect(page.locator('#toast')).toContainText('2 kitabın durumu değişti');
-    await expect(page.locator('#toast')).toContainText('1 kitaba bitiş tarihi bugün olarak yazıldı');
+    // v127: cümle artık YAZILAN tarihi taşıyor (varsayılan bugün) — g119-J
+    await expect(page.locator('#toast')).toContainText('1 kitaba bitiş tarihi');
+    await expect(page.locator('#toast')).toContainText('yazıldı');
     const d = await page.evaluate(() => ({
       yeni: veri.kitaplar.find(k => k.ad === 'Tarihsiz Eski').bitisTarihi,
       eski: veri.kitaplar.find(k => k.ad === 'Zaten Tarihli').bitisTarihi
@@ -176,7 +186,8 @@ test.describe('G118 tarih kaçakları (v126)', () => {
     await page.click('#ortuAyar [data-act="seri-ac"]');
     await expect(page.locator('#seriOrtu')).toHaveClass(/acik/);
     await expect(page.locator('#seriDurumNot')).toContainText('BUGÜN');
-    await expect(page.locator('#seriDurumNot')).toContainText('düzeltebilirsin');
+    // v127: kural artık "seçilebilir tarih" kuralı (g119-M)
+    await expect(page.locator('#seriDurumNot')).toContainText('ekleyebilirsin');
   });
 
   /* ---- 8) Detayda "Bitirdim" ---- */
