@@ -46,6 +46,7 @@
 (function(){
   const KUYRUK_ANAHTAR = 'kk_zengin_v1';
   const ARALIK_MS = 650;          // istekler arası en az bekleme (kota nezaketi)
+  const HATA_TAVAN = 3;           // v128 M2: bir kitap en çok bu kadar kez yeniden denenir
   const ALANLAR = ['tur', 'isbn', 'sayfa', 'yayinevi', 'yil', 'kapak'];
   const ALAN_AD = { tur: 'Tür', isbn: 'ISBN', sayfa: 'Sayfa', yayinevi: 'Yayınevi', yil: 'Yıl', kapak: 'Kapak' };
   const YIL_SAYISI = 15;          // M3 yıl ızgarası: bu yıldan geriye
@@ -235,6 +236,44 @@
       return r.status === 404;
     }catch(e){ return false; }
   }
+  /* ---------- v128 M4: ÖLÜ KAPAK DEFTERİ ----------
+     KUSUR (ölçüldü, 8 Eylül yedeği): v74'ün ölü-kapak istisnası kitapSorgula
+     İÇİNDE çalışıyor, ama kitabın oraya gelebilmesi için tarama kuyruğuna
+     girmesi gerekiyor — kuyruk ise yalnız "altı alandan biri boş" olanları
+     alıyordu (taramaBaslat). Ölü kapaklı 24 kaydın 18'inin altı alanı da dolu
+     görünüyor: bu 18 kayıt kuyruğa HİÇ giremiyordu ve kaç kez taransa da
+     düzelmiyordu. Ölülük ağ isteği gerektirdiği için kuyruk kurulurken
+     eşzamanlı ölçülemez → denetim AYRI koşar, bulgusunu buraya yazar,
+     taramaBaslat da bu defteri kuyruğa katar.
+     CİHAZ-YEREL (senkrona girmez): bulgu kitabın verisi değil, ağın o anki
+     durumu; kitap damgası (k.g) basmak bayat cihazın güncel düzenlemesini
+     senkron birleşiminde ezerdi (deneme defteri ile aynı gerekçe).
+     KENDİ KENDİNİ TEMİZLER: giriş {id: o anki kapak URL'si}. Kapak yenisiyle
+     değişince URL tutmaz ve giriş düşer — "ölü" damgası kapak dolduktan sonra
+     asla asılı kalmaz, ayrı bir temizleme kancası gerekmez. */
+  const OLU_KAPAK_ANAHTAR = 'kk_zg_olu_kapak_v1';
+  function oluKapakOku(){ return defterOku(OLU_KAPAK_ANAHTAR); }
+  function oluKapakYaz(d){ defterYaz(OLU_KAPAK_ANAHTAR, d); }
+  /* Şu an ölü sayılan kitap id'leri. İKİ kaynak:
+     · PLASEBO — ağsız, her zaman geçerli (URL deseni yeter, denetim beklemez)
+     · DENETİM bulgusu — yalnız kapak URL'si o günden beri DEĞİŞMEDİYSE */
+  function oluKapakIdler(){
+    const d = oluKapakOku();
+    const kitaplar = veri.kitaplar || [];
+    const s = new Set();
+    kitaplar.forEach(k => {
+      if(!k || !k.kapak) return;
+      if(plaseboKapak(k.kapak)){ s.add(k.id); return; }
+      if(d[k.id] && d[k.id] === k.kapak) s.add(k.id);
+    });
+    let temizlendi = false;
+    Object.keys(d).forEach(id => {
+      const k = kitaplar.find(x => x.id === id);
+      if(!k || k.kapak !== d[id]){ delete d[id]; temizlendi = true; }
+    });
+    if(temizlendi) oluKapakYaz(d);
+    return s;
+  }
   /* Google Books thumbnail temizliği: http:// → https:// (karma içerik engellenir)
      ve &edge=curl kaldırılır (kıvrık kenar çizimi levha diline uymuyor).
      ÖLÇÜM: ölü kapaklı 37 kitabın isbn: sorgusunda dönen 13 thumbnail'in
@@ -316,6 +355,18 @@
     const uzun = pa.length <= pb.length ? pb : pa;
     return kisa.every(t => uzun.indexOf(t) >= 0);
   }
+  /* v128 M3 — GOODREADS "KAPAK YOK" PLASEBOSU.
+     Goodreads kapağı olmayan kayda da bir görsel adresi döndürür:
+     …/nophoto/book/111x148.png — geçerli bir URL, v118'in İKİ kapısını da
+     geçer. ÖLÇÜM (14 Eylül, 69 kapaksız kayıt): worker'ın geçirdiği 52 kapağın
+     8'i bu plasebo. Yazılsaydı 8 kitap kalıcı olarak gri kutu alır, alanBos
+     "dolu" der ve bir daha HİÇ sorulmazlardı; v74 ölü kontrolü yalnız
+     OpenLibrary'ye baktığı için onu da görmezdi — sessizce doğru görünen
+     yanlış veri, düzeltmesi en zor tür.
+     İMZA URL DESENİDİR, bayt boyutu DEĞİL: 599 bayt o dosyanın bugünkü hâli,
+     Goodreads görseli değiştirse boyut değişir; yol değişmez. Ayrıca boyut
+     eşiği gerçek ama küçük bir kapağı yanlışlıkla eler. */
+  function plaseboKapak(u){ return /\/nophoto\//i.test(String(u || '')); }
   async function workerKapakSessiz(k){
     try{
       const A = window.__ara;
@@ -324,21 +375,61 @@
       const s = await A.worker(k.ad);
       const a = (s || []).find(x => x && x.kapak &&
         baslikUyar(k.ad, x.ad) && yazarUyar(k.yazar, x.yazar));
-      return a ? kapakTemizle(a.kapak) : '';
+      /* KAAN KARARI (v128): plasebo çıkınca SONRAKİ ADAYA DÜŞÜLMEZ. Düşseydi
+         "Herostrat" → "Die Mauer: …Herostrat…" ve "Bir Evlenme" → "Müfettiş -
+         Tiyatrodan Çıkış - Bir Evlenme" gibi DERLEME kapakları yazılırdı
+         (ölçüldü: filtre + düşüş = yalnız bu 2 kayıt). Ekranda "Herostrat"
+         yazıp "Die Mauer" kapağı göstermek yanlış bilgidir. Kaynak o eseri
+         tanıyor ve "kapağım yok" diyorsa alan BOŞ kalır; kullanıcı isterse
+         kendi fotoğrafını çeker (kapak.js). */
+      if(!a || plaseboKapak(a.kapak)) return '';
+      return kapakTemizle(a.kapak);
     }catch(e){ return ''; }
   }
   /* ---------- Google Books sorgusu (categories DAHİL — mevcut aramaGoogle
      categories okumadığı için burada kendi ayrıştırıcımız var) ---------- */
-  async function gbSor(q, sinyal){
-    const y = await fetch('https://www.googleapis.com/books/v1/volumes?key=' + GB_ANAHTAR +
-      '&country=TR&maxResults=10&printType=books&q=' + encodeURIComponent(q),
-      sinyal ? { signal: sinyal } : undefined);
-    const j = await y.json();
-    if(j.error) throw new Error('google-' + j.error.code);
-    return (j.items || []).map(it => it.volumeInfo || {});
+  /* v128 M1 — 503 GERİ ÇEKİLMELİ TEKRAR.
+     ÖLÇÜM (14 Eylül, uygulamanın kendi temposuyla 196 istek): Google bu uçta
+     isteklerin %32'sine HTTP 503 veriyor; sorgu biçimine bağlı değil
+     (intitle+inauthor 6/15 · "ad" yazar 7/15 · sade ad 13/15). Kod 503'ü
+     KALICI hata sayıyordu: başlık sorgusu fırladığında kitapSorgula komple
+     düşüyor, kitap v118 worker yedeğine HİÇ gelmiyordu. Kapaksız 69 kaydın
+     28'i (%40,6) tam da böyle düştü; 3 tekrarla kalıcı düşen 0 oldu.
+     YALNIZ 503 tekrarlanır: 403 (kota/referrer kısıtı) ve ağ düşmesi ANINDA
+     fırlar — gerçek arızada dakikalarca sessizce beklemek, teşhisi gizlerdi
+     (g53 "ağ hatası" vakası route.abort ile düşer, bu yola hiç girmez).
+     window.__KK_GB_BEKLE: test kancası (üründe tanımsız, varsayılan geçerli). */
+  const GB_TEKRAR = 3;
+  function gbBekleme(){
+    return (typeof window.__KK_GB_BEKLE === 'number') ? window.__KK_GB_BEKLE : 1200;
   }
+  async function gbSor(q, sinyal){
+    let son503 = null;
+    for(let deneme = 0; deneme < GB_TEKRAR; deneme++){
+      if(deneme) await bekle(gbBekleme() * deneme);   // 1.2s, 2.4s
+      const y = await fetch('https://www.googleapis.com/books/v1/volumes?key=' + GB_ANAHTAR +
+        '&country=TR&maxResults=10&printType=books&q=' + encodeURIComponent(q),
+        sinyal ? { signal: sinyal } : undefined);
+      const j = await y.json();
+      if(j.error){
+        if(j.error.code === 503){ son503 = new Error('google-503'); continue; }
+        throw new Error('google-' + j.error.code);
+      }
+      return (j.items || []).map(it => it.volumeInfo || {});
+    }
+    throw son503;
+  }
+  /* v128 M5 — KESME İŞARETİ KATLANIR.
+     ÖLÇÜM: kayıtta "Antik Yunan ve Roma**nin** Mitleri…" / "**Tanrinin** Evrimi",
+     kaynakta "Roma**'nın**" / "Tanrı**'nın**". katla ı→i yapıyor ama kesmeyi
+     bırakıyordu; iki gerçek kitap SALT bu yüzden eşleşmiyordu.
+     KURAL DAR: yalnız ASCII ' düşer (katla zaten ’/‘/ʼ → ' normalize ediyor),
+     başka hiçbir noktalamaya dokunulmaz — kunyeKatla gibi tüm noktalamayı
+     boşluğa çevirmek "roma nin" üretir ve yine eşleşmezdi. Yazar kapısı
+     (yazarUyar) olduğu gibi duruyor: gevşeyen yalnız başlık tarafı. */
+  function baslikKatla(s){ return katla(s).replace(/'/g, ''); }
   function baslikUyar(kitapAd, adayBaslik){
-    const a = katla(kitapAd), b = katla(String(adayBaslik || ''));
+    const a = baslikKatla(kitapAd), b = baslikKatla(String(adayBaslik || ''));
     if(!a || !b) return false;
     return a.indexOf(b) >= 0 || b.indexOf(a) >= 0;
   }
@@ -2129,12 +2220,113 @@
       ozetZorla: Array.isArray(kopya.ozetYazilan) ? kopya.ozetYazilan : [] });
   }
 
+  /* ---------- v128 M4: ÖLÜ KAPAK DENETİMİ (zgo- ad alanı) ----------
+     SÖZLEŞME:
+     · Yalnız OpenLibrary kapakları sorulur — ölçüm (14 Eylül, 253 canlı kapak
+       URL'si): ölü 24, HEPSİ covers.openlibrary.org (OL kapaklarının %12,5'i);
+       books.google/1k-cdn/gr-assets tarafında 0 ölü. Kütüphanenin kapaklarının
+       %76'sı OL olduğu için bu oran zamanla BÜYÜR.
+     · Plasebolar ağ sorulmadan zaten ölü sayılır (oluKapakIdler) — denetim
+       onları saymak için koşmak zorunda değil.
+     · Denetim TEK BAŞINA HİÇBİR KAYDI DEĞİŞTİRMEZ: bulgusunu cihaz-yerel
+       deftere yazar, kitap verisine ve senkrona dokunmaz. Kapağı silmek
+       cazip görünüyordu ama YANLIŞ olurdu: ölü kapaklı 24 kaydın 6'sında
+       ISBN yalnız kapak URL'sinin içinde duruyor (sorguIsbn onu oradan okur) —
+       silmek, tazelemenin tek sorgu anahtarını yok ederdi.
+     · Google kotası HARCANMAZ: bunlar HEAD istekleri, arama değil. */
+  let zgoKosuyor = false, zgoDurdur = false;
+  let zgoSon = null;   // { toplam, bakilan, olu, bilinmiyor, bitti }
+  async function olKapakDurumu(u){
+    /* olKapakOluMu yalnız "kesin ölü mü" der (yazım yolunda doğru davranış:
+       emniyet yönü geçerli kapağı korumaktır). Denetim kullanıcıya SAYI
+       gösterecek; "ölçülemedi"yi "canlı" diye saymak sayıyı sessizce iyimser
+       yapardı — üçüncü bir durum ayrı sayılır ve ekranda ayrı yazılır. */
+    const src = window.kapakSrc ? window.kapakSrc(u) : u;
+    try{
+      const r = await fetch(src, { method: 'HEAD' });
+      return r.status === 404 ? 'olu' : (r.ok ? 'canli' : 'bilinmiyor');
+    }catch(e){ return 'bilinmiyor'; }
+  }
+  function zgoAdaylar(){
+    return (veri.kitaplar || []).filter(k => k && k.kapak
+      && String(k.kapak).indexOf('covers.openlibrary.org') >= 0
+      && !plaseboKapak(k.kapak));
+  }
+  async function oluKapakDenetle(){
+    if(zgoKosuyor) return;
+    zgoKosuyor = true; zgoDurdur = false;
+    const adaylar = zgoAdaylar();
+    const d = oluKapakOku();
+    zgoSon = { toplam: adaylar.length, bakilan: 0, olu: 0, bilinmiyor: 0, bitti: false };
+    zgoCiz();
+    try{
+      for(const k of adaylar){
+        if(zgoDurdur) break;
+        const s = await olKapakDurumu(k.kapak);
+        if(s === 'olu'){ d[k.id] = k.kapak; zgoSon.olu++; }
+        else if(s === 'bilinmiyor'){ zgoSon.bilinmiyor++; }
+        else if(d[k.id]){ delete d[k.id]; }   // dirildi: eski bulgu düşer
+        zgoSon.bakilan++;
+        oluKapakYaz(d);
+        zgoCiz();
+        await bekle(120);
+      }
+      zgoSon.bitti = !zgoDurdur;
+    }finally{
+      zgoKosuyor = false;
+      zgoCiz(); durumTazele();
+    }
+  }
+  function zgoCiz(){
+    const g = document.getElementById('zgoDenetimGovde');
+    if(!g || !zgoSon) return;
+    const s = zgoSon;
+    const yuzde = s.toplam ? Math.round(s.bakilan * 100 / s.toplam) : 100;
+    const plasebo = (veri.kitaplar || []).filter(k => k && plaseboKapak(k.kapak)).length;
+    const toplamOlu = oluKapakIdler().size;
+    if(zgoKosuyor){
+      g.innerHTML =
+        '<div class="zgo-satir">' + s.bakilan + ' / ' + s.toplam + ' kapak denetlendi · ' +
+          s.olu + ' ölü bulundu</div>' +
+        '<div class="ilerleme"><div style="width:' + yuzde + '%"></div></div>' +
+        '<p class="zgo-not">Her kapak adresine tek bir HEAD isteği gidiyor — Google arama ' +
+          'kotası harcanmıyor. Hiçbir kayıt değişmiyor.</p>' +
+        '<div class="form-alt"><button class="btn btn-cerceve" data-act="zgo-durdur" style="flex:1">Duraklat</button></div>';
+      return;
+    }
+    const parcalar = [s.bakilan + ' / ' + s.toplam + ' OpenLibrary kapağı denetlendi',
+      s.olu + ' ölü (HTTP 404)'];
+    if(plasebo) parcalar.push(plasebo + ' "kapak yok" plasebosu');
+    if(s.bilinmiyor) parcalar.push(s.bilinmiyor + ' ölçülemedi (ağ) — canlı sayılmadı, ölü de sayılmadı');
+    g.innerHTML =
+      '<div class="zgo-satir">' + parcalar.join(' · ') +
+        (s.bitti ? '' : ' (yarım — sürdürebilirsin)') + '.</div>' +
+      (toplamOlu
+        ? '<p class="zgo-not">Bu ' + toplamOlu + ' kayıt ekranda kapaksız görünüyor ama ' +
+            '<b>kapak alanları dolu</b>: eksik sayacı onları göremiyordu ve altı alanı da dolu ' +
+            'olanlar tarama kuyruğuna hiç giremiyordu. Artık girecekler.</p>'
+        : '<p class="zgo-not">Ölü kapak bulunamadı — kayıtlı kapakların hepsi yükleniyor.</p>') +
+      '<div class="form-alt">' +
+      (s.bitti ? '' : '<button class="btn btn-cerceve" data-act="zgo-denetle" style="flex:1">Sürdür</button>') +
+      (toplamOlu
+        ? '<button class="btn btn-cerceve" data-act="zgo-tara" style="flex:2">Taramayı başlat</button>'
+        : '') +
+      '<button class="btn btn-cerceve" data-act="zg-kapat" data-ortu="zgoDenetim" style="flex:1">Kapat</button></div>';
+  }
+
   /* ---------- tarama döngüsü ---------- */
   async function taramaBaslat(){
     if(calisiyor) return;
     let kdurum = kuyrukYukle();
     if(!kdurum || kdurum.bitti){
-      kdurum = { sira: (veri.kitaplar || []).filter(k => ALANLAR.some(a => alanBos(k, a))).map(k => k.id),
+      /* v128 M4: ölü kapaklı kayıtlar da kuyruğa girer. Eski süzgeç yalnız
+         "altı alandan biri BOŞ" diyordu; ölü kapaklı 24 kaydın 18'inin altı
+         alanı da dolu görünüyordu (ölçüm) — o 18 kayıt kuyruğa hiç giremiyor,
+         kaç kez taranırsa taransın düzelmiyordu. kitapSorgula'daki v74 ölü
+         kontrolü zaten yerinde; eksik olan tek şey kitabın oraya ULAŞMASIYDI. */
+      const olu = oluKapakIdler();
+      kdurum = { sira: (veri.kitaplar || [])
+          .filter(k => ALANLAR.some(a => alanBos(k, a)) || olu.has(k.id)).map(k => k.id),
         islenen: {}, bulunan: {}, red: {}, hata: {}, bitti: false };
     }
     if(!kdurum.red) kdurum.red = {};   // v102 öncesi yarım kalmış kuyruk durumu
@@ -2161,9 +2353,10 @@
             const s = await kitapSorgula(k);
             if(s && s.b) kdurum.bulunan[id] = s.b;
             if(s && s.red && s.red.length) kdurum.red[id] = s.red;
+            delete kdurum.hata[id];   // v128: başarı, önceki denemelerin sayacını siler
             ardArdaHata = 0;
           }catch(e){
-            kdurum.hata[id] = 1;
+            kdurum.hata[id] = (kdurum.hata[id] || 0) + 1;   // v128 M2: sayaç (eskiden sabit 1)
             ardArdaHata++;
             if(ardArdaHata >= 5){
               /* ağ ya da kota düşmüş: dürüst mesaj + duraklat — yarım veri yazılmaz,
@@ -2173,7 +2366,14 @@
             }
           }
         }
-        kdurum.islenen[id] = 1;
+        /* v128 M2 — HATA ALAN KİTAP "İŞLENDİ" SAYILMAZ.
+           Eski kodda bu damga catch'ten SONRA koşulsuz basılıyordu: kaynak
+           hatası alan kitap işlenmiş sayılıyor, "Devam et" onu bir daha
+           denemiyor, kuyruk "bitti" diyordu — tarama bitmiş görünürken
+           kitapların %40,6'sı (ölçüm) hiç sorulmamış oluyordu.
+           TAVAN: kalıcı arıza sonsuz döngüye dönmesin diye HATA_TAVAN
+           denemeden sonra kitap işlenmiş sayılır ve kuyruk kapanabilir. */
+        if(!k || !kdurum.hata[id] || kdurum.hata[id] >= HATA_TAVAN) kdurum.islenen[id] = 1;
         kuyrukKaydet(kdurum);
         taramaCiz(kdurum);
         if(!durdur) await bekle(ARALIK_MS);
@@ -2297,10 +2497,17 @@
     const toplam = kdurum.sira.length;
     const islenen = Object.keys(kdurum.islenen).length;
     const hataN = Object.keys(kdurum.hata).length;
+    /* v128 M2: hatalı kitapların bir kısmı HENÜZ bitmedi — "Devam et" onları
+       yeniden dener. Sayıyı yazıp ne olacağını söylememek, kullanıcıya
+       "bu kitaplar kayboldu" dedirtiyordu. */
+    const hataMetin = hataN
+      ? ' · ' + hataN + ' kitapta kaynak hatası' +
+        (kdurum.bitti ? ' (yeniden denendi, kaynak vermedi)' : ' — "Devam et" onları yeniden dener')
+      : '';
     if(!kitapSayi){
       g.innerHTML = '<div class="zg-satir">' + islenen + ' / ' + toplam + ' kitap tarandı' +
         (kdurum.bitti ? ' — yazılacak yeni bilgi bulunamadı' : ' (yarım — devam edebilirsin)') +
-        (hataN ? ' · ' + hataN + ' kitapta kaynak hatası' : '') + '.</div>' +
+        hataMetin + '.</div>' +
         redBlokHtml(kdurum) +
         '<div class="form-alt">' +
         (kdurum.bitti ? '' : '<button class="btn btn-cerceve" data-act="zg-tara" style="flex:1">Devam et</button>') +
@@ -2324,7 +2531,7 @@
     g.innerHTML =
       '<div class="zg-satir">' + islenen + ' / ' + toplam + ' kitap tarandı' +
         (kdurum.bitti ? '' : ' (yarım — devam edebilirsin)') +
-        (hataN ? ' · ' + hataN + ' kitapta kaynak hatası' : '') + '</div>' +
+        hataMetin + '</div>' +
       '<div class="zg-ozet">' + kitapSayi + ' kitapta yeni bilgi: ' + ozetler + '</div>' +
       redBlokHtml(kdurum) +
       '<p class="zg-not">Yalnız BOŞ alanlar doldurulur; elle girdiğin hiçbir değere dokunulmaz. ' +
@@ -2345,11 +2552,25 @@
     const s = eksikSayim();
     const parcalar = ALANLAR.filter(a => s[a])
       .map(a => s[a] + ' kitapta ' + ALAN_AD[a].toLowerCase());
-    el.textContent = s.toplam
+    /* v128 M4 — SAYAÇ ARTIK ÖLÜ KAPAKLARI DA SÖYLÜYOR.
+       eksikSayim eşzamanlı koşar, ölülük ise ağ isteği ister (v74'ten beri
+       yazılı "BİLİNEN SINIR"). Ölçüm (8 Eylül yedeği): sayaç "46 kitapta kapak
+       eksik" diyordu, ekranda kapağı görünmeyen GERÇEK sayı 69'du — aradaki 24
+       kapak alanı dolu ama adresi 404. Sayıyı burada tahmin ETMİYORUZ:
+       denetimin ölçtüğü + ağsız kesin olan plasebolar ekleniyor, denetim hiç
+       koşmadıysa bunu açıkça söylüyoruz. */
+    const oluN = oluKapakIdler().size;
+    const temel = s.toplam
       ? (parcalar.length
         ? s.toplam + ' kitabın: ' + parcalar.join(', ') + ' eksik.'
         : 'Tüm kitapların temel alanları dolu görünüyor.')
       : 'Kütüphanen boş.';
+    const denetimKostu = zgoSon && zgoSon.bakilan > 0;
+    el.textContent = temel + (s.toplam
+      ? (oluN
+          ? ' Ayrıca ' + oluN + ' kitapta kapak adresi dolu ama görsel yüklenmiyor.'
+          : (denetimKostu ? '' : ' Kapak adreslerinin gerçekten yüklendiği denetlenmedi.'))
+      : '');
     const dugme = document.querySelector('#ayBolumZengin [data-act="zg-tara"]');
     if(dugme){
       const kdurum = kuyrukYukle();
@@ -2856,6 +3077,11 @@
     '.zg-ozet{font-size:.85rem;color:var(--muted);margin:8px 0;line-height:1.5}',
     '.zg-ozet b{color:var(--paper);font-variant-numeric:tabular-nums}',
     '.zg-not{font-size:.8rem;color:var(--muted);margin-top:10px;line-height:1.5}',
+    /* zgo- (v128): ölü kapak denetimi — zg- reçetesinin AYRI kopyası
+       (yeni UI = yeni önek; testlerin genel .zg-* seçicileri gölgelenmesin) */
+    '.zgo-satir{font-size:.9rem;color:var(--paper);margin:10px 0 8px;font-variant-numeric:tabular-nums}',
+    '.zgo-not{font-size:.8rem;color:var(--muted);margin-top:10px;line-height:1.5}',
+    '.zgo-not b{color:var(--paper)}',
     /* ky- (v100): kütüphane dosyası önizleme / hata / geri al kartı — zg-
        reçetesinin ayrı kopyası (yeni UI = yeni önek; testlerin genel
        seçicileri gölgelenmesin) */
@@ -2951,6 +3177,23 @@
             taramaBaslat();
           }
           break; }
+        /* v128 M4 — ölü kapak denetimi (zgo-). AYRI düğme, ayrı pencere:
+           192 HEAD isteği taramanın içine gömülseydi her taramayı yavaşlatır,
+           kullanıcı da neyin neden beklediğini göremezdi. */
+        case 'zgo-denetle':
+          ortuKur('zgoDenetim', 'Ölü kapak denetimi');
+          ac('zgoDenetim');
+          oluKapakDenetle();
+          break;
+        case 'zgo-durdur':
+          zgoDurdur = true;
+          break;
+        case 'zgo-tara':
+          kapat('zgoDenetim');
+          kuyrukTemizle();          // taze kuyruk: ölü kapaklılar da içeri girsin
+          ortuKur('zgTarama', 'Kütüphaneyi zenginleştir');
+          taramaBaslat();
+          break;
         case 'yv-denetle':
           ortuKur('yvDenetim', 'Yazar adı varyantları');
           yvCiz();
@@ -3170,9 +3413,13 @@
        elle kaydedildiğinde aynı yoldan geçip temizlenir. */
     metinTemizle, metinCoz, varlikCoz, mojibakeOnar, bozukMetin,
     yazarUyar, workerKapakSessiz,   // v118 kapak yedegi kapilari (test kancasi)
+    /* v128: olu kapak + plasebo. oluKapakIdler HESAPLAR ve bayat girisleri
+       duser — hicbir KITAP alanina yazmaz (denetim tek basina degistirmez). */
+    plaseboKapak, oluKapakIdler, oluKapakOku, olKapakDurumu, gbBekleme,
     ciltGB, ciltWorker, ciltUyumsuzlugu, yayineviGecersiz, isbnGecersiz,
     isbnUlke, isbnGrup, yayineviTurkMu, beklenenDil, kunyeKatla, metinCelisir,
-    ARALIK_MS, ALANLAR, KUNYE, KUYRUK_ANAHTAR, OTO_DENEME_ANAHTAR, OTO_ATANAN_ANAHTAR };
+    ARALIK_MS, HATA_TAVAN, ALANLAR, KUNYE, KUYRUK_ANAHTAR, OTO_DENEME_ANAHTAR,
+    OTO_ATANAN_ANAHTAR, OLU_KAPAK_ANAHTAR };
   /* v109: dosyadan yükle — algılama test kancası (hiçbiri yazmaz) */
   window.__dy = { tani: dyTani, TANIM: DY_TANIM };
   /* v100: kütüphane dosyası (tam değiştirme) test kancaları — hiçbiri yazmaz */

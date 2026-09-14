@@ -144,6 +144,10 @@ async function agTaklit(page, ayar) {
     if (url.includes('googleapis.com/books')) {
       sayac.google++; sayac.sonGoogleUrl = url;
       if (a.google === 'hata') return route.abort('failed');
+      /* v128: a.google FONKSİYON olabilir — (url, sira) alır, gövde döndürür.
+         Ardışık yanıtları ayrıştırmak için gerekli (503 → 503 → sonuç); sabit
+         gövde veren mevcut vakalar aynen çalışır (tür kontrolü additive). */
+      if (typeof a.google === 'function') return json(route, a.google(url, sayac.google));
       return json(route, a.google || { totalItems: 0, items: [] });
     }
     if (url.includes('kitaplik-ara.dessn7.workers.dev/turler')) {
