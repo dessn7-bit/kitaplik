@@ -1368,22 +1368,45 @@
      da durur — körlemesine "kitabın notlarını sil" onun malzemesini yok ederdi.
      ÇÖZÜM: içe aktarımla yazılan her nota kaynak işareti (kayn:'dosya';
      kitapNormalize taşır, yalnız işaret varken yazılır → işaretsiz kayıtların
-     parmak izi değişmez). Uygulamada dosyada GEÇEN her kitap için YALNIZ işaretli
-     notlar kaldırılır (senkron için silinenNotlar mezarı, not-sil yolunun
-     aynısı), dosyadaki satırlar yazılır; işaretsiz notlara ve dosyada geçmeyen
-     kitaplara HİÇ dokunulmaz. Önizleme üçünü sayar (yazılacak / değiştirilecek /
-     korunacak), kitap kitap gösterir ve SİLME içerdiğini açıkça söyler.
+     parmak izi değişmez). İşaretsiz notlara ve dosyada geçmeyen kitaplara HİÇ
+     dokunulmaz.
+     v129 — İÇERİKLE EŞLEŞME (ölçüldü: v99 dosyada GEÇEN kitabın işaretli
+     notlarının HEPSİNİ metin aynı olsa bile silip yeni id ile yeniden yaratıyordu.
+     299 not × her yükleme: yıldız, fikir etiketi, tekrar ilerlemesi ve tarih
+     kayboluyor; her yüklemede +299 mezar taşı (silinenNotlar) birikiyor — hiçbir
+     yol düşürmüyordu, yedek ve senkron gövdesine giriyordu). Artık kitap başına:
+     · dosya satırı mevcut işaretli notla katla(metin) düzeyinde eşleşiyorsa not
+       OLDUĞU GİBİ kalır (id, favori, fikir, tekrar*, tarih; ng ve k.g dokunulmaz,
+       mezar yazılmaz) — tip ya da ham metin (büyük harf, noktalama) farklıysa
+       YERİNDE güncellenir (aynı id, ng damgası; iceNotGuncelle);
+     · dosyadan ÇIKAN işaretli not kaldırılır (mezar taşı, not-sil yolunun aynısı);
+     · dosyaya GİREN satır işaretli yazılır;
+     · 1↔1 kuralı: kitapta tam olarak BİR işaretli not çıkıp BİR yeni satır
+       geliyorsa bu bir düzeltmedir — sil+ekle değil YERİNDE güncelleme (id ve
+       üst-veri korunur, mezar yok). Birden çok çıkan/giren → belirsiz, sil+ekle.
+     Hiçbir şey değişmiyorsa Uygula düğmesi bile kurulmaz: aynı dosyayı on kez
+     yüklemek sıfır yazım, sıfır mezar demektir.
+     Önizleme beş sayı: yazılacak / yerinde güncellenecek / kaldırılacak / zaten
+     güncel / elle korunacak; kitap kitap; SİLME içeriyorsa açıkça söyler.
      KURALLAR: tip yalnız 'not' | 'alinti' (katla ile; başkası → atlanır, sayılır)
      · ad/metin boş → eksik alanlı · eşleşmeyen satır yazılmaz, listelenir ·
      dosya içi tekrar ve elle girilmiş notla aynı metin (katla) → "zaten vardı"
-     (yeniden yazılmaz; eski işaretli kopya zaten kaldırılıyor) · kayıt şeması
-     detay not-ekle yoluyla birebir: {id: uid(), tip, metin, tarih: bugun(),
-     sayfa: null, ng: Date.now()} + kayn — ng/sayfa davranışı DEĞİŞMEDİ; k.g
-     kullanıcı-eylemi damgası. Hatırlatma/tekrar için istisna YOK. */
+     (yeniden yazılmaz) · yeni kayıt şeması detay not-ekle yoluyla birebir:
+     {id: uid(), tip, metin, tarih: bugun(), sayfa: null, ng: Date.now()} + kayn.
+     Plan not NESNESİ değil not İD'Sİ taşır: senkron `veri.kitaplar`ı yeni
+     diziyle değiştirebilir, erken referans ölü nesneye yazar (kapak.js dersi). */
   const ICE_NOT_KAYN = 'dosya';
   /* TEK tanım: silme yalnız bu işaretin doğru olduğu notlarda ve yalnız
      iceNotUygula içinde (g94 kaynak kilidi bu iki gerçeği kilitler). */
   function iceNotIsareti(n){ return !!(n && n.kayn === ICE_NOT_KAYN); }
+  /* Yerinde güncelleme — zengin.js'te bir notun metnine/tipine yazan TEK yer;
+     işaretsiz nota ASLA yazmaz (kapı ilk satırda, g94 kilidi). Üst-veri (favori,
+     fikir, tekrar*, tarih, sayfa) olduğu gibi kalır; ng senkron LWW için. */
+  function iceNotGuncelle(n, y){
+    if(!iceNotIsareti(n)) return false;
+    n.tip = y.tip; n.metin = y.metin; n.ng = Date.now();
+    return true;
+  }
   const ICE_NOT = {
     anahtar: 'notlar', kaynakAnahtar: 'not',
     ortuId: 'zgNotIceOrtu', ortuBaslik: 'Not dosyası yükle',
@@ -1391,13 +1414,25 @@
     act: { uygula: 'zg-not-uygula', vazgec: 'zg-not-vazgec' },
     metin: {
       bicimYok: 'Bu dosyada not listesi yok — beklenen biçim: { "surum": 1, "not": [ {ad, yazar, metin, tip} ] }',
-      yalnizNot: 'Bu işlem SİLME içerir: dosyada geçen kitapların daha önce bu yoldan gelen (dosya işaretli) ' +
-        'notları kaldırılır, yerine dosyadaki satırlar yazılır. Elle girdiğin, paylaşımdan ya da Goodreads\'ten ' +
-        'gelen not ve alıntılara dokunulmaz; dosyada geçmeyen kitaplara dokunulmaz. ' +
-        'Onaylamadan hiçbir şey yazılmaz, silinmez.',
-      yazDugme: (n, m) => 'Uygula (' + n + ' yaz' + (m ? ', ' + m + ' sil' : '') + ')',
-      toastYazildi: (n, m, kitap) => n + ' not dosyadan yazıldı' +
-        (m ? ', ' + m + ' eski içe aktarım notu kaldırıldı' : '') + ' (' + kitap + ' kitap)'
+      /* plana göre dürüst: silme varsa kaç not olduğuyla söyler, yoksa "içermiyor" der */
+      yalnizNot: sil => (sil
+          ? 'Bu işlem SİLME içerir: dosyada geçen kitapların daha önce bu yoldan gelen (dosya işaretli) ' +
+            'ama dosyadan ÇIKMIŞ ' + sil + ' notu kaldırılır. '
+          : 'Bu işlem silme içermiyor. ') +
+        'Dosyada aynen duran notlara dokunulmaz (yıldız, fikir etiketi, tekrar durumu korunur); metni değişen ' +
+        'tek not yerinde güncellenir. Elle girdiğin, paylaşımdan ya da Goodreads\'ten gelen not ve alıntılara ' +
+        'dokunulmaz; dosyada geçmeyen kitaplara dokunulmaz. Onaylamadan hiçbir şey yazılmaz' + (sil ? ', silinmez.' : '.'),
+      yazDugme: (n, m, g) => {
+        const p = [];
+        if(n) p.push(n + ' yaz'); if(g) p.push(g + ' güncelle'); if(m) p.push(m + ' sil');
+        return 'Uygula (' + p.join(', ') + ')';
+      },
+      toastYazildi: (n, m, kitap, g, a) => {
+        const p = [];
+        if(n) p.push(n + ' not dosyadan yazıldı'); if(g) p.push(g + ' not yerinde güncellendi');
+        if(m) p.push(m + ' eski içe aktarım notu kaldırıldı'); if(a) p.push(a + ' not zaten günceldi');
+        return p.join(', ') + ' (' + kitap + ' kitap)';
+      }
     }
   };
   const NOT_TIPLERI = { not: 'not', alinti: 'alinti' };
@@ -1647,7 +1682,7 @@
      Hepsi tek `dyDosyaKur`'a indi; dosyanın hangi boruya gideceğini artık
      düğme değil DOSYANIN KENDİSİ söylüyor (dy- modülü, aşağıda). */
 
-  /* ---------- NOT DOSYASI içe aktarımı (v98 → v99 kitap bazında yenileme) ---------- */
+  /* ---------- NOT DOSYASI içe aktarımı (v98 → v99 kitap bazında yenileme → v129 içerikle eşleşme) ---------- */
   async function iceNotOku(dosya){
     const cfg = ICE_NOT;
     let govde;
@@ -1663,19 +1698,29 @@
       const anah = katla(k.ad) + '|' + katla(k.yazar || '');
       (harita[anah] = harita[anah] || []).push(k);
     });
-    /* plan.kitaplar: dosyada GEÇEN kitaplar (≥1 geçerli eşleşen satır) —
-       yalnız bunların işaretli notları yenilenir. Her giriş üç sayı taşır. */
+    /* plan.kitaplar: dosyada GEÇEN kitaplar (≥1 geçerli eşleşen satır). Her giriş
+       id listeleri taşır (nesne değil — senkron diziyi değiştirebilir):
+       yazilacak [{tip,metin}] · guncellenecek [{id,tip,metin,eski}] · silinecek [id]
+       · ayni [id] · korunacak (sayı, işaretsiz). */
     const plan = { cfg, kitaplar: new Map(), zatenVardi: 0, tipBozuk: 0, gecersiz: 0, eslesmeyen: [] };
     const girdi = k => {
       let e = plan.kitaplar.get(k.id);
       if(!e){
         const notlar = k.notlar || [];
-        e = { id: k.id, ad: k.ad, yazilacak: [],
-          silinecek: notlar.filter(iceNotIsareti).length,          // eski içe aktarım notları
+        e = { id: k.id, ad: k.ad, yazilacak: [], guncellenecek: [], silinecek: [], ayni: [],
           korunacak: notlar.filter(n => n && !iceNotIsareti(n)).length,   // elle/paylaşım/Goodreads
-          /* tekrar seti YALNIZ korunacak (işaretsiz) notlardan: işaretliler
-             zaten kaldırılıyor, onlara göre "zaten vardı" saymak yanlış olurdu */
+          /* bekleyen: henüz dosya satırıyla eşleşmemiş işaretli notlar
+             (katla(metin) → [not, …]; eski yüklemelerden kalma eş-metinli kopyalar
+             da listede — ilki eşleşir, kalanı ÇIKAN sayılır, mükerrer yaşamaz);
+             döngü sonunda kalanlar dosyadan ÇIKMIŞ demektir */
+          bekleyen: new Map(),
+          /* tekrar seti işaretsiz notlardan: elle nota eş satır "zaten vardı" */
           gorulen: new Set(notlar.filter(n => n && !iceNotIsareti(n)).map(n => katla(n.metin))) };
+        for(const n of notlar) if(iceNotIsareti(n)){
+          const a = katla(n.metin);
+          if(!e.bekleyen.has(a)) e.bekleyen.set(a, []);
+          e.bekleyen.get(a).push(n);
+        }
         plan.kitaplar.set(k.id, e);
       }
       return e;
@@ -1691,7 +1736,26 @@
         const e = girdi(k), anah = katla(metin);
         if(e.gorulen.has(anah)){ plan.zatenVardi++; continue; }
         e.gorulen.add(anah);
+        const liste = e.bekleyen.get(anah);
+        if(liste && liste.length){
+          const n = liste.shift();
+          if(n.tip === tip && n.metin === metin) e.ayni.push(n.id);
+          else e.guncellenecek.push({ id: n.id, tip, metin, eski: n.metin });
+          continue;
+        }
         e.yazilacak.push({ tip, metin });
+      }
+    }
+    /* Döngü sonu: bekleyende kalan işaretli notlar dosyadan çıkmış. 1↔1 kuralı:
+       tam bir çıkan + tam bir giren = düzeltme → yerinde güncelleme. */
+    for(const e of plan.kitaplar.values()){
+      const cikan = [].concat(...Array.from(e.bekleyen.values()));
+      e.bekleyen = null;
+      if(cikan.length === 1 && e.yazilacak.length === 1){
+        const y = e.yazilacak.pop();
+        e.guncellenecek.push({ id: cikan[0].id, tip: y.tip, metin: y.metin, eski: cikan[0].metin });
+      }else{
+        e.silinecek = cikan.map(n => n.id);
       }
     }
     if(icePlan && icePlan.cfg !== cfg) kapat(icePlan.cfg.ortuId);
@@ -1701,9 +1765,12 @@
     ac(cfg.ortuId);
   }
   function iceNotToplam(plan){
-    let yaz = 0, sil = 0, koru = 0;
-    for(const e of plan.kitaplar.values()){ yaz += e.yazilacak.length; sil += e.silinecek; koru += e.korunacak; }
-    return { yaz, sil, koru, kitap: plan.kitaplar.size };
+    let yaz = 0, guncelle = 0, sil = 0, ayni = 0, koru = 0;
+    for(const e of plan.kitaplar.values()){
+      yaz += e.yazilacak.length; guncelle += e.guncellenecek.length; sil += e.silinecek.length;
+      ayni += e.ayni.length; koru += e.korunacak;
+    }
+    return { yaz, guncelle, sil, ayni, koru, kitap: plan.kitaplar.size, degisim: yaz + guncelle + sil };
   }
   function iceNotOnizleCiz(){
     const plan = icePlan;
@@ -1715,7 +1782,9 @@
     const ozet = [];
     if(t.kitap){
       ozet.push('<b>' + t.yaz + '</b> satır yazılacak');
-      ozet.push('<b>' + t.sil + '</b> içe aktarım notu değiştirilecek');
+      ozet.push('<b>' + t.guncelle + '</b> not yerinde güncellenecek');
+      ozet.push('<b>' + t.sil + '</b> içe aktarım notu kaldırılacak');
+      ozet.push('<b>' + t.ayni + '</b> not zaten güncel');
       ozet.push('<b>' + t.koru + '</b> elle girilmiş not korunacak');
     }
     if(plan.zatenVardi) ozet.push(plan.zatenVardi + ' satır zaten vardı');
@@ -1731,55 +1800,75 @@
       '<span class="zg-onizle-ad">' + esc(ad) + '</span>' +
       '<span class="zg-onizle-alan">' + alan + '</span></div></div>';
     const kitaplar = Array.from(plan.kitaplar.values());
-    const yazSatirlari = [];
-    for(const e of kitaplar) for(const y of e.yazilacak)
-      yazSatirlari.push(satir(e.ad, (y.tip === 'alinti' ? 'alıntı' : 'not') + ': ' + esc(kirp(y.metin))));
+    const yazSatirlari = [], guncelleSatirlari = [];
+    for(const e of kitaplar){
+      for(const y of e.yazilacak)
+        yazSatirlari.push(satir(e.ad, (y.tip === 'alinti' ? 'alıntı' : 'not') + ': ' + esc(kirp(y.metin))));
+      for(const y of e.guncellenecek)
+        guncelleSatirlari.push(satir(e.ad, esc(kirp(y.eski)) + ' → ' + esc(kirp(y.metin))));
+    }
+    /* değişim yoksa (hepsi zaten güncel) düğme kurulmaz: aynı dosyayı yeniden
+       yüklemek sıfır yazım, sıfır mezar demektir */
+    const degisimYok = t.kitap && !t.degisim;
     g.innerHTML =
       '<div class="zg-ozet">' + (ozet.join(' · ') || 'Dosyada işlenecek kayıt yok.') + '</div>' +
-      '<p class="zg-not">' + cfg.metin.yalnizNot + '</p>' +
+      (degisimYok ? '<p class="zg-not">Dosya ile raf zaten aynı — yazılacak, güncellenecek ya da kaldırılacak bir şey yok.</p>'
+                  : '<p class="zg-not">' + cfg.metin.yalnizNot(t.sil) + '</p>') +
       katla_('Kitap kitap', kitaplar.map(e => satir(e.ad,
-        e.yazilacak.length + ' yazılacak · ' + e.silinecek + ' değiştirilecek · ' + e.korunacak + ' korunacak'))) +
+        e.yazilacak.length + ' yazılacak · ' + e.guncellenecek.length + ' güncellenecek · ' +
+        e.silinecek.length + ' kaldırılacak · ' + e.ayni.length + ' aynı · ' + e.korunacak + ' korunacak'))) +
       katla_('Yazılacak satırlar', yazSatirlari) +
+      katla_('Yerinde güncellenecek', guncelleSatirlari) +
       katla_('Eşleşmeyen satırlar', plan.eslesmeyen.map(r => satir(r.ad, esc(r.yazar || '')))) +
       '<div class="form-alt">' +
         '<button class="btn btn-cerceve" data-act="' + cfg.act.vazgec + '" style="flex:1">Vazgeç</button>' +
-        ((t.yaz || t.sil)
+        (t.degisim
           ? '<button class="btn btn-cerceve" data-act="' + cfg.act.uygula + '" style="flex:2">' +
-            cfg.metin.yazDugme(t.yaz, t.sil) + '</button>'
+            cfg.metin.yazDugme(t.yaz, t.sil, t.guncelle) + '</button>'
           : '') +
       '</div>';
   }
-  /* Yazım — dosyada GEÇEN her kitap için: (1) YALNIZ işaretli (kayn:'dosya')
-     notlar kaldırılır, her biri için silinenNotlar mezarı (index.html not-sil
-     yolunun aynısı — karşı cihazın kopyası dirilmesin); (2) dosyadaki satırlar
-     işaretli yazılır. İşaretsiz nota ve dosyada geçmeyen kitaba dokunulmaz.
-     Bu fonksiyon zengin.js'te notlar dizisini değiştiren TEK yerdir; silme
-     TEK satırdır ve yalnız iceNotIsareti'ne dayanır (g94 kilidi). */
+  /* Yazım — dosyada GEÇEN her kitap için: (1) dosyadan ÇIKAN işaretli notlar
+     (plan.silinecek id'leri) kaldırılır, her biri için silinenNotlar mezarı
+     (index.html not-sil yolunun aynısı — karşı cihazın kopyası dirilmesin);
+     (2) yerinde güncellenecekler iceNotGuncelle ile aynı id üzerinde yazılır
+     (not o arada kaybolduysa yeni satır olarak eklenir); (3) yeni satırlar
+     işaretli yazılır. "Aynı" notlara ve işaretsiz nota dokunulmaz; değişim
+     olmayan kitaba k.g damgası basılmaz. Bu fonksiyon zengin.js'te notlar
+     dizisini değiştiren TEK yerdir; silme TEK satırdır ve yalnız iceNotIsareti +
+     plan id'sine dayanır (g94 kilidi). */
   function iceNotUygula(plan){
     const cfg = plan.cfg;
     icePlan = null;
-    let nYaz = 0, nSil = 0, nKitap = 0;
+    let nYaz = 0, nSil = 0, nGuncelle = 0, nAyni = 0, nKitap = 0;
     for(const e of plan.kitaplar.values()){
       const k = (veri.kitaplar || []).find(x => x.id === e.id);
       if(!k) continue;
       k.notlar = k.notlar || [];
-      const eski = k.notlar.filter(iceNotIsareti);
+      nAyni += e.ayni.length;
+      const silIdler = new Set(e.silinecek);
+      const eski = k.notlar.filter(n => iceNotIsareti(n) && silIdler.has(n.id));
       if(eski.length){
         k.silinenNotlar = k.silinenNotlar || {};
-        for(const n of eski) if(n.id) k.silinenNotlar[n.id] = Date.now();
-        k.notlar = k.notlar.filter(n => !iceNotIsareti(n));
+        for(const n of eski) k.silinenNotlar[n.id] = Date.now();
+        k.notlar = k.notlar.filter(n => !(iceNotIsareti(n) && silIdler.has(n.id)));
         nSil += eski.length;
       }
-      for(const y of e.yazilacak){
+      const yeni = e.yazilacak.slice();
+      for(const y of e.guncellenecek){
+        const n = k.notlar.find(x => x && x.id === y.id);
+        if(n && iceNotGuncelle(n, y)) nGuncelle++;
+        else yeni.push({ tip: y.tip, metin: y.metin });   // arada kaybolmuş: yeni satır
+      }
+      for(const y of yeni){
         k.notlar.push({ id: uid(), tip: y.tip, metin: y.metin, tarih: bugun(), sayfa: null, ng: Date.now(), kayn: ICE_NOT_KAYN });
         nYaz++;
       }
-      k.g = Date.now();
-      nKitap++;
+      if(eski.length || e.guncellenecek.length || yeni.length){ k.g = Date.now(); nKitap++; }
     }
     if(typeof depoKaydet === 'function') depoKaydet();
     kapat(cfg.ortuId);
-    bildir(cfg.metin.toastYazildi(nYaz, nSil, nKitap));
+    bildir(cfg.metin.toastYazildi(nYaz, nSil, nKitap, nGuncelle, nAyni));
     if(typeof hepsiniCiz === 'function') hepsiniCiz();
     cfg.sonTazele();
   }
@@ -2918,8 +3007,10 @@
     not: { ad: 'Not dosyası', anahtar: 'not', birim: 'satır', siler: true, geriAl: false,
       dugme: 'Notları oku',
       yazar: 'dosyada geçen kitaplara not ve alıntı',
-      dokunmaz: 'elle girdiğin, paylaşımdan ve Goodreads\'ten gelen notlar',
-      silme: 'dosyada geçen kitapların daha önce BU YOLDAN gelen (dosya işaretli) notları kaldırılır.',
+      dokunmaz: 'elle girdiğin, paylaşımdan ve Goodreads\'ten gelen notlar; dosyada aynen duran notlar ' +
+        '(yıldız, fikir etiketi, tekrar durumu korunur)',
+      silme: 'dosyada geçen kitapların daha önce BU YOLDAN gelen (dosya işaretli) ama dosyadan ÇIKMIŞ ' +
+        'notları kaldırılır; metni değişen tek not yerinde güncellenir.',
       calistir: d => iceNotOku(d) },
     birlestir: { ad: 'JSON yedeği — birleştir', anahtar: 'kitaplar', birim: 'kitap', siler: false,
       dugme: 'Birleştir (yalnız ekler)',
