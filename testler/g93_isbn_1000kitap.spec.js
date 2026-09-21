@@ -24,7 +24,10 @@ const ISBN_YOK = '9799999999990';   // sağlaması geçerli, kenarda 0 aday (öl
 /* Canlı kenar ölçümünden alınan gerçek künye — taklit yanıt bu şekli taşır. */
 const ION = { ad: 'İon', yazar: 'Euripides', yayinevi: 'Mitos-Boyut Yayınları', yil: 2018, sayfa: 80,
   kapak: 'https://1k-cdn.com/resimler/kitaplar/338065_6576f_1568096134.jpg', isbn: ISBN_ION,
-  kaynak: '1000Kitap', cevirmen: 'Ege Kandemirli', dil: 'tr' };
+  kaynak: '1000Kitap', cevirmen: 'Ege Kandemirli', dil: 'tr',
+  /* v130: eserin 1000Kitap türleri — kitapCek'in kidDizi alanından, EK İSTEK
+     YOK. Künye sözleşmesinin parçası; alan yoksa boş dizi. */
+  turler: ['Dünya Klasikleri', 'Tiyatro'] };
 const ISBN_YANIT = { sonuclar: [ION], kaynaklar: { binkitap: 1, isbnEslesme: 1 } };
 
 function gbIsbnYanit(kitap) {
@@ -259,6 +262,8 @@ const KITAPCEK = isbn => ({
   liste: [
     { renderTuru: 'reklam' },
     { renderTuru: 'kitapHakkinda', hakkinda: {
+      kidDizi: [{ id: '5', adi: 'Dünya Klasikleri', seo_adi: 'Dunya-Klasikleri' },
+        { id: '35', adi: 'Tiyatro', seo_adi: 'Tiyatro' }],
       baskiBilgileri: { adi: 'İon', altBaslik: 'Eski Yunan Tragedyaları 20', yayinevi: 'Mitos-Boyut Yayınları',
         isbn, sayfaSayisi: '80', baskiYili: '2018', dil: { kod: 'tr', baslik: 'Türkçe' } },
       digerBaskilar: [{ id: '179312', baskiBilgileriArray: { adi: 'İon', isbn, yayinevi: 'Mitos-Boyut Yayınları',
@@ -280,6 +285,9 @@ async function workerKos(url, ayar) {
     }
     if (String(u).includes('1000kitap.com/ara')) {
       if (a.bkHata) throw new Error('ag');
+      /* v130: bkFn(url) -> HTML. Alt başlık düşürme gibi ARDIŞIK-SORGU
+         davranışları sabit yanıtla ölçülemez (ilk sorgu boş, ikincisi dolu). */
+      if (typeof a.bkFn === 'function') return sahteYanit(a.bkFn(String(u)));
       return sahteYanit(a.bkBos ? '<html>bos</html>' : BK_ARA_HTML('179312'));
     }
     throw new Error('beklenmeyen adres: ' + u);
@@ -385,11 +393,19 @@ temel.describe('G93 kaynak kilitleri', () => {
     expect(b).toContain("bildir(kaynakOkundu(k.kaynak, kaynakMetni) + ': ' + k.ad)");
     const z = fs.readFileSync(path.join(KOK, 'zengin.js'), 'utf8');
     expect(z).toContain('workerIsbnSessiz(sIsbn)');
-    /* v102: worker artık ISBN-ÖNCELİKLİ dalın yedeği —  sorgusu boş
-       dönerse çağrılır (baskıya birebir kalır). Kilit yeni yapıya taşındı;
-       niyet aynı: worker BİRİNCİL kaynak değil, yedek. */
-    expect(z.indexOf('workerIsbnSessiz(sIsbn)'))
+    /* v102: worker KÜNYE için ISBN-ÖNCELİKLİ dalın yedeği — Google'ın isbn:
+       sorgusu boş dönerse çağrılır (baskıya birebir kalır). Niyet: worker
+       künyede BİRİNCİL kaynak değil, yedek.
+       v130 KİLİT YENİDEN YAZILDI: çağrı artık `wkAl()` belleği üzerinden
+       gidiyor, çünkü TÜR yolu da aynı kaydı okuyor (kitap başına tek istek —
+       aşağıdaki "kitap başına 1" sözleşmesi bunu ölçüyor). Kilit bu yüzden
+       ham çağrıyı değil KÜNYE DALINDAKİ kullanımı sınar; künye hâlâ yalnız
+       Google boşken worker'a düşüyor. Tür yolu bilerek koşulsuz: 1000Kitap
+       bu sprintte türün BİRİNCİL kaynağı. */
+    expect(z.indexOf('const wk = await wkAl();'))
       .toBeGreaterThan(z.indexOf('if(isbnAdaylar && isbnAdaylar.length)'));
+    expect(z).toContain('if(wkBellek === undefined)');          // kitap başına TEK istek
+    expect(z).toContain('turListeSessiz(k, wkAl)');             // tür aynı kaydı paylaşır
     const sw = fs.readFileSync(path.join(KOK, 'sw.js'), 'utf8');
     /* g91 deseni: sürüm KAYNAKTAN okunur, sabit anahtar her bump'ta kırılırdı */
     const swN = Number((sw.match(/const CACHE = ONEK \+ '-v(\d+)'/) || [])[1]);
@@ -402,5 +418,83 @@ temel.describe('G93 kaynak kilitleri', () => {
     const duz = s => s.split(String.fromCharCode(13)).join('');
     if (fs.existsSync(canli))
       expect(duz(fs.readFileSync(canli, 'utf8'))).toBe(duz(fs.readFileSync(path.join(KOK, 'worker', 'worker.js'), 'utf8')));
+  });
+});
+
+/* ================= worker /kitap-tur + turler (v130) =================
+   Bu uç G121 sprintine ait; birim harness'i (workerKos/BK_ARA_HTML/KITAPCEK)
+   burada yaşadığı için vakalar da burada. Davranış/UI tarafı: g121. */
+temel.describe('G93+ worker tür alanı ve /kitap-tur (v130)', () => {
+
+  temel('/isbn yanıtı kidDizi ten turler taşır — EK İSTEK YOK', async () => {
+    const { govde, istekKayit } = await workerKos('https://x.dev/isbn?q=' + ISBN_ION);
+    expect(govde.sonuclar[0].turler).toEqual(['Dünya Klasikleri', 'Tiyatro']);
+    expect(istekKayit.length).toBe(2);              // SSR arama + kitapCek; üçüncü istek YOK
+  });
+
+  temel('kidDizi yoksa turler BOŞ dizi (eski kayıt) — alan hiç yokmuş gibi değil', async () => {
+    const cek = KITAPCEK(ISBN_ION);
+    delete cek.liste[1].hakkinda.kidDizi;
+    const { govde } = await workerKos('https://x.dev/isbn?q=' + ISBN_ION, { kitapCek: cek });
+    expect(govde.sonuclar[0].turler).toEqual([]);
+  });
+
+  temel('/kitap-tur: ad+yazar → türler + eslesen + tani; 24 saat cache', async () => {
+    const { govde, istekKayit, yanit, cacheKayit } =
+      await workerKos('https://x.dev/kitap-tur?ad=' + encodeURIComponent('İon') + '&yazar=Euripides');
+    expect(govde.turler).toEqual(['Dünya Klasikleri', 'Tiyatro']);
+    /* eslesen = KAYNAK kaydın kendi künyesi (sorgu değil) — istemci v118
+       kapısını buna kurar; sorgu yankılansaydı kapı kendini doğrulardı. */
+    expect(govde.eslesen).toEqual({ ad: 'İon', yazar: 'Euripides' });
+    expect(govde.tani).toEqual({ aday: 1, kapi: 1, cek: 1 });
+    expect(istekKayit[1].url).toContain('kitapCek?id=179312');
+    expect(yanit.headers.get('Cache-Control')).toContain('max-age=86400');
+    expect(cacheKayit.length).toBe(1);
+  });
+
+  temel('/kitap-tur ÖN SÜZGECİ: yazar tutmazsa kitapCek İSTEĞİ BİLE ATILMAZ', async () => {
+    const { govde, istekKayit, yanit, cacheKayit } =
+      await workerKos('https://x.dev/kitap-tur?ad=' + encodeURIComponent('İon') + '&yazar=Puskin');
+    expect(govde.turler).toEqual([]);
+    expect(govde.eslesen).toBe(null);
+    expect(govde.tani).toEqual({ aday: 1, kapi: 0, cek: 0 });
+    expect(istekKayit.length).toBe(1);              // yalnız SSR arama
+    expect(yanit.headers.get('Cache-Control')).toContain('no-store');
+    expect(cacheKayit.length).toBe(0);
+  });
+
+  /* ÖLÇÜLDÜ (21 Eylül, canlı): "Tersine Evrim - İnsan Olmanın Anlamının
+     Yeniden Yazılan Tarihi" tam adıyla 1000Kitap'ta 0 sonuç, " - "den kesilince
+     bulunuyor. Türü boş 45 kaydın 45'e tamamlanması SALT bu dala bağlı. */
+  temel('/kitap-tur: ilk sorgu BOŞ dönerse alt başlık düşürülüp bir kez daha aranır', async () => {
+    const UZUN = 'İon - Eski Yunan Tragedyaları 20';
+    const { govde, istekKayit } = await workerKos(
+      'https://x.dev/kitap-tur?ad=' + encodeURIComponent(UZUN) + '&yazar=Euripides',
+      { bkFn: u => u.includes(encodeURIComponent(UZUN)) ? '<html>bos</html>' : BK_ARA_HTML('179312') });
+    expect(govde.turler).toEqual(['Dünya Klasikleri', 'Tiyatro']);
+    expect(istekKayit).toHaveLength(3);                       // uzun arama + kısa arama + kitapCek
+    expect(istekKayit[0].url).toContain(encodeURIComponent(UZUN));
+    expect(istekKayit[1].url).toContain('q=' + encodeURIComponent('İon') + '&');
+  });
+
+  temel('/kitap-tur: ilk sorgu DOLUYSA ikinci arama atılmaz (bütçe)', async () => {
+    const { istekKayit } = await workerKos(
+      'https://x.dev/kitap-tur?ad=' + encodeURIComponent('İon - Alt Başlık') + '&yazar=Euripides');
+    expect(istekKayit).toHaveLength(2);                       // arama + kitapCek
+  });
+
+  temel('/kitap-tur: ad 3 harften kısaysa kaynağa HİÇ gidilmez', async () => {
+    const { govde, istekKayit, yanit } = await workerKos('https://x.dev/kitap-tur?ad=ab&yazar=x');
+    expect(govde).toEqual({ turler: [], eslesen: null });
+    expect(istekKayit.length).toBe(0);
+    expect(yanit.headers.get('Cache-Control')).toContain('no-store');
+  });
+
+  temel('altBasliksiz: ayırıcı varsa keser, yoksa boş döner', async () => {
+    const { mod } = await workerKos('https://x.dev/kitap-tur?ad=ab&yazar=x');
+    expect(mod.altBasliksiz('Tersine Evrim - İnsan Olmanın Anlamının')).toBe('Tersine Evrim');
+    expect(mod.altBasliksiz('Schrödinger: kuantum')).toBe('Schrödinger');
+    expect(mod.altBasliksiz('Ploutos Servet')).toBe('');
+    expect(mod.altBasliksiz('A - B')).toBe('');     // baştaki parça <3 harf
   });
 });

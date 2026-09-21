@@ -1,0 +1,987 @@
+[
+ {
+  "no": 1,
+  "ad": "Tersine Evrim - İnsan Olmanın Anlamının Yeniden Yazılan Tarihi",
+  "yazar": "Melanie Challenger",
+  "isbn": "",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "A-kayit-yok",
+  "hata": ""
+ },
+ {
+  "no": 2,
+  "ad": "İnsanlığın Erken Dönemi: Homo Sapiens'e Doğru",
+  "yazar": "Friedemann Schrenk",
+  "isbn": "",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "A-kayit-yok",
+  "hata": ""
+ },
+ {
+  "no": 3,
+  "ad": "Eminim Saka Yapiyorsunuz Bay Feynman",
+  "yazar": "Richard Phillips Feynman",
+  "isbn": "9786051066752",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": [
+    "Physicists"
+   ]
+  },
+  "gevsek": {
+   "say": 2,
+   "uyan": 2,
+   "kat": [
+    "Physicists"
+   ]
+  },
+  "kategoriler": [
+   "Physicists"
+  ],
+  "tur": "",
+  "turBes": "Biyografi",
+  "sinif": "D-taksonomi-disi",
+  "hata": ""
+ },
+ {
+  "no": 4,
+  "ad": "1200 Yillik Sürgün",
+  "yazar": "D. Ahsen Batur",
+  "isbn": "9789758839889",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 3,
+   "uyan": 1,
+   "kat": [
+    "Turks"
+   ]
+  },
+  "kategoriler": [
+   "Turks"
+  ],
+  "tur": "",
+  "turBes": "Tarih",
+  "sinif": "D-taksonomi-disi",
+  "hata": ""
+ },
+ {
+  "no": 5,
+  "ad": "Antik Yunan ve Romanin Mitleri ve Efsaneleri",
+  "yazar": "E. M. Berens",
+  "isbn": "9786057060631",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 6,
+  "ad": "Atalarimizin Gölgesinde",
+  "yazar": "Carl Sagan, Ann Druyan",
+  "isbn": "9786050204179",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 4,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 7,
+  "ad": "Engel",
+  "yazar": "Mim Kemal Öke",
+  "isbn": "9786257231077",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 10,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 8,
+  "ad": "Tanri Denklemi",
+  "yazar": "Michio Kaku",
+  "isbn": "9786057744449",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 2,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 9,
+  "ad": "Temel Parcaciklar Ve Fizik Yasalari",
+  "yazar": "Richard Feynman, Steven Weinberg",
+  "isbn": "9786051711645",
+  "dar": {
+   "say": 2,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 10,
+  "ad": "39 Ipucu Birinci Kitap Kemik Labirenti Ciltli",
+  "yazar": "Rick Riordan",
+  "isbn": "9786053042839",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 11,
+  "ad": "Yunan Mitolojisi 2 Cilt Bir Arada",
+  "yazar": "Karl Kerenyi",
+  "isbn": "9786050206272",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "A-kayit-yok",
+  "hata": ""
+ },
+ {
+  "no": 12,
+  "ad": "Yeniseyden Seyhuna Türkler",
+  "yazar": "Hayrettin ihsan Erkoc",
+  "isbn": "9786257631549",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 13,
+  "ad": "Memelilerin Yükselisi ve Saltanati",
+  "yazar": "Steve Brusatte",
+  "isbn": "9786256230101",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 14,
+  "ad": "Kamelyali Kadin",
+  "yazar": "Alexandre Dumas",
+  "isbn": "9789754588255",
+  "dar": {
+   "say": 3,
+   "uyan": 2,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 10,
+   "uyan": 3,
+   "kat": [
+    "Antiques & Collectibles"
+   ]
+  },
+  "kategoriler": [
+   "Antiques & Collectibles"
+  ],
+  "tur": "",
+  "turBes": "",
+  "sinif": "D-taksonomi-disi",
+  "hata": ""
+ },
+ {
+  "no": 15,
+  "ad": "Paris Sikintisi",
+  "yazar": "Charles Baudelaire",
+  "isbn": "9789754588033",
+  "dar": {
+   "say": 2,
+   "uyan": 2,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 10,
+   "uyan": 1,
+   "kat": [
+    "French poetry"
+   ]
+  },
+  "kategoriler": [
+   "French poetry"
+  ],
+  "tur": "Şiir",
+  "turBes": "Şiir",
+  "sinif": "E-tur-buluyor",
+  "hata": ""
+ },
+ {
+  "no": 16,
+  "ad": "Iki soylu akraba",
+  "yazar": "William Shakespeare, John Fletcher",
+  "isbn": "9786053606765",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 2,
+   "uyan": 1,
+   "kat": [
+    "Knights and knighthood"
+   ]
+  },
+  "kategoriler": [
+   "Knights and knighthood"
+  ],
+  "tur": "",
+  "turBes": "",
+  "sinif": "D-taksonomi-disi",
+  "hata": ""
+ },
+ {
+  "no": 17,
+  "ad": "Ploutos Servet",
+  "yazar": "Aristophanes",
+  "isbn": "9786052954379",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 2,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 18,
+  "ad": "Heraklesogullari",
+  "yazar": "Euripides",
+  "isbn": "9786254059919",
+  "dar": {
+   "say": 2,
+   "uyan": 2,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 2,
+   "uyan": 2,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 19,
+  "ad": "Iphigenia Tauriste",
+  "yazar": "Euripides",
+  "isbn": "9786052951200",
+  "dar": {
+   "say": 2,
+   "uyan": 2,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 3,
+   "uyan": 2,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 20,
+  "ad": "Demosthenes - Cicero",
+  "yazar": "Plutarkhos",
+  "isbn": "9786053329145",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 10,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 21,
+  "ad": "Yasalar Üzerine",
+  "yazar": "Marcus Tullius Cicero",
+  "isbn": "9786053328889",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 3,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 22,
+  "ad": "Brutus Ile Mektuplasmalar",
+  "yazar": "Cicero",
+  "isbn": "9786254290428",
+  "dar": {
+   "say": 2,
+   "uyan": 2,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 2,
+   "uyan": 2,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 23,
+  "ad": "Troilos ve Cressıda",
+  "yazar": "William Shakespeare",
+  "isbn": "9786053320647",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": [
+    "Cressida (Fictitious character)"
+   ]
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": [
+    "Cressida (Fictitious character)"
+   ]
+  },
+  "kategoriler": [
+   "Cressida (Fictitious character)"
+  ],
+  "tur": "",
+  "turBes": "Tiyatro",
+  "sinif": "D-taksonomi-disi",
+  "hata": ""
+ },
+ {
+  "no": 24,
+  "ad": "Toplu Oyunlar 2",
+  "yazar": "Jean Paul Sartre",
+  "isbn": "9786053754602",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 2,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 25,
+  "ad": "Insan Nedir",
+  "yazar": "William B. Irvine",
+  "isbn": "9786053163145",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 26,
+  "ad": "Evrimin Kökeni",
+  "yazar": "John Gribbin, Mary Gribbin",
+  "isbn": "9786254495069",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 27,
+  "ad": "İçimizdeki maymun",
+  "yazar": "Frans B. M. Waal, Aslı Biçen",
+  "isbn": "9789753426879",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "A-kayit-yok",
+  "hata": ""
+ },
+ {
+  "no": 28,
+  "ad": "Hani",
+  "yazar": "Oruç Aruoba",
+  "isbn": "9789753420853",
+  "dar": {
+   "say": 2,
+   "uyan": 2,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 10,
+   "uyan": 0,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 29,
+  "ad": "Insan Denen Hayvan;Hastalikta Ve Saglikta Hayvanlardan Ögrenebileceklerimiz",
+  "yazar": "Kathryn Bowers, Barbara Natterson-Horowitz",
+  "isbn": "9786053162278",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 30,
+  "ad": "Schrödinger'in kedisinin peşinde: kuantum fiziği ve gerçeklik",
+  "yazar": "John R. Gribbin, Erwin Schrödinger",
+  "isbn": "9789753425193",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "A-kayit-yok",
+  "hata": ""
+ },
+ {
+  "no": 31,
+  "ad": "Virüs Gezegeni;Yasam ve Ölüm Veren Ezeli Yoldaslar",
+  "yazar": "Carl Zimmer",
+  "isbn": "9786254493553",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 2,
+   "uyan": 2,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 32,
+  "ad": "Yasamin Kiyisinda",
+  "yazar": "Carl Zimmer",
+  "isbn": "9786254497216",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 33,
+  "ad": "Dinozorlarin Tükenmeyen Soyu",
+  "yazar": "Bernhard Kegel",
+  "isbn": "9786050207866",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 34,
+  "ad": "İlk şempanze",
+  "yazar": "John Gribbin, Jeremy Cherfas",
+  "isbn": "9786051064208",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": [
+    "Human beings"
+   ]
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": [
+    "Human beings"
+   ]
+  },
+  "kategoriler": [
+   "Human beings"
+  ],
+  "tur": "",
+  "turBes": "Antropoloji-Etnoloji",
+  "sinif": "D-taksonomi-disi",
+  "hata": ""
+ },
+ {
+  "no": 35,
+  "ad": "Ilk Adimlar",
+  "yazar": "Jeremy Desilva",
+  "isbn": "9786258489118",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 36,
+  "ad": "Afektif Nörobilim",
+  "yazar": "Jaak Panksepp",
+  "isbn": "9786051715599",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 4,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 37,
+  "ad": "Ücüncü Sempanze Insan Türünün Evrimi ve Gelecegi",
+  "yazar": "Jared Diamond",
+  "isbn": "9786052998007",
+  "dar": {
+   "say": 4,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 5,
+   "uyan": 2,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 38,
+  "ad": "Tanrinin Evrimi",
+  "yazar": "Robert Wright",
+  "isbn": "9786256584495",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ },
+ {
+  "no": 39,
+  "ad": "Oyuncuya",
+  "yazar": "Michael Chekhov",
+  "isbn": "9786055127633",
+  "dar": {
+   "say": 1,
+   "uyan": 1,
+   "kat": [
+    "Acting"
+   ]
+  },
+  "gevsek": {
+   "say": 3,
+   "uyan": 1,
+   "kat": [
+    "Acting"
+   ]
+  },
+  "kategoriler": [
+   "Acting"
+  ],
+  "tur": "",
+  "turBes": "Tiyatro",
+  "sinif": "D-taksonomi-disi",
+  "hata": ""
+ },
+ {
+  "no": 40,
+  "ad": "Kokuların Gücü Adına",
+  "yazar": "Hülya Kayhan",
+  "isbn": "",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "A-kayit-yok",
+  "hata": ""
+ },
+ {
+  "no": 41,
+  "ad": "Hepimiz Yıldız Tozuyuz",
+  "yazar": "Dan Levitt",
+  "isbn": "",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 0,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "B-baslik-uymuyor",
+  "hata": ""
+ },
+ {
+  "no": 42,
+  "ad": "Soyu Yeniden Düşünmek",
+  "yazar": "Kostas Kampourakis",
+  "isbn": "",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "A-kayit-yok",
+  "hata": ""
+ },
+ {
+  "no": 43,
+  "ad": "Kusurların Doğal Tarihi",
+  "yazar": "Telmo Pievani",
+  "isbn": "",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "A-kayit-yok",
+  "hata": ""
+ },
+ {
+  "no": 44,
+  "ad": "A'dan Z'ye Astronomi",
+  "yazar": "Charles Liu",
+  "isbn": "9786050209846",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "A-kayit-yok",
+  "hata": ""
+ },
+ {
+  "no": 45,
+  "ad": "DNA - Genetik Devrimin Öyküsü",
+  "yazar": "James D. Watson, Andrew Berry",
+  "isbn": "9786050208795",
+  "dar": {
+   "say": 0,
+   "uyan": 0,
+   "kat": []
+  },
+  "gevsek": {
+   "say": 1,
+   "uyan": 1,
+   "kat": []
+  },
+  "kategoriler": [],
+  "tur": "",
+  "turBes": "",
+  "sinif": "C-kategori-yok",
+  "hata": ""
+ }
+]

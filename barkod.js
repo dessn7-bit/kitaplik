@@ -140,10 +140,35 @@
         ad: s.ad, yazar: s.yazar || '', yayinevi: s.yayinevi || '',
         yil: s.yil || null, sayfa: s.sayfa || null, kapak: s.kapak || null,
         tur: '', kategoriler: [],
+        /* v130: eserin 1000Kitap türleri. `tur` BOŞ KALIR — bu bir liste,
+           tek değer değil; hangisinin yazılacağına kullanıcı karar verir
+           (zengin.js önizleme çipleri). Ölçüm: listeden tek tür otomatik
+           seçen en iyi kural Kaan'ın kendi 254 kararıyla yalnız %43 örtüştü,
+           doğru tür ise listenin içinde %73. */
+        turler: Array.isArray(s.turler) ? s.turler.filter(Boolean) : [],
         cevirmen: s.cevirmen || '', dil: s.dil || '',
         kaynak: s.kaynak || '1000Kitap'
       };
     }finally{ if(z) clearTimeout(z); }
+  }
+  /* v130: ISBN'SİZ kayıt için tür. /isbn'de kimlik ISBN'in birebir eşleşmesiyle
+     kanıtlı; burada değil — bu yüzden worker `eslesen:{ad,yazar}` döndürür ve
+     KAPIYI ÇAĞIRAN kurar (zengin.js v118 kapısı). Burada kapı YOK, ham taşıma.
+     Her arıza null: çağıranın hata sayacını kirletmez. */
+  async function workerTur(ad, yazar){
+    const kok = (typeof ARA_KOK === 'string' && ARA_KOK) ? ARA_KOK : 'https://kitaplik-ara.dessn7.workers.dev';
+    const c = (typeof AbortController === 'function') ? new AbortController() : null;
+    const z = c ? setTimeout(() => c.abort(), 8000) : null;
+    try{
+      const r = await fetch(kok + '/kitap-tur?ad=' + encodeURIComponent(ad || '') +
+        '&yazar=' + encodeURIComponent(yazar || ''), c ? { signal: c.signal } : undefined);
+      if(!r.ok) return null;
+      const j = await r.json();
+      const t = (j && Array.isArray(j.turler)) ? j.turler.filter(Boolean) : [];
+      if(!t.length || !j.eslesen) return null;
+      return { turler: t, eslesen: { ad: j.eslesen.ad || '', yazar: j.eslesen.yazar || '' } };
+    }catch(e){ return null; }
+    finally{ if(z) clearTimeout(z); }
   }
   /* v97: "Barkod okundu" bildirimi kaynağı söyler — "1000Kitap'tan okundu: İon". */
   const KAYNAK_EK = { '1000Kitap': "1000Kitap'tan", 'Google Books': "Google Books'tan", 'Open Library': "Open Library'den" };
@@ -415,7 +440,7 @@
   if(document.getElementById('araTipSec')) baslat();
   else document.addEventListener('DOMContentLoaded', baslat);
 
-  window.__barkod = { workerIsbn, isbnGecerli, isbnTemizle, isbnAra, isbnIsle, formuDoldur, kameraVar,
+  window.__barkod = { workerIsbn, workerTur, isbnGecerli, isbnTemizle, isbnAra, isbnIsle, formuDoldur, kameraVar,
     /* tarama motoru — katalog.js seri taraması da bunları kullanır (aynı 'isbn'
        enum kusuru oradaydı); testler yedekKareCoz'a sahte EAN-13 tuvali verir */
     tarayiciKur, yedekYukle, yedekKareCoz, yedekVideoCoz, kameraKisitlari, odaklan, kameraHataAdi };

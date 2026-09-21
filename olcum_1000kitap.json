@@ -1,0 +1,2540 @@
+[
+ {
+  "no": 1,
+  "ad": "Tersine Evrim - İnsan Olmanın Anlamının Yeniden Yazılan Tarihi",
+  "yazar": "Melanie Challenger",
+  "isbn": "",
+  "isbnGecerli": false,
+  "yol": "",
+  "ssrDurum": 200,
+  "adaySayisi": 0,
+  "adaylar": [],
+  "hamIlk": null,
+  "hamTur": null,
+  "hamApiAd": "",
+  "hamApiYazar": "",
+  "isbnEslesti": false,
+  "apiKapi": null,
+  "kapiGecen": null,
+  "kapiTur": null,
+  "not": ""
+ },
+ {
+  "no": 2,
+  "ad": "İnsanlığın Erken Dönemi: Homo Sapiens'e Doğru",
+  "yazar": "Friedemann Schrenk",
+  "isbn": "",
+  "isbnGecerli": false,
+  "yol": "baslik",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "İnsanlığın Erken Dönemi",
+    "yazar": "Friedemann Schrenk",
+    "id": "266359"
+   }
+  ],
+  "hamIlk": {
+   "ad": "İnsanlığın Erken Dönemi",
+   "yazar": "Friedemann Schrenk",
+   "id": "266359"
+  },
+  "hamTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "İnsanlığın Erken Dönemi",
+  "hamApiYazar": "Friedemann Schrenk",
+  "isbnEslesti": false,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "İnsanlığın Erken Dönemi",
+   "yazar": "Friedemann Schrenk",
+   "id": "266359"
+  },
+  "kapiTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 3,
+  "ad": "Eminim Saka Yapiyorsunuz Bay Feynman",
+  "yazar": "Richard Phillips Feynman",
+  "isbn": "9786051066752",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 2,
+  "adaylar": [
+   {
+    "ad": "Eminim Şaka Yapıyorsunuz Bay Feynman",
+    "yazar": "Richard P. Feynman",
+    "id": "23650"
+   },
+   {
+    "ad": "Eminim Şaka Yapıyorsunuz Bay Feynman",
+    "yazar": "Richard P. Feynman",
+    "id": "406673"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Eminim Şaka Yapıyorsunuz Bay Feynman",
+   "yazar": "Richard P. Feynman",
+   "id": "23650"
+  },
+  "hamTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Biyografi",
+    "seo": "Biyografi"
+   }
+  ],
+  "hamApiAd": "Eminim Şaka Yapıyorsunuz Bay Feynman",
+  "hamApiYazar": "Richard P. Feynman",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Eminim Şaka Yapıyorsunuz Bay Feynman",
+   "yazar": "Richard P. Feynman",
+   "id": "23650"
+  },
+  "kapiTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Biyografi",
+    "seo": "Biyografi"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 4,
+  "ad": "1200 Yillik Sürgün",
+  "yazar": "D. Ahsen Batur",
+  "isbn": "9789758839889",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "1200 Yıllık Sürgün",
+    "yazar": "D. Ahsen Batur",
+    "id": "115300"
+   }
+  ],
+  "hamIlk": {
+   "ad": "1200 Yıllık Sürgün",
+   "yazar": "D. Ahsen Batur",
+   "id": "115300"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   }
+  ],
+  "hamApiAd": "1200 Yıllık Sürgün",
+  "hamApiYazar": "D. Ahsen Batur",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "1200 Yıllık Sürgün",
+   "yazar": "D. Ahsen Batur",
+   "id": "115300"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 5,
+  "ad": "Antik Yunan ve Romanin Mitleri ve Efsaneleri",
+  "yazar": "E. M. Berens",
+  "isbn": "9786057060631",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Antik Yunan ve Roma'nın Mitleri ve Efsaneleri",
+    "yazar": "E. M. Berens",
+    "id": "307361"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Antik Yunan ve Roma'nın Mitleri ve Efsaneleri",
+   "yazar": "E. M. Berens",
+   "id": "307361"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "Mitolojiler",
+    "seo": "Mitolojiler"
+   }
+  ],
+  "hamApiAd": "Antik Yunan ve Roma'nın Mitleri ve Efsaneleri",
+  "hamApiYazar": "E. M. Berens",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Antik Yunan ve Roma'nın Mitleri ve Efsaneleri",
+   "yazar": "E. M. Berens",
+   "id": "307361"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "Mitolojiler",
+    "seo": "Mitolojiler"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 6,
+  "ad": "Atalarimizin Gölgesinde",
+  "yazar": "Carl Sagan, Ann Druyan",
+  "isbn": "9786050204179",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Atalarımızın Gölgesinde",
+    "yazar": "Carl Sagan",
+    "id": "31211"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Atalarımızın Gölgesinde",
+   "yazar": "Carl Sagan",
+   "id": "31211"
+  },
+  "hamTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "Atalarımızın Gölgesinde",
+  "hamApiYazar": "Carl Sagan, Ann Druyan",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Atalarımızın Gölgesinde",
+   "yazar": "Carl Sagan",
+   "id": "31211"
+  },
+  "kapiTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 7,
+  "ad": "Engel",
+  "yazar": "Mim Kemal Öke",
+  "isbn": "9786257231077",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Engel",
+    "yazar": "Mim Kemâl Öke",
+    "id": "254554"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Engel",
+   "yazar": "Mim Kemâl Öke",
+   "id": "254554"
+  },
+  "hamTur": [
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Roman",
+    "seo": "Roman"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   }
+  ],
+  "hamApiAd": "Engel",
+  "hamApiYazar": "Mim Kemâl Öke",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Engel",
+   "yazar": "Mim Kemâl Öke",
+   "id": "254554"
+  },
+  "kapiTur": [
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Roman",
+    "seo": "Roman"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 8,
+  "ad": "Tanri Denklemi",
+  "yazar": "Michio Kaku",
+  "isbn": "9786057744449",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Tanrı Denklemi",
+    "yazar": "Michio Kaku",
+    "id": "331566"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Tanrı Denklemi",
+   "yazar": "Michio Kaku",
+   "id": "331566"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Diğer İnançlar",
+    "seo": "Diger-Inanclar"
+   }
+  ],
+  "hamApiAd": "Tanrı Denklemi",
+  "hamApiYazar": "Michio Kaku",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Tanrı Denklemi",
+   "yazar": "Michio Kaku",
+   "id": "331566"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Diğer İnançlar",
+    "seo": "Diger-Inanclar"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 9,
+  "ad": "Temel Parcaciklar Ve Fizik Yasalari",
+  "yazar": "Richard Feynman, Steven Weinberg",
+  "isbn": "9786051711645",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Temel Parçacıklar ve Fizik Yasaları",
+    "yazar": "Richard P. Feynman",
+    "id": "59997"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Temel Parçacıklar ve Fizik Yasaları",
+   "yazar": "Richard P. Feynman",
+   "id": "59997"
+  },
+  "hamTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "Temel Parçacıklar ve Fizik Yasaları",
+  "hamApiYazar": "Richard P. Feynman, Steven Weinberg",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Temel Parçacıklar ve Fizik Yasaları",
+   "yazar": "Richard P. Feynman",
+   "id": "59997"
+  },
+  "kapiTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 10,
+  "ad": "39 Ipucu Birinci Kitap Kemik Labirenti Ciltli",
+  "yazar": "Rick Riordan",
+  "isbn": "9786053042839",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "39 İpucu",
+    "yazar": "Rick Riordan",
+    "id": "88587"
+   }
+  ],
+  "hamIlk": {
+   "ad": "39 İpucu",
+   "yazar": "Rick Riordan",
+   "id": "88587"
+  },
+  "hamTur": [
+   {
+    "ad": "Roman",
+    "seo": "Roman"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Macera-Aksiyon",
+    "seo": "Macera-Aksiyon"
+   }
+  ],
+  "hamApiAd": "39 İpucu",
+  "hamApiYazar": "Rick Riordan",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "39 İpucu",
+   "yazar": "Rick Riordan",
+   "id": "88587"
+  },
+  "kapiTur": [
+   {
+    "ad": "Roman",
+    "seo": "Roman"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Macera-Aksiyon",
+    "seo": "Macera-Aksiyon"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 11,
+  "ad": "Yunan Mitolojisi 2 Cilt Bir Arada",
+  "yazar": "Karl Kerenyi",
+  "isbn": "9786050206272",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Yunan Mitolojisi",
+    "yazar": "Carl Kerenyi",
+    "id": "105847"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Yunan Mitolojisi",
+   "yazar": "Carl Kerenyi",
+   "id": "105847"
+  },
+  "hamTur": [
+   {
+    "ad": "Diğer İnançlar",
+    "seo": "Diger-Inanclar"
+   },
+   {
+    "ad": "Mitolojiler",
+    "seo": "Mitolojiler"
+   }
+  ],
+  "hamApiAd": "Yunan Mitolojisi",
+  "hamApiYazar": "Carl Kerenyi",
+  "isbnEslesti": true,
+  "apiKapi": false,
+  "kapiGecen": null,
+  "kapiTur": null,
+  "not": ""
+ },
+ {
+  "no": 12,
+  "ad": "Yeniseyden Seyhuna Türkler",
+  "yazar": "Hayrettin ihsan Erkoc",
+  "isbn": "9786257631549",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Yeniseyden Seyhuna Türkler",
+    "yazar": "Hayrettin İhsan Erkoç",
+    "id": "314547"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Yeniseyden Seyhuna Türkler",
+   "yazar": "Hayrettin İhsan Erkoç",
+   "id": "314547"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   }
+  ],
+  "hamApiAd": "Yeniseyden Seyhuna Türkler",
+  "hamApiYazar": "Hayrettin İhsan Erkoç",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Yeniseyden Seyhuna Türkler",
+   "yazar": "Hayrettin İhsan Erkoç",
+   "id": "314547"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 13,
+  "ad": "Memelilerin Yükselisi ve Saltanati",
+  "yazar": "Steve Brusatte",
+  "isbn": "9786256230101",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Memelilerin Yükselişi ve Saltanatı",
+    "yazar": "Steve Brusatte",
+    "id": "458213"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Memelilerin Yükselişi ve Saltanatı",
+   "yazar": "Steve Brusatte",
+   "id": "458213"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   }
+  ],
+  "hamApiAd": "Memelilerin Yükselişi ve Saltanatı",
+  "hamApiYazar": "Steve Brusatte",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Memelilerin Yükselişi ve Saltanatı",
+   "yazar": "Steve Brusatte",
+   "id": "458213"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 14,
+  "ad": "Kamelyali Kadin",
+  "yazar": "Alexandre Dumas",
+  "isbn": "9789754588255",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Kamelyalı Kadın",
+    "yazar": "Alexandre Dumas (fils)",
+    "id": "6748"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Kamelyalı Kadın",
+   "yazar": "Alexandre Dumas (fils)",
+   "id": "6748"
+  },
+  "hamTur": [
+   {
+    "ad": "Roman",
+    "seo": "Roman"
+   },
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Aşk",
+    "seo": "Ask"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   }
+  ],
+  "hamApiAd": "Kamelyalı Kadın",
+  "hamApiYazar": "Alexandre Dumas (fils)",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Kamelyalı Kadın",
+   "yazar": "Alexandre Dumas (fils)",
+   "id": "6748"
+  },
+  "kapiTur": [
+   {
+    "ad": "Roman",
+    "seo": "Roman"
+   },
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Aşk",
+    "seo": "Ask"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 15,
+  "ad": "Paris Sikintisi",
+  "yazar": "Charles Baudelaire",
+  "isbn": "9789754588033",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Paris Sıkıntısı",
+    "yazar": "Charles Baudelaire",
+    "id": "7905"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Paris Sıkıntısı",
+   "yazar": "Charles Baudelaire",
+   "id": "7905"
+  },
+  "hamTur": [
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Şiir",
+    "seo": "Siir"
+   },
+   {
+    "ad": "Deneme-İnceleme",
+    "seo": "Deneme"
+   },
+   {
+    "ad": "Anlatı",
+    "seo": "Anlati"
+   }
+  ],
+  "hamApiAd": "Paris Sıkıntısı",
+  "hamApiYazar": "Charles Baudelaire",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Paris Sıkıntısı",
+   "yazar": "Charles Baudelaire",
+   "id": "7905"
+  },
+  "kapiTur": [
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Şiir",
+    "seo": "Siir"
+   },
+   {
+    "ad": "Deneme-İnceleme",
+    "seo": "Deneme"
+   },
+   {
+    "ad": "Anlatı",
+    "seo": "Anlati"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 16,
+  "ad": "Iki soylu akraba",
+  "yazar": "William Shakespeare, John Fletcher",
+  "isbn": "9786053606765",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "İki Soylu Akraba",
+    "yazar": "William Shakespeare",
+    "id": "32236"
+   }
+  ],
+  "hamIlk": {
+   "ad": "İki Soylu Akraba",
+   "yazar": "William Shakespeare",
+   "id": "32236"
+  },
+  "hamTur": [
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Tiyatro",
+    "seo": "Tiyatro"
+   },
+   {
+    "ad": "Senaryo-Oyun",
+    "seo": "Senaryo-Oyun"
+   }
+  ],
+  "hamApiAd": "İki Soylu Akraba",
+  "hamApiYazar": "William Shakespeare, John Fletcher",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "İki Soylu Akraba",
+   "yazar": "William Shakespeare",
+   "id": "32236"
+  },
+  "kapiTur": [
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Tiyatro",
+    "seo": "Tiyatro"
+   },
+   {
+    "ad": "Senaryo-Oyun",
+    "seo": "Senaryo-Oyun"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 17,
+  "ad": "Ploutos Servet",
+  "yazar": "Aristophanes",
+  "isbn": "9786052954379",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Ploutos (Servet)",
+    "yazar": "Aristophanes",
+    "id": "107779"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Ploutos (Servet)",
+   "yazar": "Aristophanes",
+   "id": "107779"
+  },
+  "hamTur": [
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Tiyatro",
+    "seo": "Tiyatro"
+   },
+   {
+    "ad": "Senaryo-Oyun",
+    "seo": "Senaryo-Oyun"
+   }
+  ],
+  "hamApiAd": "Ploutos (Servet)",
+  "hamApiYazar": "Aristophanes",
+  "isbnEslesti": true,
+  "apiKapi": false,
+  "kapiGecen": null,
+  "kapiTur": null,
+  "not": ""
+ },
+ {
+  "no": 18,
+  "ad": "Heraklesogullari",
+  "yazar": "Euripides",
+  "isbn": "9786254059919",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Heraklesoğulları",
+    "yazar": "Euripides",
+    "id": "334566"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Heraklesoğulları",
+   "yazar": "Euripides",
+   "id": "334566"
+  },
+  "hamTur": [
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Tiyatro",
+    "seo": "Tiyatro"
+   },
+   {
+    "ad": "Senaryo-Oyun",
+    "seo": "Senaryo-Oyun"
+   },
+   {
+    "ad": "Mitolojiler",
+    "seo": "Mitolojiler"
+   }
+  ],
+  "hamApiAd": "Heraklesoğulları",
+  "hamApiYazar": "Euripides",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Heraklesoğulları",
+   "yazar": "Euripides",
+   "id": "334566"
+  },
+  "kapiTur": [
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Tiyatro",
+    "seo": "Tiyatro"
+   },
+   {
+    "ad": "Senaryo-Oyun",
+    "seo": "Senaryo-Oyun"
+   },
+   {
+    "ad": "Mitolojiler",
+    "seo": "Mitolojiler"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 19,
+  "ad": "Iphigenia Tauriste",
+  "yazar": "Euripides",
+  "isbn": "9786052951200",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "İphigenia Tauris’te",
+    "yazar": "Euripides",
+    "id": "85091"
+   }
+  ],
+  "hamIlk": {
+   "ad": "İphigenia Tauris’te",
+   "yazar": "Euripides",
+   "id": "85091"
+  },
+  "hamTur": [
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Tiyatro",
+    "seo": "Tiyatro"
+   },
+   {
+    "ad": "Senaryo-Oyun",
+    "seo": "Senaryo-Oyun"
+   },
+   {
+    "ad": "Mitolojiler",
+    "seo": "Mitolojiler"
+   }
+  ],
+  "hamApiAd": "İphigenia Tauris’te",
+  "hamApiYazar": "Euripides",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "İphigenia Tauris’te",
+   "yazar": "Euripides",
+   "id": "85091"
+  },
+  "kapiTur": [
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Tiyatro",
+    "seo": "Tiyatro"
+   },
+   {
+    "ad": "Senaryo-Oyun",
+    "seo": "Senaryo-Oyun"
+   },
+   {
+    "ad": "Mitolojiler",
+    "seo": "Mitolojiler"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 20,
+  "ad": "Demosthenes - Cicero",
+  "yazar": "Plutarkhos",
+  "isbn": "9786053329145",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Demosthenes - Cicero",
+    "yazar": "Plutarkhos",
+    "id": "83734"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Demosthenes - Cicero",
+   "yazar": "Plutarkhos",
+   "id": "83734"
+  },
+  "hamTur": [
+   {
+    "ad": "Biyografi",
+    "seo": "Biyografi"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "İnsan ve Toplum",
+    "seo": "Insan-ve-Toplum"
+   }
+  ],
+  "hamApiAd": "Demosthenes - Cicero",
+  "hamApiYazar": "Plutarkhos",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Demosthenes - Cicero",
+   "yazar": "Plutarkhos",
+   "id": "83734"
+  },
+  "kapiTur": [
+   {
+    "ad": "Biyografi",
+    "seo": "Biyografi"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "İnsan ve Toplum",
+    "seo": "Insan-ve-Toplum"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 21,
+  "ad": "Yasalar Üzerine",
+  "yazar": "Marcus Tullius Cicero",
+  "isbn": "9786053328889",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Yasalar Üzerine",
+    "yazar": "Marcus Tullius Cicero",
+    "id": "78161"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Yasalar Üzerine",
+   "yazar": "Marcus Tullius Cicero",
+   "id": "78161"
+  },
+  "hamTur": [
+   {
+    "ad": "Felsefe-Düşünce",
+    "seo": "Felsefe-Dusunce"
+   },
+   {
+    "ad": "Hukuk",
+    "seo": "Hukuk"
+   }
+  ],
+  "hamApiAd": "Yasalar Üzerine",
+  "hamApiYazar": "Marcus Tullius Cicero",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Yasalar Üzerine",
+   "yazar": "Marcus Tullius Cicero",
+   "id": "78161"
+  },
+  "kapiTur": [
+   {
+    "ad": "Felsefe-Düşünce",
+    "seo": "Felsefe-Dusunce"
+   },
+   {
+    "ad": "Hukuk",
+    "seo": "Hukuk"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 22,
+  "ad": "Brutus Ile Mektuplasmalar",
+  "yazar": "Cicero",
+  "isbn": "9786254290428",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Brutus İle Mektuplaşmalar",
+    "yazar": "Marcus Tullius Cicero",
+    "id": "337531"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Brutus İle Mektuplaşmalar",
+   "yazar": "Marcus Tullius Cicero",
+   "id": "337531"
+  },
+  "hamTur": [
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Anı-Mektup-Günlük",
+    "seo": "Ani-Mektup"
+   }
+  ],
+  "hamApiAd": "Brutus İle Mektuplaşmalar",
+  "hamApiYazar": "Marcus Tullius Cicero",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Brutus İle Mektuplaşmalar",
+   "yazar": "Marcus Tullius Cicero",
+   "id": "337531"
+  },
+  "kapiTur": [
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Anı-Mektup-Günlük",
+    "seo": "Ani-Mektup"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 23,
+  "ad": "Troilos ve Cressıda",
+  "yazar": "William Shakespeare",
+  "isbn": "9786053320647",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Troilus ve Cressida",
+    "yazar": "William Shakespeare",
+    "id": "16874"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Troilus ve Cressida",
+   "yazar": "William Shakespeare",
+   "id": "16874"
+  },
+  "hamTur": [
+   {
+    "ad": "Dünya Klasikleri",
+    "seo": "Dunya-Klasikleri"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Tiyatro",
+    "seo": "Tiyatro"
+   },
+   {
+    "ad": "Senaryo-Oyun",
+    "seo": "Senaryo-Oyun"
+   }
+  ],
+  "hamApiAd": "Troilus ve Cressida",
+  "hamApiYazar": "William Shakespeare",
+  "isbnEslesti": true,
+  "apiKapi": false,
+  "kapiGecen": null,
+  "kapiTur": null,
+  "not": ""
+ },
+ {
+  "no": 24,
+  "ad": "Toplu Oyunlar 2",
+  "yazar": "Jean Paul Sartre",
+  "isbn": "9786053754602",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Toplu Oyunlar 2",
+    "yazar": "Jean-Paul Sartre",
+    "id": "36157"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Toplu Oyunlar 2",
+   "yazar": "Jean-Paul Sartre",
+   "id": "36157"
+  },
+  "hamTur": [
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Tiyatro",
+    "seo": "Tiyatro"
+   },
+   {
+    "ad": "Senaryo-Oyun",
+    "seo": "Senaryo-Oyun"
+   }
+  ],
+  "hamApiAd": "Toplu Oyunlar 2",
+  "hamApiYazar": "Jean-Paul Sartre",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Toplu Oyunlar 2",
+   "yazar": "Jean-Paul Sartre",
+   "id": "36157"
+  },
+  "kapiTur": [
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Tiyatro",
+    "seo": "Tiyatro"
+   },
+   {
+    "ad": "Senaryo-Oyun",
+    "seo": "Senaryo-Oyun"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 25,
+  "ad": "Insan Nedir",
+  "yazar": "William B. Irvine",
+  "isbn": "9786053163145",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "İnsan Nedir?",
+    "yazar": "William Braxton Irvine",
+    "id": "429653"
+   }
+  ],
+  "hamIlk": {
+   "ad": "İnsan Nedir?",
+   "yazar": "William Braxton Irvine",
+   "id": "429653"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Antropoloji-Etnoloji",
+    "seo": "Antropoloji"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "İnsan Nedir?",
+  "hamApiYazar": "William Braxton Irvine",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "İnsan Nedir?",
+   "yazar": "William Braxton Irvine",
+   "id": "429653"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Antropoloji-Etnoloji",
+    "seo": "Antropoloji"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 26,
+  "ad": "Evrimin Kökeni",
+  "yazar": "John Gribbin, Mary Gribbin",
+  "isbn": "9786254495069",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Evrimin Kökeni",
+    "yazar": "John Gribbin",
+    "id": "327450"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Evrimin Kökeni",
+   "yazar": "John Gribbin",
+   "id": "327450"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "Evrimin Kökeni",
+  "hamApiYazar": "John Gribbin, Mary Gribbin",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Evrimin Kökeni",
+   "yazar": "John Gribbin",
+   "id": "327450"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 27,
+  "ad": "İçimizdeki maymun",
+  "yazar": "Frans B. M. Waal, Aslı Biçen",
+  "isbn": "9789753426879",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "İçimizdeki Maymun",
+    "yazar": "Frans de Waal",
+    "id": "17072"
+   }
+  ],
+  "hamIlk": {
+   "ad": "İçimizdeki Maymun",
+   "yazar": "Frans de Waal",
+   "id": "17072"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "İnsan ve Toplum",
+    "seo": "Insan-ve-Toplum"
+   }
+  ],
+  "hamApiAd": "İçimizdeki Maymun",
+  "hamApiYazar": "Frans de Waal",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "İçimizdeki Maymun",
+   "yazar": "Frans de Waal",
+   "id": "17072"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "İnsan ve Toplum",
+    "seo": "Insan-ve-Toplum"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 28,
+  "ad": "Hani",
+  "yazar": "Oruç Aruoba",
+  "isbn": "9789753420853",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Hani",
+    "yazar": "Oruç Aruoba",
+    "id": "13156"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Hani",
+   "yazar": "Oruç Aruoba",
+   "id": "13156"
+  },
+  "hamTur": [
+   {
+    "ad": "Felsefe-Düşünce",
+    "seo": "Felsefe-Dusunce"
+   },
+   {
+    "ad": "Deneme-İnceleme",
+    "seo": "Deneme"
+   }
+  ],
+  "hamApiAd": "Hani",
+  "hamApiYazar": "Oruç Aruoba",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Hani",
+   "yazar": "Oruç Aruoba",
+   "id": "13156"
+  },
+  "kapiTur": [
+   {
+    "ad": "Felsefe-Düşünce",
+    "seo": "Felsefe-Dusunce"
+   },
+   {
+    "ad": "Deneme-İnceleme",
+    "seo": "Deneme"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 29,
+  "ad": "Insan Denen Hayvan;Hastalikta Ve Saglikta Hayvanlardan Ögrenebileceklerimiz",
+  "yazar": "Kathryn Bowers, Barbara Natterson-Horowitz",
+  "isbn": "9786053162278",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "İnsan Denen Hayvan",
+    "yazar": "Barbara Natterson-Horowitz",
+    "id": "280495"
+   }
+  ],
+  "hamIlk": {
+   "ad": "İnsan Denen Hayvan",
+   "yazar": "Barbara Natterson-Horowitz",
+   "id": "280495"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Sağlık-Tıp",
+    "seo": "Saglik-Tip"
+   }
+  ],
+  "hamApiAd": "İnsan Denen Hayvan",
+  "hamApiYazar": "Barbara Natterson-Horowitz, Kathryn Bowers",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "İnsan Denen Hayvan",
+   "yazar": "Barbara Natterson-Horowitz",
+   "id": "280495"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Sağlık-Tıp",
+    "seo": "Saglik-Tip"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 30,
+  "ad": "Schrödinger'in kedisinin peşinde: kuantum fiziği ve gerçeklik",
+  "yazar": "John R. Gribbin, Erwin Schrödinger",
+  "isbn": "9789753425193",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Schrödinger’in Kedisinin Peşinde",
+    "yazar": "John Gribbin",
+    "id": "3605"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Schrödinger’in Kedisinin Peşinde",
+   "yazar": "John Gribbin",
+   "id": "3605"
+  },
+  "hamTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "Schrödinger’in Kedisinin Peşinde",
+  "hamApiYazar": "John Gribbin",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Schrödinger’in Kedisinin Peşinde",
+   "yazar": "John Gribbin",
+   "id": "3605"
+  },
+  "kapiTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 31,
+  "ad": "Virüs Gezegeni;Yasam ve Ölüm Veren Ezeli Yoldaslar",
+  "yazar": "Carl Zimmer",
+  "isbn": "9786254493553",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Virüs Gezegeni",
+    "yazar": "Carl Zimmer",
+    "id": "323113"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Virüs Gezegeni",
+   "yazar": "Carl Zimmer",
+   "id": "323113"
+  },
+  "hamTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "Virüs Gezegeni",
+  "hamApiYazar": "Carl Zimmer",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Virüs Gezegeni",
+   "yazar": "Carl Zimmer",
+   "id": "323113"
+  },
+  "kapiTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 32,
+  "ad": "Yasamin Kiyisinda",
+  "yazar": "Carl Zimmer",
+  "isbn": "9786254497216",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Yaşamın Kıyısında",
+    "yazar": "Carl Zimmer",
+    "id": "372835"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Yaşamın Kıyısında",
+   "yazar": "Carl Zimmer",
+   "id": "372835"
+  },
+  "hamTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "Yaşamın Kıyısında",
+  "hamApiYazar": "Carl Zimmer",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Yaşamın Kıyısında",
+   "yazar": "Carl Zimmer",
+   "id": "372835"
+  },
+  "kapiTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 33,
+  "ad": "Dinozorlarin Tükenmeyen Soyu",
+  "yazar": "Bernhard Kegel",
+  "isbn": "9786050207866",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Dinozorların Tükenmeyen Soyu",
+    "yazar": "Bernhard Kegel",
+    "id": "225826"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Dinozorların Tükenmeyen Soyu",
+   "yazar": "Bernhard Kegel",
+   "id": "225826"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Ekoloji",
+    "seo": "Ekoloji"
+   }
+  ],
+  "hamApiAd": "Dinozorların Tükenmeyen Soyu",
+  "hamApiYazar": "Bernhard Kegel",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Dinozorların Tükenmeyen Soyu",
+   "yazar": "Bernhard Kegel",
+   "id": "225826"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Ekoloji",
+    "seo": "Ekoloji"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 34,
+  "ad": "İlk şempanze",
+  "yazar": "John Gribbin, Jeremy Cherfas",
+  "isbn": "9786051064208",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "İlk Şempanze",
+    "yazar": "John Gribbin",
+    "id": "843"
+   }
+  ],
+  "hamIlk": {
+   "ad": "İlk Şempanze",
+   "yazar": "John Gribbin",
+   "id": "843"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "İlk Şempanze",
+  "hamApiYazar": "John Gribbin, Jeremy Cherfas",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "İlk Şempanze",
+   "yazar": "John Gribbin",
+   "id": "843"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 35,
+  "ad": "Ilk Adimlar",
+  "yazar": "Jeremy Desilva",
+  "isbn": "9786258489118",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "İlk Adımlar: Dik Yürümek Bizi Nasıl İnsan Yaptı?",
+    "yazar": "Jeremy DeSilva",
+    "id": "312295"
+   }
+  ],
+  "hamIlk": {
+   "ad": "İlk Adımlar: Dik Yürümek Bizi Nasıl İnsan Yaptı?",
+   "yazar": "Jeremy DeSilva",
+   "id": "312295"
+  },
+  "hamTur": [
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "İnsan ve Toplum",
+    "seo": "Insan-ve-Toplum"
+   },
+   {
+    "ad": "Antropoloji-Etnoloji",
+    "seo": "Antropoloji"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "İlk Adımlar: Dik Yürümek Bizi Nasıl İnsan Yaptı?",
+  "hamApiYazar": "Jeremy DeSilva",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "İlk Adımlar: Dik Yürümek Bizi Nasıl İnsan Yaptı?",
+   "yazar": "Jeremy DeSilva",
+   "id": "312295"
+  },
+  "kapiTur": [
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "İnsan ve Toplum",
+    "seo": "Insan-ve-Toplum"
+   },
+   {
+    "ad": "Antropoloji-Etnoloji",
+    "seo": "Antropoloji"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 36,
+  "ad": "Afektif Nörobilim",
+  "yazar": "Jaak Panksepp",
+  "isbn": "9786051715599",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Afektif Nörobilim",
+    "yazar": "Jaak Panksepp",
+    "id": "91230"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Afektif Nörobilim",
+   "yazar": "Jaak Panksepp",
+   "id": "91230"
+  },
+  "hamTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "Afektif Nörobilim",
+  "hamApiYazar": "Jaak Panksepp",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Afektif Nörobilim",
+   "yazar": "Jaak Panksepp",
+   "id": "91230"
+  },
+  "kapiTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 37,
+  "ad": "Ücüncü Sempanze Insan Türünün Evrimi ve Gelecegi",
+  "yazar": "Jared Diamond",
+  "isbn": "9786052998007",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Üçüncü Şempanze",
+    "yazar": "Jared Diamond",
+    "id": "194575"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Üçüncü Şempanze",
+   "yazar": "Jared Diamond",
+   "id": "194575"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "Psikoloji",
+    "seo": "Psikoloji"
+   },
+   {
+    "ad": "İnsan ve Toplum",
+    "seo": "Insan-ve-Toplum"
+   },
+   {
+    "ad": "Antropoloji-Etnoloji",
+    "seo": "Antropoloji"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Sosyoloji",
+    "seo": "Sosyoloji"
+   }
+  ],
+  "hamApiAd": "Üçüncü Şempanze",
+  "hamApiYazar": "Jared Diamond",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Üçüncü Şempanze",
+   "yazar": "Jared Diamond",
+   "id": "194575"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "Psikoloji",
+    "seo": "Psikoloji"
+   },
+   {
+    "ad": "İnsan ve Toplum",
+    "seo": "Insan-ve-Toplum"
+   },
+   {
+    "ad": "Antropoloji-Etnoloji",
+    "seo": "Antropoloji"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Sosyoloji",
+    "seo": "Sosyoloji"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 38,
+  "ad": "Tanrinin Evrimi",
+  "yazar": "Robert Wright",
+  "isbn": "9786256584495",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Tanrı’nın Evrimi",
+    "yazar": "Robert Wright",
+    "id": "459692"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Tanrı’nın Evrimi",
+   "yazar": "Robert Wright",
+   "id": "459692"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "Diğer İnançlar",
+    "seo": "Diger-Inanclar"
+   }
+  ],
+  "hamApiAd": "Tanrı’nın Evrimi",
+  "hamApiYazar": "Robert Wright",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Tanrı’nın Evrimi",
+   "yazar": "Robert Wright",
+   "id": "459692"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "Diğer İnançlar",
+    "seo": "Diger-Inanclar"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 39,
+  "ad": "Oyuncuya",
+  "yazar": "Michael Chekhov",
+  "isbn": "9786055127633",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Oyuncuya",
+    "yazar": "Mihail Çehov (Michael Chekhov)",
+    "id": "139505"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Oyuncuya",
+   "yazar": "Mihail Çehov (Michael Chekhov)",
+   "id": "139505"
+  },
+  "hamTur": [
+   {
+    "ad": "Tiyatro",
+    "seo": "Tiyatro"
+   },
+   {
+    "ad": "Kültür",
+    "seo": "kultur"
+   }
+  ],
+  "hamApiAd": "Oyuncuya",
+  "hamApiYazar": "Mihail Çehov (Michael Chekhov)",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Oyuncuya",
+   "yazar": "Mihail Çehov (Michael Chekhov)",
+   "id": "139505"
+  },
+  "kapiTur": [
+   {
+    "ad": "Tiyatro",
+    "seo": "Tiyatro"
+   },
+   {
+    "ad": "Kültür",
+    "seo": "kultur"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 40,
+  "ad": "Kokuların Gücü Adına",
+  "yazar": "Hülya Kayhan",
+  "isbn": "",
+  "isbnGecerli": false,
+  "yol": "baslik",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Kokuların Gücü Adına",
+    "yazar": "Hülya Kayhan",
+    "id": "530026"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Kokuların Gücü Adına",
+   "yazar": "Hülya Kayhan",
+   "id": "530026"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Sağlık-Tıp",
+    "seo": "Saglik-Tip"
+   }
+  ],
+  "hamApiAd": "Kokuların Gücü Adına",
+  "hamApiYazar": "Hülya Kayhan",
+  "isbnEslesti": false,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Kokuların Gücü Adına",
+   "yazar": "Hülya Kayhan",
+   "id": "530026"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Sağlık-Tıp",
+    "seo": "Saglik-Tip"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 41,
+  "ad": "Hepimiz Yıldız Tozuyuz",
+  "yazar": "Dan Levitt",
+  "isbn": "",
+  "isbnGecerli": false,
+  "yol": "baslik",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Hepimiz Yıldız Tozuyuz",
+    "yazar": "Dan Levitt",
+    "id": "480137"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Hepimiz Yıldız Tozuyuz",
+   "yazar": "Dan Levitt",
+   "id": "480137"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "Hepimiz Yıldız Tozuyuz",
+  "hamApiYazar": "Dan Levitt",
+  "isbnEslesti": false,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Hepimiz Yıldız Tozuyuz",
+   "yazar": "Dan Levitt",
+   "id": "480137"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Edebiyat",
+    "seo": "Edebiyat"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 42,
+  "ad": "Soyu Yeniden Düşünmek",
+  "yazar": "Kostas Kampourakis",
+  "isbn": "",
+  "isbnGecerli": false,
+  "yol": "baslik",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Soyu Yeniden Düşünmek",
+    "yazar": "Kostas Kampourakis",
+    "id": "518174"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Soyu Yeniden Düşünmek",
+   "yazar": "Kostas Kampourakis",
+   "id": "518174"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Sağlık-Tıp",
+    "seo": "Saglik-Tip"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Kültür",
+    "seo": "kultur"
+   }
+  ],
+  "hamApiAd": "Soyu Yeniden Düşünmek",
+  "hamApiYazar": "Kostas Kampourakis",
+  "isbnEslesti": false,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Soyu Yeniden Düşünmek",
+   "yazar": "Kostas Kampourakis",
+   "id": "518174"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Sağlık-Tıp",
+    "seo": "Saglik-Tip"
+   },
+   {
+    "ad": "Tarih",
+    "seo": "Tarih"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Kültür",
+    "seo": "kultur"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 43,
+  "ad": "Kusurların Doğal Tarihi",
+  "yazar": "Telmo Pievani",
+  "isbn": "",
+  "isbnGecerli": false,
+  "yol": "baslik",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "Kusurların Doğal Tarihi",
+    "yazar": "Telmo Pievani",
+    "id": "529500"
+   }
+  ],
+  "hamIlk": {
+   "ad": "Kusurların Doğal Tarihi",
+   "yazar": "Telmo Pievani",
+   "id": "529500"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "Kusurların Doğal Tarihi",
+  "hamApiYazar": "Telmo Pievani",
+  "isbnEslesti": false,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "Kusurların Doğal Tarihi",
+   "yazar": "Telmo Pievani",
+   "id": "529500"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 44,
+  "ad": "A'dan Z'ye Astronomi",
+  "yazar": "Charles Liu",
+  "isbn": "9786050209846",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "A'dan Z'ye Astronomi",
+    "yazar": "Charles Liu",
+    "id": "433479"
+   }
+  ],
+  "hamIlk": {
+   "ad": "A'dan Z'ye Astronomi",
+   "yazar": "Charles Liu",
+   "id": "433479"
+  },
+  "hamTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "hamApiAd": "A'dan Z'ye Astronomi",
+  "hamApiYazar": "Charles Liu",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "A'dan Z'ye Astronomi",
+   "yazar": "Charles Liu",
+   "id": "433479"
+  },
+  "kapiTur": [
+   {
+    "ad": "Araştırma-İnceleme",
+    "seo": "Arastirma-Inceleme"
+   },
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   }
+  ],
+  "not": ""
+ },
+ {
+  "no": 45,
+  "ad": "DNA - Genetik Devrimin Öyküsü",
+  "yazar": "James D. Watson, Andrew Berry",
+  "isbn": "9786050208795",
+  "isbnGecerli": true,
+  "yol": "isbn",
+  "ssrDurum": 200,
+  "adaySayisi": 1,
+  "adaylar": [
+   {
+    "ad": "DNA - Genetik Devrimin Öyküsü",
+    "yazar": "James D. Watson",
+    "id": "359867"
+   }
+  ],
+  "hamIlk": {
+   "ad": "DNA - Genetik Devrimin Öyküsü",
+   "yazar": "James D. Watson",
+   "id": "359867"
+  },
+  "hamTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Kültür",
+    "seo": "kultur"
+   }
+  ],
+  "hamApiAd": "DNA - Genetik Devrimin Öyküsü",
+  "hamApiYazar": "James D. Watson",
+  "isbnEslesti": true,
+  "apiKapi": true,
+  "kapiGecen": {
+   "ad": "DNA - Genetik Devrimin Öyküsü",
+   "yazar": "James D. Watson",
+   "id": "359867"
+  },
+  "kapiTur": [
+   {
+    "ad": "Bilim-Teknoloji-Mühendislik",
+    "seo": "Bilim-Teknoloji-Muhendislik"
+   },
+   {
+    "ad": "Kültür",
+    "seo": "kultur"
+   }
+  ],
+  "not": ""
+ }
+]

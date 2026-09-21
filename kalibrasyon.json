@@ -1,0 +1,673 @@
+[
+ {
+  "ad": "Tanrı Yanılgısı",
+  "yazar": "Richard Dawkins",
+  "kaanTur": "Felsefe-Düşünce",
+  "ssr": 200,
+  "kid": [
+   "Bilim-Kurgu"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Akıl Çağı - Özgürlük Yolları 1",
+  "yazar": "Jean-Paul Sartre",
+  "kaanTur": "Roman",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "İçimizdeki Balık: İnsan Vücudunun 3,5 Milyar Yıllık Tarihine Seyahat",
+  "yazar": "Neil Shubin",
+  "kaanTur": "Bilim-Teknoloji-Mühendislik",
+  "ssr": 200,
+  "kid": [
+   "Araştırma-İnceleme",
+   "Bilim-Teknoloji-Mühendislik"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Soyağacımızdaki Maymun - İnsan Evriminin Yeni Bilimi",
+  "yazar": "Eugene E. Harris",
+  "kaanTur": "Bilim-Teknoloji-Mühendislik",
+  "ssr": 200,
+  "kid": [
+   "Bilim-Teknoloji-Mühendislik"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Armağan",
+  "yazar": "Celal Kadri Kınoğlu",
+  "kaanTur": "Roman",
+  "ssr": 200,
+  "kid": [
+   "Roman",
+   "Edebiyat"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Acelesi Olanlar için Astrofizik",
+  "yazar": "Neil deGrasse Tyson",
+  "kaanTur": "Astronomi",
+  "ssr": 200,
+  "kid": [
+   "Araştırma-İnceleme",
+   "Bilim-Teknoloji-Mühendislik"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Gorillerinki Küçük Olur : Cinsellik, Evrim ve Yaşam",
+  "yazar": "Vincenzo Venuto",
+  "kaanTur": "Bilim-Teknoloji-Mühendislik",
+  "ssr": 200,
+  "kid": [
+   "Bilim-Teknoloji-Mühendislik",
+   "Ekoloji"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Bira",
+  "yazar": "Rick Kempen",
+  "kaanTur": "Hobi",
+  "ssr": 200,
+  "kid": [
+   "Hobi",
+   "Yemek"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Kibarlık Budalası",
+  "yazar": "Molière",
+  "kaanTur": "Tiyatro",
+  "ssr": 200,
+  "kid": [
+   "Eğlence-Mizah",
+   "Dünya Klasikleri",
+   "Edebiyat",
+   "Tiyatro",
+   "Senaryo-Oyun"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Helena",
+  "yazar": "Euripides",
+  "kaanTur": "Tiyatro",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Bizden Önceki Dünya",
+  "yazar": "Tom Higham",
+  "kaanTur": "Arkeoloji",
+  "ssr": 200,
+  "kid": [
+   "Bilim-Teknoloji-Mühendislik"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Evrenin Karanlığında Evrimin Işığı",
+  "yazar": "Çağrı Mert Bakırcı",
+  "kaanTur": "Bilim-Teknoloji-Mühendislik",
+  "ssr": 200,
+  "kid": [
+   "Bilim-Teknoloji-Mühendislik"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "İnsanın Türeyişi",
+  "yazar": "Charles Darwin",
+  "kaanTur": "Bilim-Teknoloji-Mühendislik",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Burun",
+  "yazar": "Nikolai Gogol",
+  "kaanTur": "Hikaye (Öykü)",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Bir Delinin Hatıra Defteri",
+  "yazar": "Nikolai Gogol",
+  "kaanTur": "Hikaye (Öykü)",
+  "ssr": 200,
+  "kid": [
+   "Hikaye (Öykü)",
+   "Edebiyat"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Philoctetes",
+  "yazar": "Sophocles",
+  "kaanTur": "Tiyatro",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Oblomov",
+  "yazar": "Ivan Goncharov",
+  "kaanTur": "Roman",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Frankenstein: The 1818 Text",
+  "yazar": "Mary Wollstonecraft Shelley",
+  "kaanTur": "Korku-Gerilim",
+  "ssr": 200,
+  "kid": [
+   "Roman",
+   "Dünya Klasikleri",
+   "Bilim-Kurgu",
+   "Edebiyat",
+   "Korku-Gerilim"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Ölüler Evinden Anılar",
+  "yazar": "Fyodor Dostoevsky",
+  "kaanTur": "Roman",
+  "ssr": 200,
+  "kid": [
+   "Roman",
+   "Dünya Klasikleri",
+   "Edebiyat",
+   "Yeraltı Edebiyatı"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Timurlenk - Bozkırların Son Göçebe Fatihi",
+  "yazar": "Beatrice Forbes Manz",
+  "kaanTur": "Tarih",
+  "ssr": 200,
+  "kid": [
+   "Araştırma-İnceleme",
+   "Tarih"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Notre Dame'ın Kamburu",
+  "yazar": "Victor Hugo",
+  "kaanTur": "Roman",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "The Travels",
+  "yazar": "Marco Polo",
+  "kaanTur": "Gezi",
+  "ssr": 200,
+  "kid": [
+   "Tarih",
+   "Edebiyat",
+   "Anı-Mektup-Günlük",
+   "Gezi"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Babalar ve Oğullar",
+  "yazar": "Ivan Turgenev",
+  "kaanTur": "Roman",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Cymbeline",
+  "yazar": "William Shakespeare",
+  "kaanTur": "Tiyatro",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "The Blizzard",
+  "yazar": "Alexander Pushkin",
+  "kaanTur": "Hikaye (Öykü)",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Novelle del defunto Ivan Petrovič Belkin",
+  "yazar": "Alexander Pushkin",
+  "kaanTur": "Hikaye (Öykü)",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "The Acharnians",
+  "yazar": "Aristophanes",
+  "kaanTur": "Tiyatro",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Eşekarıları (Yargıçlar)",
+  "yazar": "Aristophanes",
+  "kaanTur": "Tiyatro",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "1984",
+  "yazar": "George Orwell",
+  "kaanTur": "Bilim-Kurgu",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Carmilla",
+  "yazar": "J. Sheridan Le Fanu",
+  "kaanTur": "Korku-Gerilim",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Tembellik Hakkı",
+  "yazar": "Paul Lafargue",
+  "kaanTur": "Siyaset-Politika",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Evrim Nedir?",
+  "yazar": "Ernst W. Mayr",
+  "kaanTur": "Bilim-Teknoloji-Mühendislik",
+  "ssr": 200,
+  "kid": [
+   "Felsefe-Düşünce",
+   "Bilim-Teknoloji-Mühendislik"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Une terrible vengeance",
+  "yazar": "Nikolai Gogol",
+  "kaanTur": "Hikaye (Öykü)",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "The Night Before Christmas",
+  "yazar": "Nikolai Gogol",
+  "kaanTur": "Hikaye (Öykü)",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Rezonans Kanunu",
+  "yazar": "Pierre Franckh",
+  "kaanTur": "Kişisel Gelişim",
+  "ssr": 200,
+  "kid": [
+   "Kişisel Gelişim",
+   "İnsan ve Toplum"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Yöntem Üzerine Konuşma",
+  "yazar": "René Descartes",
+  "kaanTur": "Felsefe-Düşünce",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Ego'nun Aşkınlığı",
+  "yazar": "Jean-Paul Sartre",
+  "kaanTur": "Felsefe-Düşünce",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Pale Blue Dot: A Vision of the Human Future in Space",
+  "yazar": "Carl Sagan",
+  "kaanTur": "Astronomi",
+  "ssr": 200,
+  "kid": [
+   "Araştırma-İnceleme",
+   "Bilim-Teknoloji-Mühendislik"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Poetika",
+  "yazar": "Aristotle",
+  "kaanTur": "Eleştiri-Kuram",
+  "ssr": 200,
+  "kid": [
+   "Dünya Klasikleri",
+   "Felsefe-Düşünce",
+   "Edebiyat",
+   "Şiir",
+   "Deneme-İnceleme",
+   "Sanat",
+   "Eleştiri-Kuram"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Odysseia",
+  "yazar": "Homer",
+  "kaanTur": "Efsaneler-Destanlar",
+  "ssr": 200,
+  "kid": [
+   "Dünya Klasikleri",
+   "Edebiyat",
+   "Efsaneler-Destanlar"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Deliliğe Övgü",
+  "yazar": "Erasmus",
+  "kaanTur": "Felsefe-Düşünce",
+  "ssr": 200,
+  "kid": [
+   "Dünya Klasikleri",
+   "Edebiyat",
+   "İnsan ve Toplum"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Ütopya",
+  "yazar": "Thomas More",
+  "kaanTur": "Felsefe-Düşünce",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Sophie’s World",
+  "yazar": "Jostein Gaarder",
+  "kaanTur": "Felsefe-Düşünce",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Kuyrukluyıldız",
+  "yazar": "Carl Sagan",
+  "kaanTur": "Astronomi",
+  "ssr": 200,
+  "kid": [
+   "Bilim-Teknoloji-Mühendislik"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Sapiens: A Brief History of Humankind",
+  "yazar": "Yuval Noah Harari",
+  "kaanTur": "Tarih",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Savaş Sanatı",
+  "yazar": "Sun Tzu",
+  "kaanTur": "Siyaset-Politika",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "The Hobbit, or There and Back Again",
+  "yazar": "J.R.R. Tolkien",
+  "kaanTur": "Fantastik",
+  "ssr": 200,
+  "kid": [
+   "Roman",
+   "Fantastik",
+   "Edebiyat"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Harry Potter and the Sorcerer's Stone (Harry Potter, #1)",
+  "yazar": "J.K. Rowling",
+  "kaanTur": "Fantastik",
+  "ssr": 200,
+  "kid": [
+   "Roman",
+   "Fantastik",
+   "Edebiyat",
+   "Gençlik",
+   "Macera-Aksiyon"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Harry Potter and the Chamber of Secrets (Harry Potter, #2)",
+  "yazar": "J.K. Rowling",
+  "kaanTur": "Fantastik",
+  "ssr": 200,
+  "kid": [
+   "Roman",
+   "Fantastik",
+   "Edebiyat",
+   "Gençlik",
+   "Macera-Aksiyon"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Harry Potter and the Prisoner of Azkaban (Harry Potter, #3)",
+  "yazar": "J.K. Rowling",
+  "kaanTur": "Fantastik",
+  "ssr": 200,
+  "kid": [
+   "Roman",
+   "Fantastik",
+   "Edebiyat",
+   "Gençlik",
+   "Macera-Aksiyon"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Buz Ejderhası",
+  "yazar": "George R.R. Martin",
+  "kaanTur": "Fantastik",
+  "ssr": 200,
+  "kid": [
+   "Edebiyat",
+   "Fantastik",
+   "Roman"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Kara Delikler",
+  "yazar": "Stephen W. Hawking",
+  "kaanTur": "Astronomi",
+  "ssr": 200,
+  "kid": [
+   "Araştırma-İnceleme",
+   "Bilim-Teknoloji-Mühendislik"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "The Hidden Oracle (The Trials of Apollo, #1)",
+  "yazar": "Rick Riordan",
+  "kaanTur": "Fantastik",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Kosmos",
+  "yazar": "Carl Sagan",
+  "kaanTur": "Astronomi",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Sol Ayağım",
+  "yazar": "Christy Brown",
+  "kaanTur": "Anı-Mektup-Günlük",
+  "ssr": 200,
+  "kid": [
+   "Biyografi",
+   "Roman",
+   "Edebiyat"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "The Little Prince",
+  "yazar": "Antoine de Saint-Exupéry",
+  "kaanTur": "Çocuk",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Üvercinka",
+  "yazar": "Cemal Süreya",
+  "kaanTur": "Şiir",
+  "ssr": 200,
+  "kid": [],
+  "isbnEslesti": false
+ },
+ {
+  "ad": "Milenaya Mektuplar",
+  "yazar": "Franz Kafka",
+  "kaanTur": "Eleştiri-Kuram",
+  "ssr": 200,
+  "kid": [
+   "Dünya Klasikleri",
+   "Edebiyat",
+   "Anı-Mektup-Günlük"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Safdil",
+  "yazar": "Voltaire (Francois Marie Arouet",
+  "kaanTur": "Edebiyat",
+  "ssr": 200,
+  "kid": [
+   "Dünya Klasikleri",
+   "Felsefe-Düşünce",
+   "Edebiyat",
+   "Novella"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Windsor'un şen kadınları",
+  "yazar": "William Shakespeare",
+  "kaanTur": "Edebiyat",
+  "ssr": 200,
+  "kid": [
+   "Dünya Klasikleri",
+   "Edebiyat",
+   "Tiyatro",
+   "Senaryo-Oyun"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Herakles",
+  "yazar": "Euripides",
+  "kaanTur": "Tarih",
+  "ssr": 200,
+  "kid": [
+   "Edebiyat",
+   "Tiyatro",
+   "Senaryo-Oyun",
+   "Mitolojiler"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Yakarıcılar",
+  "yazar": "Euripides",
+  "kaanTur": "Mitolojiler",
+  "ssr": 200,
+  "kid": [
+   "Felsefe-Düşünce",
+   "Edebiyat",
+   "Tiyatro",
+   "Senaryo-Oyun",
+   "Mitolojiler"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Deniz Iscileri",
+  "yazar": "Victor Hugo",
+  "kaanTur": "Edebiyat",
+  "ssr": 200,
+  "kid": [
+   "Roman",
+   "Dünya Klasikleri",
+   "Edebiyat"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Kısasa kısas",
+  "yazar": "William Shakespeare",
+  "kaanTur": "Edebiyat",
+  "ssr": 200,
+  "kid": [
+   "Dünya Klasikleri",
+   "Edebiyat",
+   "Tiyatro",
+   "Senaryo-Oyun"
+  ],
+  "isbnEslesti": true
+ },
+ {
+  "ad": "Hirçin Kiz",
+  "yazar": "William Shakespeare",
+  "kaanTur": "Edebiyat",
+  "ssr": 200,
+  "kid": [
+   "Dünya Klasikleri",
+   "Aşk",
+   "Edebiyat",
+   "Tiyatro",
+   "Senaryo-Oyun"
+  ],
+  "isbnEslesti": true
+ }
+]

@@ -4,8 +4,12 @@
      GET /turler                 → { turler:[{seo,ad,kitapSayisi}] }                       (78 tür)
      GET /tur?slug=..&sayfa=1    → { tur:{seo,ad}, sonuclar:[{ad,yazar,puan,okuyan,kapak}], hasMore, sayfa }
      GET /saglik                 → kaynak başına canlı sayaç (asla cache'lenmez)
-     GET /isbn?q=<isbn>          → { sonuclar:[{ad,yazar,yayinevi,yil,sayfa,kapak,isbn,kaynak,cevirmen,dil}], kaynaklar }
+     GET /isbn?q=<isbn>          → { sonuclar:[{ad,yazar,yayinevi,yil,sayfa,kapak,isbn,kaynak,cevirmen,dil,turler}], kaynaklar }
                                    Türkçe baskılar için 1000Kitap künyesi (v97); bulunamazsa boş dizi, asla fırlatmaz
+                                   turler[] = eserin 1000Kitap türleri (v130, ek istek YOK)
+     GET /kitap-tur?ad=&yazar=   → { turler:[...], eslesen:{ad,yazar}|null, tani:{aday,kapi,cek} }
+                                   v130, ISBN'siz kayıt için. Buradaki ad/yazar süzgeci yalnız BÜTÇE
+                                   ön-süzgecidir; NİHAİ KAPI İSTEMCİDE (zengin.js v118) `eslesen`e kurulur.
      POST /ozet-taslak           → { durum:'tamam', metin, kaynak:'1000Kitap', dil:'tr' } |
                                    { durum:'bulunamadi' } | { durum:'hata', mesaj }  (v4)
    Kaynaklar: Goodreads auto_complete · 1000Kitap SSR (__NEXT_DATA__) · 1000Kitap v2 API
@@ -195,6 +199,36 @@ export default {
       return yanit;
     }
 
+    /* --- Tür, ISBN'siz kayıt için (v130) ---
+       ISBN'i olan kayıt /isbn'i kullanır: orada aranan ISBN dönen baskınınkiyle
+       BİREBİR eşleşiyor, yani kimlik kanıtlı. Burada öyle bir kanıt YOK, bu
+       yüzden iki kapı var ve İKİSİ DE nihai değil:
+         · buradaki adUyar/yazarUyar yalnız BÜTÇE ön-süzgeci (kitapCek'i her
+           adaya atmamak için) — GEVŞEK, otorite değil;
+         · NİHAİ KAPI İSTEMCİDE: yanıt `eslesen:{ad,yazar}` taşır, zengin.js
+           kendi v118 kapısını (baslikUyar + yazarUyar) ona uygular ve
+           geçmezse türü HİÇ önermez. Kapı tek yerde yaşasın diye burada
+           kopyalanmadı (v118 dersi: yanlış eşleşmeyi yakalayan kapı yazardı).
+       ALT BAŞLIK DÜŞÜRME (ölçüldü): "Tersine Evrim - İnsan Olmanın Anlamının
+       Yeniden Yazılan Tarihi" tam adıyla 0 sonuç veriyor, " - "den kesilince
+       bulunuyor. İkinci sorgu YALNIZ ilki boş dönerse atılır. */
+    if (url.pathname === '/kitap-tur') {
+      const ad = (url.searchParams.get('ad') || '').trim().slice(0, 120);
+      const yazar = (url.searchParams.get('yazar') || '').trim().slice(0, 120);
+      if (ad.length < 3) return json({ turler: [], eslesen: null }, { ...cors, 'Cache-Control': 'no-store' });
+      const anahtar = new Request(url.origin + '/kitap-tur?ad=' + encodeURIComponent(ad) +
+        '&yazar=' + encodeURIComponent(yazar));
+      const cache = caches.default;
+      const vurus = await cache.match(anahtar);
+      if (vurus) return vurus;
+      const bulgu = await kitapTuru(ad, yazar);
+      if (!bulgu.turler.length)
+        return json(bulgu, { ...cors, 'Cache-Control': 'no-store' });
+      const yanit = json(bulgu, { ...cors, 'Cache-Control': 'public, max-age=' + ISBN_ONBELLEK_SN });
+      ctx.waitUntil(cache.put(anahtar, yanit.clone()));
+      return yanit;
+    }
+
     if (url.pathname !== '/ara')
       return new Response('kitaplik-ara v2', { headers: { 'Content-Type': 'text/plain; charset=utf-8', ...cors } });
 
@@ -361,6 +395,50 @@ async function isbnKunye(isbn) {
   kaynaklar.isbnEslesme = 1;
   return { sonuclar: [kayit], kaynaklar };
 }
+/* Ad (+yazar) → eser türleri. Her arıza boş sonuç, ASLA fırlatmaz. */
+async function kitapTuru(ad, yazar) {
+  /* tani: /isbn'in `kaynaklar` sayacının dengi — boş sonuç geldiğinde
+     ZİNCİRİN NERESİNİN düştüğü dışarıdan okunabilsin (arama mı boş, kapı mı
+     eledi, kitapCek mi düştü). Ölçüm yapılamayan uç sessizce yanlış çalışır. */
+  const tani = { aday: 0, kapi: 0, cek: 0 };
+  let liste = [];
+  try { liste = await bkHamListe(ad); } catch (e) { liste = []; }
+  if (!liste.length) {
+    const kisa = altBasliksiz(ad);
+    if (kisa && kisa !== ad) { try { liste = await bkHamListe(kisa); } catch (e) { liste = []; } }
+  }
+  tani.aday = liste.length;
+  const aday = liste.find(b => b && b.id &&
+    adUyar((b.adi || ''), ad) && yazarUyar((b.yazarAdi || b.ilkYazar || ''), yazar));
+  if (!aday) return { turler: [], eslesen: null, tani };
+  tani.kapi = 1;
+  let j = null;
+  try { j = await binKitapApi('kitaplar/kitapCek?id=' + encodeURIComponent(aday.id)); } catch (e) { j = null; }
+  if (!j) return { turler: [], eslesen: null, tani };
+  tani.cek = 1;
+  const k = j.kitap || {};
+  /* eslesen: İSTEMCİNİN kapıyı kuracağı künye — kaynak kaydın KENDİ adı ve
+     yazarı (arama sorgusu değil), yoksa kapı kendi kendini doğrular. */
+  const yazarlar = (Array.isArray(k.yazarlar) ? k.yazarlar : [])
+    .filter(y => y && y.adi && String(y.kitapYazarTurBaslik || '') === 'Yazar')
+    .map(y => String(y.adi).trim());
+  return {
+    turler: turDizi(j),
+    eslesen: {
+      ad: String(k.adi || aday.adi || '').trim(),
+      yazar: (yazarlar.length ? yazarlar : [String(k.ilkYazar || aday.yazarAdi || '').trim()])
+        .filter(Boolean).slice(0, 3).join(', ')
+    },
+    tani
+  };
+}
+/* "Ad - Alt başlık" / "Ad: Alt başlık" → "Ad". Ayırıcı yoksa '' döner
+   (çağıran ikinci sorguyu atmaz). Kesme YALNIZ baştaki parça ≥3 harfse. */
+function altBasliksiz(ad) {
+  const m = String(ad || '').match(/^(.+?)\s*(?: - |:|;|—)/);
+  const bas = m ? m[1].trim() : '';
+  return bas.length >= 3 && bas.length < String(ad || '').length ? bas : '';
+}
 /* SAF dönüştürücü (test kancası): kitapCek JSON'u + aranan ISBN13 → /ara alan seti.
    Baskı adayları: hakkinda.baskiBilgileri (ana) + digerBaskilar[].baskiBilgileriArray;
    ISBN'i aranan ile birebir eşleşen baskı seçilir, eşleşen yoksa null. */
@@ -388,8 +466,24 @@ function isbnDonustur(j, isbn) {
     isbn,
     kaynak: '1000Kitap',
     cevirmen: rol('Çevirmen').slice(0, 2).join(', '),
-    dil: (b.dil && b.dil.kod) ? String(b.dil.kod).toLowerCase() : ''
+    dil: (b.dil && b.dil.kod) ? String(b.dil.kod).toLowerCase() : '',
+    turler: turDizi(j)
   };
+}
+/* --- TÜR (v130) ---
+   ÖLÇÜM (21 Eylül, türü boş 45 gerçek kayıt): kitapCek yanıtının
+   liste[renderTuru=kitapHakkinda].hakkinda.kidDizi alanı kitabın TÜRLERİNİ
+   taşıyor ve bu adlar 1000Kitap'ın KENDİ taksonomisinden geliyor — yani
+   /turler ucunun döndürdüğü AYNI 78 türlük liste. 45 kaydın 119 tür
+   etiketinin tamamı o listenin içindeydi: eşleme sözlüğü GEREKMİYOR,
+   eşlenemeyen tür sayısı 0.
+   MALİYET SIFIR: /isbn zinciri kitapCek'i zaten indiriyordu, alan okunmuyordu.
+   TÜR BASKIYA DEĞİL ESERE aittir (v102'deki Kaan istisnasının aynısı) —
+   digerBaskilar'a bakılmaz, ana kitabın listesi geçerlidir. */
+function turDizi(j) {
+  const hk = (((j && j.liste) || []).find(x => x && x.renderTuru === 'kitapHakkinda') || {}).hakkinda || {};
+  return (Array.isArray(hk.kidDizi) ? hk.kidDizi : [])
+    .map(t => String((t && t.adi) || '').trim()).filter(Boolean).slice(0, 8);
 }
 
 /* --- Kaynak 3: 1000Kitap v2 API (tür keşfi) --- */
@@ -600,4 +694,5 @@ function dilTahmin(m) { return /[çğışöüÇĞİŞÖÜ]/.test(m) ? 'tr' : 'en
 
 /* test kancası (node testleri için, Worker çalışmasını etkilemez) */
 export { grDonustur, bkDonustur, tekillestir, norm, adUyar, yazarUyar,
-  taslakDogrula, metinTemizle, dilTahmin, isbn13e, isbnDonustur };
+  taslakDogrula, metinTemizle, dilTahmin, isbn13e, isbnDonustur,
+  turDizi, altBasliksiz };

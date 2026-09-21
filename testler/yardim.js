@@ -130,7 +130,8 @@ async function tehlikeAc(page) {
      { google, worker, turler, tur, olArama, olKitap, firebase, sonGoogleUrl, sonTurUrl } */
 async function agTaklit(page, ayar) {
   const sayac = { google: 0, worker: 0, turler: 0, tur: 0, olArama: 0, olKitap: 0,
-    firebase: 0, bildirim: 0, isbn: 0, sonGoogleUrl: '', sonTurUrl: '', sonIsbnUrl: '' };
+    firebase: 0, bildirim: 0, isbn: 0, kitapTur: 0,
+    sonGoogleUrl: '', sonTurUrl: '', sonIsbnUrl: '', sonKitapTurUrl: '' };
   const beklenmeyen = [];
   page.__agSayac = sayac;
   page.__agBeklenmeyen = beklenmeyen;
@@ -172,6 +173,13 @@ async function agTaklit(page, ayar) {
       sayac.isbn++; sayac.sonIsbnUrl = url;
       if (a.isbn === 'hata') return route.abort('failed');
       return json(route, a.isbn || { sonuclar: [] });
+    }
+    /* v130: worker /kitap-tur (ISBN'siz kayit icin tur). AYRI dal + AYRI sayac;
+       varsayilan bos yanit, boylece mevcut vakalar tur listesi GORMEZ. */
+    if (url.includes('kitaplik-ara.dessn7.workers.dev/kitap-tur?')) {
+      sayac.kitapTur++; sayac.sonKitapTurUrl = url;
+      if (a.kitapTur === 'hata') return route.abort('failed');
+      return json(route, a.kitapTur || { turler: [], eslesen: null });
     }
     if (url.includes('kitaplik-ara.dessn7.workers.dev')) {
       sayac.worker++;

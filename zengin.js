@@ -98,6 +98,22 @@
     ['theater', 'Tiyatro'],
     ['theatre', 'Tiyatro'],
     ['plays', 'Tiyatro'],
+    /* v130 — ÖLÇÜLMÜŞ üç ekleme (21 Eylül, türü boş 45 gerçek kayıt).
+       Taksonomi dışında kalan 7 kategoriden bunlar 1000Kitap'ın kendi tür
+       listesiyle ÇAPRAZ DOĞRULANDI: "Acting"→Oyuncuya (1k: Tiyatro+Kültür),
+       "Turks"→1200 Yıllık Sürgün (1k: Araştırma-İnceleme+Tarih),
+       "Cressida (Fictitious character)"→Troilos ve Cressida (1k: …+Tiyatro+…).
+       ALINMAYAN ikisi ve gerekçeleri (bir daha önerilmesin diye yazılı):
+       · "Human beings"→Antropoloji-Etnoloji: çapraz denetim ÇÜRÜTTÜ — İlk
+         şempanze'ye 1000Kitap Bilim-Teknoloji-Mühendislik diyor.
+       · "Physicists"→Biyografi: yukarıdaki 5. kural kişi kategorilerini
+         (Novelists/Poets/Dramatists/Scientists) bilerek dışarıda bırakıyor;
+         tek kitap için ilke delinmedi — o kitap 1000Kitap listesinden seçilir.
+       · "Antiques & Collectibles" (Kamelyalı Kadın) ve "Knights and knighthood"
+         (İki Soylu Akraba): 1000Kitap Roman/Aşk ve Tiyatro diyor — eşleme
+         yanlış olurdu, Kaan'ın yargısı ölçümle doğrulandı. */
+    ['acting', 'Tiyatro'],
+    ['cressida (fictitious character)', 'Tiyatro', 'tam'],
     /* kurgu-dışı — spesifik bileşikler jeneriklerden ÖNCE */
     ['literary criticism', 'Eleştiri-Kuram'],
     ['history and criticism', 'Eleştiri-Kuram'],
@@ -112,6 +128,7 @@
     ['psychoanalysis', 'Psikoloji'],
     ['sociology', 'Sosyoloji'],
     ['politics', 'Siyaset-Politika'],
+    ['turks', 'Tarih'],            // v130 (ölçüldü); 'turkey' BİLEREK yok — ülke konu etiketi
     ['history', 'Tarih'],
     ['biography', 'Biyografi'],
     ['autobiography', 'Biyografi'],
@@ -354,6 +371,51 @@
     const kisa = pa.length <= pb.length ? pa : pb;
     const uzun = pa.length <= pb.length ? pb : pa;
     return kisa.every(t => uzun.indexOf(t) >= 0);
+  }
+  /* v130 — 1000KİTAP TÜR LİSTESİ (bu sprintin ana kaynağı).
+     ÖLÇÜM (21 Eylül, türü boş 45 gerçek kayıt): Google bu 45'in yalnız 1'ine
+     tür veriyordu (27'sinde baskı var ama `categories` yok, 9'unda kayıt bile
+     yok). 1000Kitap 45'in 45'ine tür veriyor ve verdiği adlar KENDİ
+     taksonomisinden — /turler'in döndürdüğü aynı 78'lik liste; 119 tür
+     etiketinin tamamı o listenin içindeydi, eşleme sözlüğü gerekmiyor.
+     DÖNÜŞ TEK DEĞER DEĞİL LİSTE — ve bilerek: listeden tek tür seçen en iyi
+     kural Kaan'ın kendi 254 kararıyla %43 örtüşüyor, doğru tür ise listenin
+     içinde %73. Astronomi tek başına sistematik: Kaan astronomiyi ayrı tür
+     sayıyor, 1000Kitap 4 vakanın 4'ünde Bilim-Teknoloji-Mühendislik diyor.
+     Otomatik yazım bu oranla sessiz yanlış üretirdi; seçim kullanıcının.
+     KİMLİK KAPISI İKİ YOLLU:
+     · ISBN varsa worker /isbn kullanılır — orada aranan ISBN dönen baskınınkiyle
+       BİREBİR eşleşiyor (worker sözleşmesi), yani kimlik kanıtlı; ad kapısı
+       GEREKMEZ. Ölçüm bunu zorunlu kıldı: Karl/Carl Kerenyi, "Troilos"/
+       "Troilus", "Ploutos Servet"/"Ploutos (Servet)" üç gerçek kayıt ad
+       kapısından düşüyor ama ISBN'leri birebir tutuyor — doğru kitaplar.
+     · ISBN yoksa (ya da 1000Kitap o ISBN'i tanımıyorsa) ad araması yapılır ve
+       v118 kapısı ZORUNLU: baslikUyar + yazarUyar, worker'ın döndürdüğü
+       `eslesen` künyesine uygulanır. Yazarı BOŞ olan kayıtta kapı kurulamaz →
+       HİÇ sorulmaz (v118 kapak kuralının aynısı).
+     ISBN→ad DÜŞÜŞÜ SERBEST (v102 md.3 istisnası): tür künye değildir, esere
+     aittir, baskıdan baskıya değişmez — "baskı karışmasın" gerekçesi türde
+     geçerli değil, üstelik düşüşte ad+yazar kapısı kuruluyor.
+     Her arıza null: Google yolunun "art arda hata" sayacını KİRLETMEZ. */
+  async function turListeSessiz(k, wkAl){
+    try{
+      const B = window.__barkod;
+      if(!B) return null;
+      const sIsbn = sorguIsbn(k);
+      if(sIsbn){
+        /* wkAl: kitapSorgula'nın kitap başına TEK istek belleği. Yoksa
+           (doğrudan çağrı / test) kendi sorar. */
+        const w = wkAl ? await wkAl() : await workerIsbnSessiz(sIsbn);
+        if(w && Array.isArray(w.turler) && w.turler.length)
+          return { turler: w.turler.slice(0, 8), kapi: 'isbn' };
+      }
+      if(typeof B.workerTur !== 'function') return null;
+      if(!k.ad || !String(k.yazar || '').trim()) return null;   // kapı kurulamıyor → sorma
+      const t = await B.workerTur(k.ad, k.yazar);
+      if(!t || !Array.isArray(t.turler) || !t.turler.length || !t.eslesen) return null;
+      if(!baslikUyar(k.ad, t.eslesen.ad) || !yazarUyar(k.yazar, t.eslesen.yazar)) return null;
+      return { turler: t.turler.slice(0, 8), kapi: 'ad+yazar' };
+    }catch(e){ return null; }
   }
   /* v128 M3 — GOODREADS "KAPAK YOK" PLASEBOSU.
      Goodreads kapağı olmayan kayda da bir görsel adresi döndürür:
@@ -789,6 +851,14 @@
 
     /* ---------- 1) ISBN sorgusu: künyenin ÖNCELİKLİ kaynağı + kapak ---------- */
     let isbnAdaylar = null, kunye = null, kunyeIsbnli = false;
+    /* v130: worker /isbn kitap başına EN ÇOK BİR KEZ sorulur. Künye ve tür
+       AYNI kaydı okur — tür ayrı sorsaydı ISBN'li her kitapta istek İKİYE
+       katlanırdı (g93'ün "kitap başına 1" sözleşmesi bunu kilitliyor). */
+    let wkBellek;
+    const wkAl = async () => {
+      if(wkBellek === undefined) wkBellek = sIsbn ? await workerIsbnSessiz(sIsbn) : null;
+      return wkBellek;
+    };
     if(sIsbn && (kunyeIster || kapakIster)){
       /* Hata YUTULUR: bu yol bir EK yetenek, düşmesi başlık yolunu öldürmemeli
          (v74 dersi — Google bu uçta aralıklı 503 veriyor). */
@@ -799,22 +869,39 @@
     if(kunyeIster && sIsbn){
       if(isbnAdaylar && isbnAdaylar.length){ kunye = ciltGB(isbnAdaylar[0]); kunyeIsbnli = true; }
       else{
-        const wk = await workerIsbnSessiz(sIsbn);   // 1000Kitap: Türkçe baskılarda birebir
+        const wk = await wkAl();                   // 1000Kitap: Türkçe baskılarda birebir
         if(wk){ kunye = ciltWorker(wk); kunyeIsbnli = true; }
       }
       if(!kunye) red.push('ISBN ile künye bulunamadı — başlık aramasına düşülmedi (baskı karışmasın)');
     }
 
-    /* ---------- 2) Başlık araması: tür + kapak için HER ZAMAN, künye için
-                     yalnız kayıtta ISBN YOKKEN ---------- */
-    const dar = 'intitle:"' + k.ad + '"' + (k.yazar ? ' inauthor:"' + k.yazar + '"' : '');
-    const adaylar1 = await gbSor(dar);
-    let aday = adaylar1.find(v => baslikUyar(k.ad, v.title));
-    let adaylar2 = null;
-    if(!aday){
-      await bekle(ARALIK_MS);
-      adaylar2 = await gbSor('"' + k.ad + '" ' + (k.yazar || ''));
-      aday = adaylar2.find(v => baslikUyar(k.ad, v.title));
+    /* ---------- 1.5) TÜR LİSTESİ (v130) — GOOGLE'DAN ÖNCE ----------
+       Sıra bilerek: tür listesi gelirse Google'a hiç gidilmeyebilir. İki
+       gerekçe, ikisi de ölçülmüş:
+       · BÜTÇE — yalnız türü eksik kayıtta eski akış kitap başına 1-2 Google
+         isteği harcıyordu (45 kayıt = 90 isteğe kadar, günlük kota 1000);
+         1000Kitap listesi geldiğinde o isteklerin hiçbiri gerekmiyor.
+       · DAYANIKLILIK — Google bu uçta isteklerin %32'sine 503 veriyor (v128
+         ölçümü) ve fırlayan istek kitabı KOMPLE düşürüyor. Tür sorgusu
+         Google'ın arkasında dursaydı, Google düştüğünde 1000Kitap'a hiç
+         sorulmadan tür boş kalırdı. */
+    const turIster = eksikler.indexOf('tur') >= 0;
+    let turListe = null, turAtlandi = false;
+    if(turIster) turListe = await turListeSessiz(k, wkAl);
+
+    /* ---------- 2) Başlık araması: künye (ISBN yokken), kapak ve —tür listesi
+                     gelmediyse— tür için ---------- */
+    const baslikIster = kapakIster || (kunyeIster && !sIsbn) || (turIster && !turListe && !!taksonomi);
+    let adaylar1 = [], adaylar2 = null, aday = null;
+    if(baslikIster){
+      const dar = 'intitle:"' + k.ad + '"' + (k.yazar ? ' inauthor:"' + k.yazar + '"' : '');
+      adaylar1 = await gbSor(dar);
+      aday = adaylar1.find(v => baslikUyar(k.ad, v.title));
+      if(!aday){
+        await bekle(ARALIK_MS);
+        adaylar2 = await gbSor('"' + k.ad + '" ' + (k.yazar || ''));
+        aday = adaylar2.find(v => baslikUyar(k.ad, v.title));
+      }
     }
     if(kunyeIster && !sIsbn){
       if(aday){
@@ -826,21 +913,40 @@
       }
     }
 
-    /* ---------- 3) TÜR (künye DEĞİL — çok cilt havuzu sürüyor) ---------- */
+    /* ---------- 3) TÜR (künye DEĞİL — çok cilt havuzu sürüyor) ----------
+       v130 SIRA: 1000Kitap LİSTESİ → yoksa Google'ın tek değeri.
+       TEK KAYNAK KURALI: liste geldiyse Google'ın türü o kitaba YAZILMAZ.
+       İkisi birden gösterilseydi ekranda "seçilmemiş çipler" ile "otomatik
+       yazılacak tür" yan yana durur, kullanıcı hangisinin uygulanacağını
+       bilemezdi (v102'nin "künye TEK kaynaktan" ilkesinin tür karşılığı).
+       TAKSONOMİ YOKSA GOOGLE YOLU HİÇ DENENMEZ ve bu ATLAMA SAYILIR:
+       turCevir zaten taksonomisiz '' döndürüyordu, ama sessizce — kullanıcı
+       "tür bulunamadı" ile "tür sorulamadı"yı ayırt edemiyordu (canlı kanıt:
+       ölçüm sırasında 1000Kitap worker'ı 403'ledi, /turler düştü, toplu tarama
+       diğer alanları doldurup türü sessizce atladı). Artık istek de harcanmaz. */
     let tur = '';
-    if(eksikler.indexOf('tur') >= 0){
-      tur = turCevir(kategoriTopla(adaylar1, k.ad)
-        .concat(adaylar2 ? kategoriTopla(adaylar2, k.ad) : []));
-      if(!tur && adaylar2 === null){
-        await bekle(ARALIK_MS);
-        adaylar2 = await gbSor('"' + k.ad + '" ' + (k.yazar || ''));
-        tur = turCevir(kategoriTopla(adaylar2, k.ad));
+    if(turIster){
+      if(!turListe){
+        if(!taksonomi){
+          turAtlandi = true;
+        }else{
+          tur = turCevir(kategoriTopla(adaylar1, k.ad)
+            .concat(adaylar2 ? kategoriTopla(adaylar2, k.ad) : []));
+          if(!tur && adaylar2 === null){
+            await bekle(ARALIK_MS);
+            adaylar2 = await gbSor('"' + k.ad + '" ' + (k.yazar || ''));
+            tur = turCevir(kategoriTopla(adaylar2, k.ad));
+          }
+        }
       }
     }
 
     /* ---------- 4) Yazım: künye TEK cilttan, doğrulama kapılarıyla ---------- */
     const bulunan = {};
     if(tur) bulunan.tur = tur;
+    /* __ önekli alanlar ALANLAR'da değildir → uygula()'nın alan döngüsüne
+       girmez, kitaba yazılmaz. Liste yalnız önizlemede çip üretir. */
+    if(turListe){ bulunan.__turListe = turListe.turler; bulunan.__turKapi = turListe.kapi; }
     if(kunye){
       if(eksikler.indexOf('isbn') >= 0 && kunye.isbn){
         const B = window.__barkod;
@@ -871,8 +977,10 @@
       }
       if(kpk){ bulunan.kapak = kpk; if(kapakOlu) bulunan.__kapakOlu = true; }
     }
-    const gercek = ALANLAR.some(a => bulunan[a] !== undefined);
-    return { b: gercek ? bulunan : null, red: red };
+    /* Türü YALNIZ liste olarak bulunan kitap da önizlemeye GİRMELİ — yoksa
+       seçim ekranı hiç çizilmez (bu sprintin 45 kaydının çoğu böyle). */
+    const gercek = ALANLAR.some(a => bulunan[a] !== undefined) || bulunan.__turListe !== undefined;
+    return { b: gercek ? bulunan : null, red: red, turAtlandi: turAtlandi };
   }
 
   /* ---------- OTOMATİK TÜR (v65): yeni eklenen kitaba kayıt anında ----------
@@ -2416,9 +2524,11 @@
       const olu = oluKapakIdler();
       kdurum = { sira: (veri.kitaplar || [])
           .filter(k => ALANLAR.some(a => alanBos(k, a)) || olu.has(k.id)).map(k => k.id),
-        islenen: {}, bulunan: {}, red: {}, hata: {}, bitti: false };
+        islenen: {}, bulunan: {}, red: {}, hata: {}, turSec: {}, turAtlanan: {}, bitti: false };
     }
     if(!kdurum.red) kdurum.red = {};   // v102 öncesi yarım kalmış kuyruk durumu
+    if(!kdurum.turSec) kdurum.turSec = {};         // v130 öncesi kuyruk
+    if(!kdurum.turAtlanan) kdurum.turAtlanan = {};
     kuyrukKaydet(kdurum);
     calisiyor = true; durdur = false;
     ortuKur('zgTarama', 'Kütüphaneyi zenginleştir');
@@ -2442,6 +2552,8 @@
             const s = await kitapSorgula(k);
             if(s && s.b) kdurum.bulunan[id] = s.b;
             if(s && s.red && s.red.length) kdurum.red[id] = s.red;
+            if(s && s.turAtlandi) kdurum.turAtlanan[id] = 1;
+            else delete kdurum.turAtlanan[id];
             delete kdurum.hata[id];   // v128: başarı, önceki denemelerin sayacını siler
             ardArdaHata = 0;
           }catch(e){
@@ -2479,12 +2591,70 @@
   function onizlemeOzet(kdurum){
     const alanSayi = {};
     ALANLAR.forEach(a => { alanSayi[a] = 0; });
-    let kitapSayi = 0;
-    Object.values(kdurum.bulunan).forEach(b => {
+    let kitapSayi = 0, turListeSayi = 0, turSecSayi = 0;
+    const sec = kdurum.turSec || {};
+    Object.entries(kdurum.bulunan).forEach(([id, b]) => {
       kitapSayi++;
       ALANLAR.forEach(a => { if(b[a] !== undefined) alanSayi[a]++; });
+      /* v130: liste gelen kitapta tür bir ALAN değil, bekleyen bir SEÇİM —
+         alanSayi.tur'a girmez (oraya girse "tür bulundu" der, oysa henüz
+         hiçbir şey yazılacak değil). Ayrı sayılır, ayrı gösterilir. */
+      if(Array.isArray(b.__turListe) && b.__turListe.length){
+        turListeSayi++;
+        if(sec[id] && b.__turListe.indexOf(sec[id]) >= 0) turSecSayi++;
+      }
     });
-    return { alanSayi, kitapSayi };
+    return { alanSayi, kitapSayi, turListeSayi, turSecSayi };
+  }
+  /* v130 — TÜR SEÇİM BLOĞU (zgt- ad alanı).
+     KAAN KARARI, üç madde ve üçü de burada zorlanıyor:
+     (1) hiçbiri ÖNCEDEN SEÇİLİ değil — `sec` boş başlar, çip 'secili' sınıfını
+         yalnız kullanıcı dokununca alır;
+     (2) seçilmeyen kitaba HİÇBİR ŞEY yazılmaz — kapı uygula()'da, burada değil
+         (çizim kapı olamaz: kullanıcı paneli hiç açmadan "Uygula"ya basabilir);
+     (3) BİRDEN ÇOK tür seçilemez — kayıtta tek `tur` alanı var; seçim
+         üzerine YAZILIR (dizi değil skaler), seçiliye tekrar dokunmak kaldırır. */
+  function turSecimHtml(kdurum){
+    const kayitlar = Object.entries(kdurum.bulunan)
+      .filter(([, b]) => Array.isArray(b.__turListe) && b.__turListe.length);
+    if(!kayitlar.length) return '';
+    const sec = kdurum.turSec || {};
+    const satirlar = kayitlar.map(([id, b]) => {
+      const k = (veri.kitaplar || []).find(x => x.id === id);
+      if(!k) return '';
+      const s0 = sec[id] || '';
+      const cipler = b.__turListe.map(t =>
+        '<button type="button" class="zgt-cip' + (t === s0 ? ' secili' : '') + '" ' +
+          'data-act="zgt-sec" data-kid="' + escAttr(id) + '" data-tur="' + escAttr(t) + '" ' +
+          'aria-pressed="' + (t === s0 ? 'true' : 'false') + '">' + esc(t) + '</button>').join('');
+      return '<div class="zgt-satir" data-kid="' + escAttr(id) + '">' +
+        '<div class="zgt-ad">' + esc(k.ad) + '</div>' +
+        '<div class="zgt-cipler">' + cipler + '</div></div>';
+    }).join('');
+    const { turListeSayi, turSecSayi } = onizlemeOzet(kdurum);
+    /* "Uygula" kuyruğu TEMİZLER (kuyrukTemizle) — seçilmemiş listeler de gider.
+       Bu gerçek bir friksiyon: kullanıcı kararı VERMEDEN önce bilmeli, sonra
+       "listem nerede" diye aramasın. Yeniden tarama ücretsiz değil (kaynak
+       istekleri), ama tür hâlâ boş olduğu için kitaplar kuyruğa geri girer. */
+    const kalan = turListeSayi - turSecSayi;
+    return '<div class="zgt-blok">' +
+      '<div class="zgt-basi">Tür seçimi — <b>' + turSecSayi + '</b> / ' + turListeSayi + ' kitapta seçtin</div>' +
+      (kalan ? '<div class="zgt-kalan">Seçmediğin <b>' + kalan + '</b> kitabın türü boş kalacak; ' +
+        '"Bulunanları uygula" bu listeyi kapatır, onları yeniden taraman gerekir.</div>' : '') +
+      '<p class="zgt-not">Türler 1000Kitap\'ın kendi listesinden geliyor, uydurulmuyor. ' +
+        'Hiçbiri önceden seçili değil: <b>seçmediğin kitaba tür yazılmaz.</b> ' +
+        'Bir kitaba tek tür seçilir; seçiliye tekrar dokunursan seçim kalkar.</p>' +
+      '<div class="zgt-liste">' + satirlar + '</div></div>';
+  }
+  /* v130 — TAKSONOMİ DÜŞTÜ, TÜR ADIMI ATLANDI.
+     Eskiden bu durum SESSİZDİ: turCevir taksonomisiz '' döndürüyor, tarama
+     diğer alanları dolduruyor, kullanıcı "tür bulunamadı" sanıyordu. */
+  function turAtlamaHtml(kdurum){
+    const n = Object.keys(kdurum.turAtlanan || {}).length;
+    if(!n) return '';
+    return '<div class="zgt-uyari">Tür düzeni alınamadı (1000Kitap\'a ulaşılamadı) — ' +
+      '<b>' + n + '</b> kitapta tür adımı ATLANDI. Bu koşuda o kitaplara tür hiç sorulmadı; ' +
+      'diğer alanlar tarandı. Bağlantı düzelince yeniden tara, bu kitaplar yeniden sorulur.</div>';
   }
   /* UYGULA: yalnız hâlâ BOŞ olan alana yazar — dolu alan (bu arada elle
      doldurulmuş olsa bile) KORUNUR; çelişen değer yazılmaz.
@@ -2500,6 +2670,17 @@
       if(!k) return;
       let yazildi = false;
       ALANLAR.forEach(a => {
+        /* v130 TÜR SEÇİMİ KAPISI: 1000Kitap listesi gelen kitapta tür
+           OTOMATİK DEĞİL, kullanıcının seçimidir. Seçilmemiş kitaba hiçbir
+           şey yazılmaz; seçim listede yoksa (bayat kuyruk) yine yazılmaz. */
+        if(a === 'tur' && b.__turListe !== undefined){
+          const sec = (kdurum.turSec || {})[id];
+          if(!sec || b.__turListe.indexOf(sec) < 0) return;
+          if(!alanBos(k, 'tur')) return;
+          k.tur = sec;
+          yazildi = true; alanN++;
+          return;
+        }
         if(b[a] === undefined) return;
         const oluKapakIstisnasi = (a === 'kapak' && b.__kapakOlu === true);
         if(!alanBos(k, a) && !oluKapakIstisnasi) return;   // DOLU ALANA DOKUNMA
@@ -2597,6 +2778,7 @@
       g.innerHTML = '<div class="zg-satir">' + islenen + ' / ' + toplam + ' kitap tarandı' +
         (kdurum.bitti ? ' — yazılacak yeni bilgi bulunamadı' : ' (yarım — devam edebilirsin)') +
         hataMetin + '.</div>' +
+        turAtlamaHtml(kdurum) +
         redBlokHtml(kdurum) +
         '<div class="form-alt">' +
         (kdurum.bitti ? '' : '<button class="btn btn-cerceve" data-act="zg-tara" style="flex:1">Devam et</button>') +
@@ -2604,8 +2786,11 @@
       if(kdurum.bitti) kuyrukTemizle();
       return;
     }
+    const { turListeSayi, turSecSayi } = onizlemeOzet(kdurum);
     const ozetler = ALANLAR.filter(a => alanSayi[a])
-      .map(a => ALAN_AD[a] + ': <b>' + alanSayi[a] + '</b> kitap').join(' · ');
+      .map(a => ALAN_AD[a] + ': <b>' + alanSayi[a] + '</b> kitap')
+      .concat(turListeSayi ? ['Tür seçimi: <b>' + turSecSayi + '</b>/' + turListeSayi + ' kitap'] : [])
+      .join(' · ');
     const satirlar = Object.entries(kdurum.bulunan).map(([id, b]) => {
       const k = (veri.kitaplar || []).find(x => x.id === id);
       if(!k) return '';
@@ -2622,9 +2807,12 @@
         (kdurum.bitti ? '' : ' (yarım — devam edebilirsin)') +
         hataMetin + '</div>' +
       '<div class="zg-ozet">' + kitapSayi + ' kitapta yeni bilgi: ' + ozetler + '</div>' +
+      turAtlamaHtml(kdurum) +
+      turSecimHtml(kdurum) +
       redBlokHtml(kdurum) +
       '<p class="zg-not">Yalnız BOŞ alanlar doldurulur; elle girdiğin hiçbir değere dokunulmaz. ' +
-        'Tür, 1000Kitap taksonomisine eşlenemezse boş bırakılır — uydurma tür yazılmaz.</p>' +
+        'Tür, listesi gelen kitapta yukarıdan SEÇİLİR; liste gelmeyen kitapta Google kategorisi ' +
+        '1000Kitap taksonomisine eşlenemezse boş bırakılır — uydurma tür yazılmaz.</p>' +
       '<details class="zg-katla"><summary>Tek tek gör (' + kitapSayi + ' kitap)</summary>' +
         '<div class="zg-onizle-liste">' + satirlar + '</div></details>' +
       '<div class="form-alt">' +
@@ -3168,6 +3356,26 @@
     '.zg-ozet{font-size:.85rem;color:var(--muted);margin:8px 0;line-height:1.5}',
     '.zg-ozet b{color:var(--paper);font-variant-numeric:tabular-nums}',
     '.zg-not{font-size:.8rem;color:var(--muted);margin-top:10px;line-height:1.5}',
+    /* zgt- (v130): tür seçim çipleri — yeni UI, yeni önek (mevcut .zg-* ve
+       .vm-cip seçicileri gölgelenmesin). */
+    '.zgt-blok{margin-top:12px;border:1px solid var(--kontur);border-radius:var(--r-md);padding:12px}',
+    '.zgt-basi{font-size:.9rem;color:var(--paper);margin-bottom:4px}',
+    '.zgt-basi b{font-variant-numeric:tabular-nums}',
+    '.zgt-not{font-size:.8rem;color:var(--muted);line-height:1.55;margin:0 0 10px}',
+    '.zgt-not b{color:var(--paper);font-weight:600}',
+    '.zgt-liste{max-height:46vh;overflow:auto}',
+    '.zgt-satir{padding:8px 0}',
+    '.zgt-satir + .zgt-satir{border-top:1px solid var(--kontur)}',
+    '.zgt-ad{font-size:.85rem;color:var(--paper);margin-bottom:6px}',
+    '.zgt-cipler{display:flex;flex-wrap:wrap;gap:6px}',
+    '.zgt-cip{min-height:40px;padding:6px 12px;font-size:.8rem;border-radius:999px;' +
+      'border:1px solid var(--kontur);background:transparent;color:var(--muted);cursor:pointer}',
+    '.zgt-cip.secili{background:var(--brass);border-color:var(--brass);color:var(--uzeri);font-weight:600}',
+    '.zgt-kalan{font-size:.8rem;color:var(--muted);line-height:1.5;margin:0 0 8px}',
+    '.zgt-kalan b{color:var(--paper);font-variant-numeric:tabular-nums}',
+    '.zgt-uyari{font-size:.8rem;color:var(--drop);line-height:1.5;margin:8px 0;' +
+      'background:color-mix(in srgb,var(--drop) 9%,transparent);border-radius:var(--r-ic);padding:8px 10px}',
+    '.zgt-uyari b{font-variant-numeric:tabular-nums}',
     /* zgo- (v128): ölü kapak denetimi — zg- reçetesinin AYRI kopyası
        (yeni UI = yeni önek; testlerin genel .zg-* seçicileri gölgelenmesin) */
     '.zgo-satir{font-size:.9rem;color:var(--paper);margin:10px 0 8px;font-variant-numeric:tabular-nums}',
@@ -3317,9 +3525,24 @@
           const kdurum3 = kuyrukYukle();
           if(kdurum3 && kdurum3.bulunan[el.dataset.kid]){
             delete kdurum3.bulunan[el.dataset.kid];
+            if(kdurum3.turSec) delete kdurum3.turSec[el.dataset.kid];   // v130: yetim seçim kalmasın
             kuyrukKaydet(kdurum3);
             onizlemeCiz(kdurum3);
           }
+          break; }
+        /* v130 TÜR ÇİPİ — TEK seçim. Seçim LİSTEYE karşı doğrulanır: bayat
+           kuyruk ya da elle kurcalanmış data-tur kayda giremesin. */
+        case 'zgt-sec': {
+          const kd = kuyrukYukle();
+          if(!kd) break;
+          const kid = el.dataset.kid, t = el.dataset.tur;
+          const b = kd.bulunan && kd.bulunan[kid];
+          if(!b || !Array.isArray(b.__turListe) || b.__turListe.indexOf(t) < 0) break;
+          if(!kd.turSec) kd.turSec = {};
+          if(kd.turSec[kid] === t) delete kd.turSec[kid];   // tekrar dokunma = seçimi kaldır
+          else kd.turSec[kid] = t;                          // skaler: önceki seçim EZİLİR
+          kuyrukKaydet(kd);
+          onizlemeCiz(kd);
           break; }
         case 'zg-kapat': kapat(el.dataset.ortu); break;
         /* v109: yedi dosya girişi TEK kapıda birleşti. Boru seçimi düğmeden
@@ -3504,6 +3727,9 @@
        elle kaydedildiğinde aynı yoldan geçip temizlenir. */
     metinTemizle, metinCoz, varlikCoz, mojibakeOnar, bozukMetin,
     yazarUyar, workerKapakSessiz,   // v118 kapak yedegi kapilari (test kancasi)
+    /* v130 tur listesi: turListeSessiz KAPILARI kurar (hicbir seye yazmaz),
+       onizlemeCiz/onizlemeOzet cizim kancasi — secim kapisi uygula'dadir. */
+    turListeSessiz, onizlemeCiz, onizlemeOzet,
     /* v128: olu kapak + plasebo. oluKapakIdler HESAPLAR ve bayat girisleri
        duser — hicbir KITAP alanina yazmaz (denetim tek basina degistirmez). */
     plaseboKapak, oluKapakIdler, oluKapakOku, olKapakDurumu, gbBekleme,
