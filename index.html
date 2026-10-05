@@ -1048,6 +1048,34 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
   position:relative;text-decoration:underline;text-underline-offset:3px;
   text-decoration-color:var(--muted2)}
 .oz-sessiz::after,.onto-sessiz::after,.ts-sessiz::after{content:'';position:absolute;inset:-8px}
+/* ÇAKIŞMA UYARISI (ck-, Sprint Q): panelin üstünde küçük, uyarı renginde sol
+   çizgi — kart/dolgu yok (Ciltli). Yan yana: geniş ekranda iki sütun, dar
+   ekranda alt alta; her sütun kendi oz-/onto-metin tipografisini korur. */
+.ck-uyari{border-left:2px solid var(--drop);padding:6px 0 6px 12px;margin:0 0 12px}
+.ck-metin{font-size:.8rem;color:var(--muted);line-height:1.5}
+.ck-eylem{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.ck-sessiz{background:none;border:none;font-size:.8rem;color:var(--muted);padding:0;position:relative;
+  text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--muted2)}
+.ck-sessiz::after{content:'';position:absolute;inset:-8px}
+.ck-yanyana{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:700px){.ck-yanyana{grid-template-columns:1fr 1fr}}
+.ck-sutun{min-width:0}
+.ck-baslik{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:6px}
+/* KAYNAK / DOĞRULAMA satırı (kdg-, Sprint Q): metnin altında soluk tek satır;
+   "bulamadım" durumu uyarı renginde — gizlenmez, özür dilenmez. */
+.kdg-satir{font-size:.75rem;color:var(--muted2);margin-top:10px;line-height:1.5;font-variant-numeric:tabular-nums}
+.kdg-uyari{color:var(--drop);font-weight:600}
+/* SAHİPSİZ ÖZETLER (sz-, Sprint Q / Q4a): Depolama kartının altında satır + onay listesi */
+.sz-satir{font-size:.85rem;color:var(--muted);margin-top:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.sz-satir b{font-variant-numeric:tabular-nums;color:var(--paper)}
+.sz-kart{margin-top:10px;border:1px solid var(--kontur);border-radius:var(--r-md);padding:12px 13px}
+.sz-kart[hidden]{display:none}
+.sz-not{font-size:.8rem;color:var(--muted);line-height:1.55;margin:0 0 8px}
+.sz-liste{max-height:40vh;overflow-y:auto}
+.sz-oge{padding:8px 0;border-bottom:1px solid var(--cizgi);font-size:.82rem;line-height:1.45}
+.sz-oge:last-child{border-bottom:none}
+.sz-oge .sz-id{display:block;font-size:.7rem;color:var(--muted2);font-family:var(--mono,monospace)}
+.sz-oge .sz-yer{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2);margin-left:6px}
 /* Özet/Ontoloji sekme şeridi (ms-, v89) — kicker dilinin sekme hâli: seçili
    sekme pirinç + alt çizgi (nav-btn etiket deseni), diğeri soluk. 44px dokunma
    hedefi; odak halkası global :focus-visible kuralından (v85) gelir. */
@@ -1715,6 +1743,17 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;
       JSON yedeğine <b>girer</b>. Uzun özetler ana kütüphane kaydını şişirmez — senkronda yalnız
       değişen özet gönderilir.</p>
         <div class="kp-depo-satir" id="ozDepoBilgi">Hesaplanıyor…</div>
+        <!-- Sprint Q (Q4a): SAHİPSİZ özetler — kitabı silinmiş (v117 öncesi) ama
+             IDB'de / senkron düğümünde kalmış kayıtlar. Sayım yerel + uzak;
+             silme onay kartından, üç yerden birden (IDB, yedek, düğüm). Yeni
+             .ay-bolum / kicker / ay-baslik AÇILMADI (g48/g86 envanter kilidi). -->
+        <div class="sz-satir" id="szSatir">Sahipsiz özetler: <b>…</b></div>
+        <div class="sz-kart" id="szKart" hidden></div>
+        <!-- Sprint Q tamamlama: ÇAKIŞAN SÜRÜMLER — c'si dolu her kayıt (gerçek
+             çakışma + göçten kalan özdeş kopya) tek onayla çözülür: "Tümünde
+             mevcut metni tut". m/o değişmez; silme yedeğe ve senkrona işlenir. -->
+        <div class="sz-satir" id="cksSatir" hidden></div>
+        <div class="sz-kart" id="cksKart" hidden></div>
         <h3 class="ay-baslik">Kapak fotoğrafları</h3>
         <p class="ay-not">Kendi çektiğin kapak fotoğrafları <b>yalnız bu cihazda</b> saklanır — senkrona ve JSON
       yedeğine girmezler. Cihaz değiştirirsen fotoğrafları yeni cihazda yeniden çekmen gerekir.</p>
@@ -2234,7 +2273,8 @@ let durum = { filtre:'hepsi', arama:'', etiket:'', sirala:'bitis', sekme:'ana',
   /* v116 mükerrer onayı: ikizId = kartta gösterilen MEVCUT kaydın id'si
      ("Kitaba git" onu açar), ikizGec = "Yine de ekle" dendi, ikinci turda
      kapı atlanacak. İkisi de oturumluk, depoya girmez. */
-  ikizId:null, ikizGec:false };
+  ikizId:null, ikizGec:false,
+  ckYanYana:null };   // Sprint Q: 'kitapId|m' / 'kitapId|o' — çakışan sürüm yan yana açık
 
 /* ---------- sıralama tercihi (v74) ----------
    Bulgu: sıralama seçimi HİÇBİR yerde saklanmıyordu — her yenilemede
@@ -2518,14 +2558,183 @@ function ozIslem(mod, gorev, tekrar){
    silme, v79 kuralı). o (v81): özetin İKİZİ ikinci metin alanı — AYRI depo
    AÇILMADI (ayrı depo senkron/yedek/göç/yetim süpürücüsünü ikiye katlardı);
    damga g İKİSİNİ BİRDEN kapsar. o'suz eski kayıt okunduğunda o='' sayılır. */
-const ozetBellek = new Map();       // id -> { m, g, o }
+/* Sprint Q (v131) — kayda ÜÇ isteğe bağlı alan ailesi eklendi, şema sürümü
+   yok (IDB deposu şemasız; kitapParmak özet alanlarını dışlar → ANLIK_SURUM
+   DEĞİŞMEZ, yeniden damgalama yok):
+     c: [{ m?, o?, g, kaynak? }] — ÇAKIŞAN sürümler (başka cihazdan). m ve o
+        artık TEK sürüm tutar. Eski ozetBirlesim çakışmayı metnin İÇİNE
+        " — · — Çakışan özet (diğer cihazdan):" ekiyle yazıyordu; 8 Eylül 2026
+        yedeğinde 303 kaydın 237'si (m) / 100'ü (o) bu eki taşıyordu, 150'sinde
+        ek İÇ İÇE tekrarlıyordu (3-4 parça), toplam özet metni 0,96 MB → 2,89 MB
+        (3,01 kat). Sebep: eski kural "yeni metin eskiyi kapsamıyorsa ekle" idi;
+        yeni taraf KISA metinse (aynı metin taze damgayla yeniden yüklenince)
+        birleşik eski metni yeniden ekliyordu — yakınsama tek yönlüydü.
+     k / s / d — içe aktarım dosyasından KAYNAK (metin) / DURUM ('dogru' |
+        'duzeltildi' | 'bulamadim') / DOĞRULAMA tarihi (YYYY-AA-GG). Kitap
+        detayında soluk satır; yoksa hiç çizilmez.
+   Boş alan IDB'ye, yedeğe ve senkron paketine HİÇ yazılmaz (o'nun v81 kuralı). */
+const OZET_AYIRAC_M = '\n\n— · —\nÇakışan özet (diğer cihazdan):\n\n';
+const OZET_AYIRAC_O = '\n\n— · —\nÇakışan ontoloji (diğer cihazdan):\n\n';
+const OZET_C_TAVAN = 10;              // kayıt başına en çok çakışan sürüm (en yeni kalır)
+const OZET_DURUMLAR = ['dogru', 'duzeltildi', 'bulamadim'];
+/* cx: ["m:<iz>" | "o:<iz>"] — ÇÖZÜLMÜŞ sürüm izleri (Sprint Q tamamlama).
+   Kullanıcı bir çakışan sürümü attığında (tekil çözüm ya da Ayarlar'daki toplu
+   "mevcut metni tut") atılan metnin izi buraya girer. NEDEN: c birleşimde
+   kaybedenden de taşınır (iki cihazın çakışmaları birleşir); iz olmasa öbür
+   cihaz kendi yerel c'sini bir sonraki senkronda geri iterdi — silme odaya
+   yayılmazdı. İçerik-bazlı: yalnız ATILAN metin söner; sonradan gelen FARKLI
+   bir sürüm yine çakışma olarak görünür. Birleşimde iki tarafın izleri
+   birleşir (yalnız büyür), tavan OZET_CX_TAVAN (en yeni kalır). */
+const OZET_CX_TAVAN = 64;
+function ozIz(alan, metin){   // FNV-1a 32 bit + uzunluk — kısa, deterministik, iki cihazda aynı
+  let h = 0x811c9dc5;
+  const s = String(metin || '');
+  for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return alan + ':' + h.toString(16) + '.' + s.length.toString(36);
+}
+function ozCxBirlestir(...listeler){
+  const s = [];
+  for(const l of listeler) for(const x of (Array.isArray(l) ? l : []))
+    if(typeof x === 'string' && x && s.indexOf(x) < 0) s.push(x);
+  return s.slice(-OZET_CX_TAVAN);
+}
+/* GÜNCEL metin asla iz değildir: m/o şu an hangi metinse onun 'm:'/'o:' izi
+   düşer (kullanıcı eski bir metne geri dönerse o metin yeniden canlı sayılır;
+   başka cihazdaki sürümle çakışırsa yine görünür). 'a:' (özdeş kopya izi)
+   bundan etkilenmez — kopya zaten güncel metnin aynısıdır. */
+function ozCxSade(cx, m, o){
+  const at = new Set([ozIz('m', m), ozIz('o', o)]);
+  return ozCxBirlestir(cx).filter(x => !at.has(x));
+}
+/* ÜZERİNE YAZILAN metnin izi (Sprint Q tamamlama): kullanıcı düzenlemesi ve
+   özet içe aktarımı eski m/o'yu BİLEREK değiştirir. İz olmasa öbür cihaz
+   eski metni (değişmemiş kendi kopyası) birleşimde "çakışan sürüm" sayardı —
+   her düzenleme öbür cihazda sahte çakışma doğururdu (eski ek mekanizmasının
+   şişirdiği yol buydu). İzle: değişmemiş eski kopya söner, öbür cihazda
+   EŞZAMANLI yazılmış FARKLI metin ise yine çakışma olarak görünür. */
+function ozUstuneIz(cx, eskiM, yeniM, eskiO, yeniO){
+  const ek = [];
+  if(eskiM && eskiM !== yeniM) ek.push(ozIz('m', eskiM));
+  if(eskiO && eskiO !== yeniO) ek.push(ozIz('o', eskiO));
+  return ozCxSade(ozCxBirlestir(cx, ek), yeniM, yeniO);
+}
+const ozetBellek = new Map();       // id -> { m, g, o, c, k, s, d, cx }
 const ozetKatli = new Map();        // id -> katla(m + o) — arama dizini (ikisi birden aranır)
 let ozetHazir = false;              // açılış getAll'i bitti mi
 let ozetKotaUyarildi = false;       // %80 eşik uyarısı oturum başına bir kez
-function ozBellekKoy(id, m, g, o){
-  ozetBellek.set(String(id), { m: String(m || ''), g: parseInt(g) || 0, o: String(o || '') });
+let ozetGocLog = null;              // Sprint Q göçünün bu açılıştaki raporu (test/tanı kancası)
+function ozBellekKoy(id, m, g, o, ek){
+  const e = ek || {};
+  ozetBellek.set(String(id), { m: String(m || ''), g: parseInt(g) || 0, o: String(o || ''),
+    c: Array.isArray(e.c) ? e.c : [], k: String(e.k || ''), s: String(e.s || ''), d: String(e.d || ''),
+    cx: ozCxSade(e.cx, m, o) });
   ozetKatli.set(String(id), katla((m || '') + (o ? '\n' + o : '')));
 }
+/* IDB kaydı: m, g, o DAİMA (v81 biçimiyle geriye uyumlu); c/k/s/d yalnız doluysa. */
+function ozKayitIdb(m, g, o, ek){
+  const e = ek || {}, r = { m: String(m || ''), g: parseInt(g) || 0, o: String(o || '') };
+  if(Array.isArray(e.c) && e.c.length) r.c = e.c;
+  if(e.k) r.k = String(e.k); if(e.s) r.s = String(e.s); if(e.d) r.d = String(e.d);
+  const cx = ozCxSade(e.cx, r.m, r.o);
+  if(cx.length) r.cx = cx;
+  return r;
+}
+/* Yedek/senkron paketi: o da yalnız doluysa (v81 — dosya şişmesin). */
+function ozPaket(kayit){
+  const r = { m: kayit.m, g: kayit.g };
+  if(kayit.o) r.o = kayit.o;
+  if(Array.isArray(kayit.c) && kayit.c.length) r.c = kayit.c;
+  if(kayit.k) r.k = kayit.k; if(kayit.s) r.s = kayit.s; if(kayit.d) r.d = kayit.d;
+  if(Array.isArray(kayit.cx) && kayit.cx.length) r.cx = kayit.cx;
+  return r;
+}
+/* Çakışma listesi temizliği — TEK otorite (senkron birleşimi de bunu çağırır):
+   · m/o ile birebir aynı parça çakışma DEĞİLDİR (Q2d: iki sürüm aynıysa
+     çakışma yok) → düşer;
+   · aynı içerik iki kez durmaz;
+   · sıra DETERMİNİSTİK (g azalan, sonra metin) — iki cihaz simetrik
+     birleştirse de aynı listeyi üretir (yakınsama JSON eşitliğiyle ölçülür);
+   · tavan OZET_C_TAVAN (en yeni kalır). */
+/* c girdisi: { m?, o?, g, kaynak?, ayni?, n? }
+     ayni: true → ÖZDEŞ KOPYA: göçte ayrılan parça m/o ile birebir aynıydı. Çakışma
+       DEĞİLDİR (uyarı saymaz, birleşimde yalnız kazananla taşınır) ama metin
+       silme kararı kullanıcınındır — Ayarlar ▸ Depolama "özdeş kopyalar" temizliği
+       onayla siler. Yalnız m/o ile HÂLÂ aynıyken yaşar: kullanıcı metni
+       değiştirince eski kopya kendiliğinden düşer (kaydet'in zaten attığı eski
+       sürümden farkı yok).
+     n: aynı metnin kaç kopyası birleştirildi (metin bir kez saklanır, sayı
+       korunur — uzunluk denklemi n ile kurulur). */
+function ozCTemizle(m, o, c, cx){
+  const cikti = [], dizin = new Map();
+  const atilan = new Set(Array.isArray(cx) ? cx : []);
+  for(const e of (Array.isArray(c) ? c : [])){
+    if(!e || typeof e !== 'object') continue;
+    let em = (typeof e.m === 'string' && e.m) ? e.m : '';
+    let eo = (typeof e.o === 'string' && e.o) ? e.o : '';
+    if(e.ayni){ if(em && em !== m) em = ''; if(eo && eo !== o) eo = ''; }   // özdeş kopya yalnız hâlâ aynıyken
+    else { if(em === m) em = ''; if(eo === o) eo = ''; }                      // çözülmüş çakışma düşer (Q2d)
+    if(atilan.size){   // kullanıcının attığı sürüm hiçbir yoldan geri gelmez (cx)
+      if(em && atilan.has(ozIz(e.ayni ? 'a' : 'm', em))) em = '';
+      if(eo && atilan.has(ozIz(e.ayni ? 'a' : 'o', eo))) eo = '';
+    }
+    if(!em && !eo) continue;
+    const anah = JSON.stringify([em, eo, !!e.ayni]);
+    const n = Math.max(1, parseInt(e.n) || 1);
+    const var_ = dizin.get(anah);
+    if(var_){
+      /* n yalnız >1 ya da ayni iken yazılır — aynı içerik iki yoldan gelince JSON
+         birebir kalsın (yakınsama JSON eşitliğiyle ölçülür; n:1 sızıntısı
+         gereksiz PATCH üretirdi) */
+      const yeniN = Math.max(var_.n || 1, n);
+      if(yeniN > 1 || var_.ayni) var_.n = yeniN;
+      if(!var_.g && e.g) var_.g = parseInt(e.g) || 0;
+      continue;
+    }
+    const y = { g: parseInt(e.g) || 0 };
+    if(em) y.m = em; if(eo) y.o = eo;
+    if(e.kaynak) y.kaynak = String(e.kaynak);
+    if(e.ayni) y.ayni = true;
+    if(n > 1 || e.ayni) y.n = n;
+    dizin.set(anah, y); cikti.push(y);
+  }
+  cikti.sort((a, b) => ((a.ayni ? 1 : 0) - (b.ayni ? 1 : 0)) || (b.g - a.g)
+    || String(a.m || '').localeCompare(String(b.m || '')) || String(a.o || '').localeCompare(String(b.o || '')));
+  return cikti.slice(0, OZET_C_TAVAN);
+}
+/* GÖÇ ÇEKİRDEĞİ (Q2c) — saf fonksiyon: eski çakışma ekini ayırır, ÇOKLU ayıraç
+   dahil (gerçek veri: 4 parçaya kadar). Ayıraçtan ÖNCESİ m/o'da kalır (eski
+   kural yeni damgalıyı öne yazıyordu — doğrulanmış doğru metin o), SONRAKİ her
+   parça ayrı c girdisi (g: 0, kaynak: 'goc' — parçanın damgası bilinmiyor).
+   METİN KAYBI SIFIR: m/o ile ya da birbiriyle birebir aynı parçalar da c'de
+   kalır — ayni: true (m/o kopyası) ve n (kopya sayısı) ile; metin bir kez
+   saklanır. Uzunluk denklemi: önce = sonra(m+o) + Σ(parça × n) + ayıraç sayısı
+   × ayıraç uzunluğu. 1 Ekim 2026 yedeği: 301 kayıttan 237'si (m) / 107'si (o)
+   ekli, 119'unda parçalar aynı metnin tekrarı, ~2,9 M karakter çöp.
+   kaydetHam da her yazımda bunu çağırır: eski eki taşıyan metin (uzak düğüm,
+   eski yedek, eski istemci) girdiği yerde ayrılır — kendini onaran yol. */
+function ozCakismaAyir(m, o, c){
+  m = String(m || ''); o = String(o || '');
+  const mP = m.split(OZET_AYIRAC_M), oP = o.split(OZET_AYIRAC_O);
+  const s = { m: mP[0], o: oP[0], c: Array.isArray(c) ? c.map(e => ({ ...e })) : [], tasinan: 0, ozdes: 0,
+    tasinanUzunluk: 0, ozdesUzunluk: 0, ayirac: (mP.length - 1) + (oP.length - 1),
+    degisti: mP.length > 1 || oP.length > 1 };
+  if(!s.degisti) return s;
+  const ekle = (alan, parca) => {
+    if(!parca) return;   // boş parça: taşınacak metin yok (ayıraç yine sayıldı)
+    const diger = alan === 'm' ? 'o' : 'm', asil = alan === 'm' ? s.m : s.o;
+    const var_ = s.c.find(e => e && e[alan] === parca && !e[diger] && e.kaynak === 'goc');
+    if(var_){ var_.n = (var_.n || 1) + 1; s.ozdes++; s.ozdesUzunluk += parca.length; return; }
+    const giris = { [alan]: parca, g: 0, kaynak: 'goc' };
+    if(parca === asil){ giris.ayni = true; giris.n = 1; s.ozdes++; s.ozdesUzunluk += parca.length; }
+    else { s.tasinan++; s.tasinanUzunluk += parca.length; }
+    s.c.push(giris);
+  };
+  mP.slice(1).forEach(p => ekle('m', p));
+  oP.slice(1).forEach(p => ekle('o', p));
+  s.c = ozCTemizle(s.m, s.o, s.c);
+  return s;
+}
+function ozCanliIdler(){ return new Set((veri.kitaplar || []).map(k => String(k && k.id))); }
 window.__ozet = {
   get hazir(){ return ozetHazir; },
   oku(id){ const k = ozetBellek.get(String(id)); return k ? k.m : ''; },
@@ -2539,10 +2748,15 @@ window.__ozet = {
      etkilerdi (kitapParmak da özet alanlarını dışlar — senkron.js). */
   async kaydet(id, metin){
     const m = String(metin || ''), g = Date.now();
-    const o = (ozetBellek.get(String(id)) || { o: '' }).o || '';   // v81: özet yazımı ontolojiyi KORUR
-    try{ await ozIslem('readwrite', st => st.put({ m, g, o }, String(id))); }
-    catch(e){ return false; }
-    ozBellekKoy(id, m, g, o);
+    const e = ozetBellek.get(String(id)) || { o: '', c: [], k: '', s: '', d: '', cx: [] };
+    const o = e.o || '';   // v81: özet yazımı ontolojiyi KORUR
+    /* Sprint Q: c/k/s/d KORUNUR; yeni metinle birebir aynı düşen çakışma
+       sürümü kendiliğinden çözülür (ozCTemizle); eski metnin izi cx'e */
+    const cx = ozUstuneIz(e.cx, e.m || '', m, o, o);
+    const ek = { c: ozCTemizle(m, o, e.c, cx), k: e.k, s: e.s, d: e.d, cx };
+    try{ await ozIslem('readwrite', st => st.put(ozKayitIdb(m, g, o, ek), String(id))); }
+    catch(err){ return false; }
+    ozBellekKoy(id, m, g, o, ek);
     const k = (veri.kitaplar || []).find(x => x.id === id);
     if(k){ k.ozetVar = !!m; k.ozetUzunluk = m.length; k.ozetG = g; depoKaydet(); }
     ozKotaDenetle();
@@ -2552,10 +2766,13 @@ window.__ozet = {
      kapsar) tazelenir, kitap işaretleri güncellenir. kaydet'in birebiri. */
   async kaydetOnto(id, metin){
     const o = String(metin || ''), g = Date.now();
-    const m = (ozetBellek.get(String(id)) || { m: '' }).m || '';
-    try{ await ozIslem('readwrite', st => st.put({ m, g, o }, String(id))); }
-    catch(e){ return false; }
-    ozBellekKoy(id, m, g, o);
+    const e = ozetBellek.get(String(id)) || { m: '', c: [], k: '', s: '', d: '', cx: [] };
+    const m = e.m || '';
+    const cx = ozUstuneIz(e.cx, m, m, e.o || '', o);
+    const ek = { c: ozCTemizle(m, o, e.c, cx), k: e.k, s: e.s, d: e.d, cx };
+    try{ await ozIslem('readwrite', st => st.put(ozKayitIdb(m, g, o, ek), String(id))); }
+    catch(err){ return false; }
+    ozBellekKoy(id, m, g, o, ek);
     const k = (veri.kitaplar || []).find(x => x.id === id);
     if(k){ k.ozetVar = !!m; k.ozetUzunluk = m.length; k.ozetG = g; depoKaydet(); }
     ozKotaDenetle();
@@ -2563,23 +2780,144 @@ window.__ozet = {
   },
   /* senkron/göç/içe aktarım yazımı: damga DIŞARIDAN gelir.
      o verilmezse (undefined/null) mevcut ontoloji KORUNUR — eski yedekler ve
-     3-parametreli çağrılar ontolojiyi silmesin (v81). */
-  async kaydetHam(id, m, g, o){
-    const oSon = (o === undefined || o === null)
-      ? (ozetBellek.get(String(id)) || { o: '' }).o || ''
-      : String(o || '');
-    try{ await ozIslem('readwrite', st => st.put({ m: String(m || ''), g: parseInt(g) || 0, o: oSon }, String(id))); }
-    catch(e){ return false; }
-    ozBellekKoy(id, m, g, oSon);
+     3-parametreli çağrılar ontolojiyi silmesin (v81).
+     Sprint Q: 5. parametre ek = { c?, k?, s?, d? } — verilmeyen alan (undefined)
+     KORUNUR, verilen alan yazılır ('' / [] = temizle). 4 parametreli eski
+     çağrılar c/k/s/d'ye dokunmaz. Yazımdan önce ozCakismaAyir: eski çakışma
+     eki taşıyan metin burada ayrılır (kendini onaran yol). */
+  async kaydetHam(id, m, g, o, ek){
+    const eski = ozetBellek.get(String(id)) || { o: '', c: [], k: '', s: '', d: '', cx: [] };
+    const oVer = (o === undefined || o === null) ? (eski.o || '') : String(o || '');
+    const e = ek || {};
+    const ay = ozCakismaAyir(m, oVer, (e.c !== undefined) ? e.c : eski.c);
+    /* cx YALNIZ BÜYÜR: eski izler + gelen izler (eski yedek/eski istemci izsiz
+       gelir — atılmış sürüm onunla geri girmesin) */
+    /* ek.ustune === true: çağıran eski metni BİLEREK değiştiriyor (özet içe
+       aktarımı) → eski m/o'nun izi. Senkron/yedek/göç yazımları bunu VERMEZ:
+       orada kaybeden metin birleşimin kendi çakışma girdisidir. */
+    const cx = e.ustune ? ozUstuneIz(ozCxBirlestir(eski.cx, e.cx), eski.m || '', ay.m, eski.o || '', ay.o)
+      : ozCxBirlestir(eski.cx, e.cx);
+    const son = { cx, c: ozCTemizle(ay.m, ay.o, ay.c, cx),
+      k: (e.k !== undefined) ? String(e.k || '') : eski.k,
+      s: (e.s !== undefined) ? String(e.s || '') : eski.s,
+      d: (e.d !== undefined) ? String(e.d || '') : eski.d };
+    try{ await ozIslem('readwrite', st => st.put(ozKayitIdb(ay.m, g, ay.o, son), String(id))); }
+    catch(err){ return false; }
+    ozBellekKoy(id, ay.m, g, ay.o, son);
     const k = (veri.kitaplar || []).find(x => x.id === id);
-    if(k){ k.ozetVar = !!m; k.ozetUzunluk = String(m || '').length; k.ozetG = parseInt(g) || 0; }
+    if(k){ k.ozetVar = !!ay.m; k.ozetUzunluk = ay.m.length; k.ozetG = parseInt(g) || 0; }
     return true;
   },
   /* v117: kitap silinince özet + ontoloji de gider. Bu metot ÖNCE yoktu —
      silme yolları (detay + toplu) IDB kaydını yerinde bırakıyordu: yetim özet
      kotayı yiyor, hepsiDisa üzerinden JSON yedeğine ve senkron özet düğümüne
-     girmeye devam ediyordu. okuHam ile geri alma defterine kopyalanabilir. */
-  okuHam(id){ const k = ozetBellek.get(String(id)); return k ? { m: k.m, g: k.g, o: k.o } : null; },
+     girmeye devam ediyordu. okuHam ile geri alma defterine kopyalanabilir.
+     Sprint Q: c/k/s/d de döner (geri alma + senkron paketi tam kayıt taşır). */
+  okuHam(id){
+    const k = ozetBellek.get(String(id));
+    return k ? { m: k.m, g: k.g, o: k.o, c: k.c.slice(), k: k.k, s: k.s, d: k.d, cx: k.cx.slice() } : null;
+  },
+  /* ---- Sprint Q: çakışma (c) ---- */
+  okuCakisma(id){ const k = ozetBellek.get(String(id)); return k ? k.c.slice() : []; },
+  /* GERÇEK çakışmalar: bu alanda metni olan ve özdeş kopya OLMAYAN sürümler
+     (ckHtml bunu çizer; ayni:true girdiler uyarı saymaz) — [{e, i}] */
+  cakismalar(id, alan){
+    const k = ozetBellek.get(String(id));
+    return k ? k.c.map((e, i) => ({ e, i })).filter(x => x.e[alan] && !x.e.ayni) : [];
+  },
+  /* TOPLU ÇÖZÜM (Sprint Q tamamlama) — "Tümünde mevcut metni tut": c'si dolu
+     HER kayıtta (gerçek çakışma + göçten kalan özdeş kopya, sahipsiz dahil)
+     c boşalır; m ve o'ya DOKUNULMAZ. Atılan her sürümün izi cx'e girer (öbür
+     cihaz yerel c'sini geri itemesin) ve kayıt TAZE damgayla yazılır: senkron
+     temiz kaydı iter, öbür cihaz birleşimde kazananı alır, cx onun c'sini de
+     söndürür; hepsiDisa (JSON yedek) temiz kaydı taşır. Geri alınamaz — onay
+     kartı bunu söyler. */
+  cakismaSayim(){
+    const canli = ozCanliIdler(), liste = [];
+    let surum = 0, gercek = 0;
+    for(const [id, e] of ozetBellek){
+      if(!e.c.length) continue;
+      const kitap = canli.has(id) ? (veri.kitaplar || []).find(x => String(x.id) === id) : null;
+      liste.push({ id, ad: kitap ? kitap.ad : '', yazar: kitap ? (kitap.yazar || '') : '' });
+      for(const x of e.c){ surum += x.n || 1; if(!x.ayni) gercek++; }
+    }
+    return { kayit: liste.length, surum, gercek, liste };
+  },
+  async topluCoz(){
+    let kayit = 0, surum = 0;
+    for(const [id, e] of Array.from(ozetBellek.entries())){
+      if(!e.c.length) continue;
+      const izler = [];
+      for(const x of e.c){
+        const t = x.ayni ? 'a' : null;
+        if(x.m) izler.push(ozIz(t || 'm', x.m));
+        if(x.o) izler.push(ozIz(t || 'o', x.o));
+      }
+      const g = Math.max(Date.now(), (e.g || 0) + 1);
+      const ek = { c: [], k: e.k, s: e.s, d: e.d, cx: ozCxBirlestir(e.cx, izler) };
+      try{ await ozIslem('readwrite', st => st.put(ozKayitIdb(e.m, g, e.o, ek), id)); }catch(err){ continue; }
+      ozBellekKoy(id, e.m, g, e.o, ek);
+      const k = (veri.kitaplar || []).find(x => String(x.id) === id);
+      if(k) k.ozetG = g;
+      kayit++; surum += e.c.reduce((t, x) => t + (x.n || 1), 0);
+    }
+    if(kayit && typeof depoKaydet === 'function') depoKaydet();
+    ozDepoBilgiTazele();
+    if(kayit && window.__senkron && window.__senkron.ozetSenkronEt)
+      try{ window.__senkron.ozetSenkronEt(); }catch(err){}   // oda yoksa kendisi no-op
+    return { kayit, surum };
+  },
+  /* Çakışma çözümü (Q2b). alan 'm' | 'o'; sira c dizini; sec 'bunu' (bu
+     cihazdaki kalır, diğer sürümün o alanı düşer) | 'digeri' (diğer sürüm m/o
+     olur, eskisi düşer). Alanı kalmayan sürüm listeden çıkar. TAZE damga:
+     seçim senkronla öbür cihaza gider, orada aynı uyarı söner. */
+  async cakismaCoz(id, alan, sira, sec){
+    const e = ozetBellek.get(String(id));
+    if(!e || (alan !== 'm' && alan !== 'o')) return false;
+    const c = e.c.map(x => ({ ...x }));
+    const sv = c[sira];
+    if(!sv || !sv[alan]) return false;
+    let m = e.m, o = e.o;
+    /* atılan metnin izi cx'e (öbür cihaz geri itemesin): 'bunu' → diğer sürüm,
+       'digeri' → bu cihazdaki eski metin */
+    const atilan = sec === 'digeri' ? (alan === 'm' ? e.m : e.o) : sv[alan];
+    if(sec === 'digeri'){ if(alan === 'm') m = sv.m; else o = sv.o; }
+    delete sv[alan];
+    if(!sv.m && !sv.o) c.splice(sira, 1);
+    const g = Date.now();
+    const cx = atilan ? ozCxBirlestir(e.cx, [ozIz(alan, atilan)]) : e.cx;
+    const ek = { c: ozCTemizle(m, o, c, cx), k: e.k, s: e.s, d: e.d, cx };
+    try{ await ozIslem('readwrite', st => st.put(ozKayitIdb(m, g, o, ek), String(id))); }
+    catch(err){ return false; }
+    ozBellekKoy(id, m, g, o, ek);
+    const k = (veri.kitaplar || []).find(x => x.id === id);
+    if(k){ k.ozetVar = !!m; k.ozetUzunluk = m.length; k.ozetG = g; depoKaydet(); }
+    return true;
+  },
+  /* ---- Sprint Q: kaynak / durum / doğrulama (k/s/d) ---- */
+  okuKaynak(id){
+    const k = ozetBellek.get(String(id));
+    return k ? { k: k.k, s: k.s, d: k.d } : { k: '', s: '', d: '' };
+  },
+  /* ---- Sprint Q: sahipsiz (kitabı olmayan) kayıtlar — YEREL kol ---- */
+  sahipsizYerel(){
+    const canli = ozCanliIdler(), liste = [];
+    for(const [id, e] of ozetBellek)
+      if(!canli.has(id) && (e.m || e.o || e.c.length)) liste.push({ id, m: e.m, o: e.o, g: e.g });
+    return liste;
+  },
+  async sahipsizSil(idler){
+    let n = 0;
+    for(const id of (idler || [])){
+      try{ await ozIslem('readwrite', st => st.delete(String(id))); }catch(e){ continue; }
+      ozetBellek.delete(String(id)); ozetKatli.delete(String(id)); n++;
+    }
+    ozDepoBilgiTazele();
+    return n;
+  },
+  get sonGoc(){ return ozetGocLog; },
+  cakismaAyir: ozCakismaAyir, cTemizle: ozCTemizle, paket: ozPaket, iz: ozIz, cxBirlestir: ozCxBirlestir, cxSade: ozCxSade,
+  AYIRAC_M: OZET_AYIRAC_M, AYIRAC_O: OZET_AYIRAC_O, DURUMLAR: OZET_DURUMLAR,
   async sil(id){
     try{ await ozIslem('readwrite', st => st.delete(String(id))); }
     catch(e){ return false; }   // yazılamazsa kayıt yerinde kalır; kitap yine silinir
@@ -2588,12 +2926,16 @@ window.__ozet = {
     ozDepoBilgiTazele();
     return true;
   },
-  hepsiDisa(){   // JSON yedeğe: { id: {m,g,o} } — özet SENKRONLANAN veridir, yedeğe girer
-    const cikti = {};
-    for(const [id, kayit] of ozetBellek)
-      if(kayit.m || kayit.g || kayit.o)
-        // o boşsa alan HİÇ yazılmaz — yedek dosyası şişmesin (v81)
-        cikti[id] = kayit.o ? { m: kayit.m, g: kayit.g, o: kayit.o } : { m: kayit.m, g: kayit.g };
+  hepsiDisa(){   // JSON yedeğe: { id: {m,g,o,c?,k?,s?,d?} } — özet SENKRONLANAN veridir, yedeğe girer
+    const cikti = {}, canli = ozCanliIdler();
+    for(const [id, kayit] of ozetBellek){
+      const metinVar = !!(kayit.m || kayit.o || kayit.c.length);
+      if(!metinVar && !kayit.g) continue;
+      /* Sprint Q: kitabı olmayan MEZAR (boş + damga) yedeğe girmez — kitabı
+         yoksa korunacak silme de yoktur; canlı kitabın mezarı girer (v79). */
+      if(!metinVar && !canli.has(id)) continue;
+      cikti[id] = ozPaket(kayit);   // o/c/k/s/d boşsa alan HİÇ yazılmaz — dosya şişmesin (v81)
+    }
     return cikti;
   },
   sayim(){
@@ -2623,9 +2965,45 @@ function ozetDepoBaslat(){
       ]);
       (anahtarlar || []).forEach((id, i) => {
         const v = (kayitlar || [])[i];
-        if(v && typeof v === 'object') ozBellekKoy(id, v.m, v.g, v.o);   // v.o eski kayıtta yok → ''
+        if(v && typeof v === 'object')
+          ozBellekKoy(id, v.m, v.g, v.o, { c: ozCTemizle(v.m, v.o, v.c, v.cx), k: v.k, s: v.s, d: v.d, cx: v.cx });   // v.o/c/k/s/d eski kayıtta yok → boş
       });
     }catch(e){ /* IDB yok/açılamadı: bellek boş kalır, arama/detay işaretle yaşar */ }
+    /* ---- Sprint Q GÖÇÜ (Q2c): eski "çakışma eki" → c alanı ----
+       TÜM kayıtlar, SAHİPSİZ dahil (karar): metin kaybı sıfır; sahipsizin
+       temizliği ayrı iş, kullanıcı onayıyla ve göçten SONRA — göç önce koşar ki
+       temizlik listesinde kayıt doğru ilk satırıyla görünsün ve kullanıcı
+       vazgeçerse kayıt temiz kalsın. Damga DEĞİŞMEZ: ayırma deterministik, iki
+       cihaz aynı sonucu üretir; taze damga her cihazı karşılıklı PATCH'e
+       (ping-pong) sokardı. Tekrarlanabilir-güvenli: ayıraç kalmayınca iş kalmaz.
+       Yazılamayan kayıt yerinde kalır, sonraki açılış yeniden dener (v79 kuralı).
+       Rapor console.info + window.__ozet.sonGoc (test/tanı). */
+    const gocCanli = ozCanliIdler();
+    const goc = { kayit: 0, tasinan: 0, ozdes: 0, ayirac: 0, onceUzunluk: 0, sonraUzunluk: 0,
+      tasinanUzunluk: 0, ozdesUzunluk: 0, sahipsiz: 0, kayitlar: [] };
+    for(const [id, e] of Array.from(ozetBellek.entries())){
+      if(e.m.indexOf(OZET_AYIRAC_M) < 0 && e.o.indexOf(OZET_AYIRAC_O) < 0) continue;
+      const ay = ozCakismaAyir(e.m, e.o, e.c);
+      const ek = { c: ay.c, k: e.k, s: e.s, d: e.d, cx: e.cx };
+      try{ await ozIslem('readwrite', st => st.put(ozKayitIdb(ay.m, e.g, ay.o, ek), id)); }
+      catch(err){ continue; }
+      ozBellekKoy(id, ay.m, e.g, ay.o, ek);
+      const kitap = gocCanli.has(id) ? (veri.kitaplar || []).find(x => String(x.id) === id) : null;
+      if(kitap) kitap.ozetUzunluk = ay.m.length;   // işaret: şişkin uzunluk düzelir (damga sabit)
+      goc.kayit++; goc.tasinan += ay.tasinan; goc.ozdes += ay.ozdes; goc.ayirac += ay.ayirac;
+      goc.onceUzunluk += e.m.length + e.o.length; goc.sonraUzunluk += ay.m.length + ay.o.length;
+      goc.tasinanUzunluk += ay.tasinanUzunluk; goc.ozdesUzunluk += ay.ozdesUzunluk;
+      if(!kitap) goc.sahipsiz++;
+      goc.kayitlar.push({ id, ad: kitap ? kitap.ad : '(sahipsiz)', sahipsiz: !kitap,
+        ayirac: ay.ayirac, tasinan: ay.tasinan, ozdes: ay.ozdes });
+    }
+    ozetGocLog = goc;
+    if(goc.kayit){
+      try{ console.info('[Pinakes] çakışma eki göçü: ' + goc.kayit + ' kayıt (' + goc.sahipsiz +
+        ' sahipsiz), ' + goc.tasinan + ' sürüm c alanına taşındı, ' + goc.ozdes + ' özdeş parça atıldı — ' +
+        goc.kayitlar.map(x => x.ad + (x.sahipsiz ? ' [sahipsiz ' + x.id + ']' : '')).join(' · '), goc); }catch(e){}
+      if(typeof depoKaydet === 'function') depoKaydet();
+    }
     ozetHazir = true;
     // v79 göçü
     const gocluk = (veri.kitaplar || []).filter(k => k && k.ozet);
@@ -2692,6 +3070,132 @@ function ozDepoBilgiTazele(){
       kutu.textContent = metin + ' · cihaz deposu: hesaplanamadı';
     });
   }else kutu.textContent = metin;
+}
+/* ---------- SAHİPSİZ ÖZETLER (sz-, Sprint Q / Q4a) ----------
+   NEDEN üç yer: v117'den önce silinen kitabın özeti IDB'de kalıyordu; açılış
+   süpürücüsü onu yerelden siliyor ama senkron düğümü (izler + k/<id>) hâlâ
+   taşıyordu ve ozetSenkronEt fihristteki her id'yi çekiyordu → silinen kayıt
+   her turda yerele geri iniyor, hepsiDisa ile yedeğe giriyordu (8 Eylül
+   yedeğinde 8, 23 Eylül'de 9 sahipsiz kayıt bu döngünün ürünü). Sprint Q:
+   (1) senkron sahipsizi ne çeker ne iter (ozetSenkronEt canlı kapısı);
+   (2) burada yerel + uzak sayım, isimli onay kartı, üç yerden silme.
+   Uzak silme MEZAR yazar (boş + taze damga), null değil — eski bir istemcinin
+   yerel kopyası düz silinmiş düğümü geri ittirirdi. Kitabı silinmiş kaydın adı
+   yoktur; liste ilk satırı gösterir. */
+let szOnbellek = null;   // son sayım: { liste: [{id, m, o, g, yer}], uzakHata }
+function szIlkSatir(x){
+  const metin = String(x.m || x.o || '').split('\n').find(s => s.trim()) || '';
+  return metin.length > 110 ? metin.slice(0, 110) + '…' : metin;
+}
+async function szTazele(){
+  const satir = document.getElementById('szSatir');
+  if(!satir || !window.__ozet) return;
+  satir.innerHTML = 'Sahipsiz özetler: <b>hesaplanıyor…</b>';
+  const yerel = window.__ozet.sahipsizYerel();
+  let uzak = [], uzakHata = '';
+  if(window.__senkron && window.__senkron.ozetSahipsizUzak){
+    try{
+      const r = await window.__senkron.ozetSahipsizUzak();
+      if(r){ uzak = r.liste || []; uzakHata = r.hata || ''; }
+    }catch(e){ uzakHata = 'okunamadı'; }
+  }
+  const harita = new Map();
+  yerel.forEach(x => harita.set(String(x.id), { ...x, yer: 'bu cihaz' }));
+  uzak.forEach(x => {
+    const v = harita.get(String(x.id));
+    if(v) v.yer = 'bu cihaz + senkron'; else harita.set(String(x.id), { ...x, yer: 'senkron düğümü' });
+  });
+  szOnbellek = { liste: Array.from(harita.values()), uzakHata };
+  const n = szOnbellek.liste.length;
+  satir.innerHTML = 'Sahipsiz özetler: <b>' + n + '</b>' +
+    (uzakHata ? ' <span class="sz-yer">senkron düğümü okunamadı (' + esc(uzakHata) + ')</span>' : '') +
+    (n ? ' <button class="btn btn-cerceve btn-kucuk" data-act="sz-ac">Göster</button>' : '');
+  const kart = document.getElementById('szKart');
+  if(kart && !n){ kart.hidden = true; kart.innerHTML = ''; }
+}
+function szKartAc(){
+  const kart = document.getElementById('szKart');
+  if(!kart || !szOnbellek || !szOnbellek.liste.length) return;
+  const l = szOnbellek.liste;
+  kart.hidden = false;
+  kart.innerHTML =
+    '<p class="sz-not">Bu <b>' + l.length + '</b> özetin bağlı olduğu kitap kütüphanede yok (silinmiş). ' +
+      'Silersen bu cihazdan, JSON yedeğinden ve senkron düğümünden kalkar; <b>geri alınamaz</b>. ' +
+      'Kitabı geri eklemeyi düşünüyorsan önce özeti bir yere kopyala.</p>' +
+    '<div class="sz-liste">' + l.map(x =>
+      '<div class="sz-oge">' + esc(szIlkSatir(x) || '(boş metin)') +
+        '<span class="sz-yer">' + esc(x.yer) + '</span>' +
+        '<span class="sz-id">' + esc(x.id) + (x.m ? ' · ' + x.m.length + ' karakter' : '') + '</span></div>').join('') +
+    '</div>' +
+    '<div class="ay-eylem" style="margin-top:10px">' +
+      '<button class="btn btn-tehlike" data-act="sz-sil">Sil (' + l.length + ')</button>' +
+      '<button class="btn btn-cerceve" data-act="sz-vazgec">Vazgeç</button></div>';
+}
+function szKartKapat(){
+  const kart = document.getElementById('szKart');
+  if(kart){ kart.hidden = true; kart.innerHTML = ''; }
+}
+async function szSil(){
+  if(!szOnbellek || !szOnbellek.liste.length) return;
+  const idler = szOnbellek.liste.map(x => x.id);
+  szKartKapat();
+  const yerelN = await window.__ozet.sahipsizSil(idler);
+  let uzakN = 0, uzakHata = '';
+  if(window.__senkron && window.__senkron.ozetSahipsizUzakSil){
+    try{ uzakN = await window.__senkron.ozetSahipsizUzakSil(idler); }
+    catch(e){ uzakHata = String((e && e.message) || e); }
+  }
+  toast(idler.length + ' sahipsiz özet silindi' +
+    (uzakHata ? ' — senkron düğümünden silinemedi (' + uzakHata + '), sonra yeniden dene' : (uzakN ? ' (senkron düğümü dahil)' : '')));
+  if(window._iz && uzakHata) window._iz('szUzakSil', uzakHata);
+  szTazele();
+}
+/* ---------- ÇAKIŞAN SÜRÜMLER (cks-, Sprint Q tamamlama) ----------
+   Göç eski çakışma ekini c'ye ayırdı; kitap kitap "Bunu tut / Diğerini tut"
+   yüzlerce kayıtta pratik değil. Burada tek satır + isimli onay kartı:
+   kaç kitap etkilenir, ilk birkaç ad, geri alınamaz uyarısı. Onay → topluCoz. */
+const CKS_ORNEK = 5;
+function cksTazele(){
+  const satir = document.getElementById('cksSatir');
+  if(!satir || !window.__ozet) return;
+  const s = window.__ozet.cakismaSayim();
+  if(!s.kayit){ satir.hidden = true; satir.innerHTML = ''; cksKartKapat(); return; }
+  satir.hidden = false;
+  satir.innerHTML = 'Çakışan sürümler: <b>' + s.kayit + '</b> kitap ' +
+    '<button class="btn btn-cerceve btn-kucuk" data-act="cks-ac">Çöz</button>';
+}
+function cksKartAc(){
+  const kart = document.getElementById('cksKart');
+  if(!kart) return;
+  const s = window.__ozet.cakismaSayim();
+  if(!s.kayit) return;
+  const adlar = s.liste.slice(0, CKS_ORNEK).map(x =>
+    '<div class="sz-oge">' + (x.ad ? esc(x.ad) + (x.yazar ? ' <span class="sz-yer">' + esc(x.yazar) + '</span>' : '')
+      : '<i>(kitabı silinmiş özet)</i> <span class="sz-id">' + esc(x.id) + '</span>') + '</div>').join('');
+  const kalan = s.kayit - Math.min(CKS_ORNEK, s.kayit);
+  kart.hidden = false;
+  kart.innerHTML =
+    '<p class="sz-not"><b>' + s.kayit + '</b> kitabın özetinde ya da ontolojisinde başka sürümler duruyor ' +
+      '(' + s.gercek + ' farklı sürüm, geri kalanı mevcut metnin birebir kopyası). ' +
+      '"Tümünde mevcut metni tut" dersen şu an gördüğün özet ve ontoloji metinleri <b>aynen kalır</b>; ' +
+      'diğer sürümlerin hepsi bu cihazdan, JSON yedeğinden ve senkrondan silinir. ' +
+      '<b>Geri alınamaz.</b> Bir sürümü saklamak istiyorsan önce o kitabın detayından "yan yana" ile bak.</p>' +
+    '<div class="sz-liste">' + adlar +
+      (kalan ? '<div class="sz-oge sz-not">… ve ' + kalan + ' kitap daha</div>' : '') + '</div>' +
+    '<div class="ay-eylem" style="margin-top:10px">' +
+      '<button class="btn btn-tehlike" data-act="cks-coz">Tümünde mevcut metni tut (' + s.kayit + ')</button>' +
+      '<button class="btn btn-cerceve" data-act="cks-vazgec">Vazgeç</button></div>';
+}
+function cksKartKapat(){
+  const kart = document.getElementById('cksKart');
+  if(kart){ kart.hidden = true; kart.innerHTML = ''; }
+}
+async function cksCoz(){
+  cksKartKapat();
+  const r = await window.__ozet.topluCoz();
+  toast(r.kayit ? r.kayit + ' kitapta mevcut metin tutuldu, ' + r.surum + ' sürüm silindi' : 'Çözülecek sürüm yok');
+  cksTazele();
+  if(typeof hepsiniCiz === 'function') hepsiniCiz();
 }
 function ozKotaDenetle(){
   if(ozetKotaUyarildi || !navigator.storage || !navigator.storage.estimate) return;
@@ -2925,6 +3429,60 @@ function katla(s){
 function iKatla(s){
   return String(s ?? '').toLocaleLowerCase('tr').replace(/ı/g, 'i');
 }
+/* ---------- EŞLEŞTİRME ANAHTARI (Sprint Q, v131) ----------
+   katla()'nın üstüne İKİ katman: (1) Unicode aksan/diakritik düşürme — NFD
+   ayrıştırma + birleşik işaret silme (š→s, č→c, é→e, ñ→n) ve ayrışmayan
+   harfler (ł ø đ ß æ œ); (2) harf-rakam dışı HER ŞEY atılır (tire, nokta,
+   kesme, boşluk). "Jean Paul Sartre" = "Jean-Paul Sartre"; "Puškin" = "Puskin".
+   Ölçüm (23 Eylül 2026 özet içe aktarımı): 16 kayıt yalnız bu farklar yüzünden
+   sessizce atlanmıştı. İçe aktarım eşleşmesi ve kopya tespiti (kopyaAnahtar)
+   bunu kullanır; ARAMA katla'da kalır (arama kısmi dizgi işidir, boşluk atmak
+   sorguyu bozardı). */
+const ES_HARF = { 'ł':'l', 'ø':'o', 'đ':'d', 'ß':'ss', 'æ':'ae', 'œ':'oe', 'ð':'d', 'þ':'th' };
+function esAnahtar(s){
+  return katla(s).normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[łøđßæœðþ]/g, c => ES_HARF[c] || c)
+    .replace(/[^\p{L}\p{N}]+/gu, '');
+}
+/* Yazar TRANSLİTERE TOLERANSI: aynı adın Latin yazımları — "Pushkin"/"Puškin",
+   "Dostoyevski"/"Dostoevsky", "Chekhov"/"Çehov" — anahtarda bile tutmaz
+   (sh↔š, y↔i). Kök: esAnahtar sözcükleri + çift harf → tek (sh→s, ch→c, zh→z,
+   kh→h, ph→f, th→t, ck→k, ts→c, x→ks, w→v, y→i, j→y) + tekrarlı harf tek.
+   Benzerlik: soyad (son kök) eşit VE tüm dizi düzeltme-mesafesi oranı ≥ .6,
+   YA DA oran ≥ .85, YA DA kökler alt küme (yalnız soyadla yazılmış yazar).
+   KAÇIRMAK ucuzdur burada (aday onaya düşer), YANLIŞ EŞLEMEK pahalı — eşikler
+   onun için yüksek; aday kapısı ayrıca "ad TEK kitapla eşleşiyor" ister. */
+function yazarKokler(s){
+  return katla(s).normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[łøđßæœðþ]/g, c => ES_HARF[c] || c)
+    .split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+    .map(t => t.replace(/sh|sch/g, 's').replace(/ch|tch|ts/g, 'c').replace(/zh/g, 'z')
+      .replace(/kh/g, 'h').replace(/ph/g, 'f').replace(/th/g, 't').replace(/ck/g, 'k')
+      .replace(/x/g, 'ks').replace(/w/g, 'v').replace(/y/g, 'i').replace(/j/g, 'y')
+      .replace(/(.)\1+/g, '$1'));
+}
+function esMesafe(a, b){   // Levenshtein — kısa dizgiler (yazar adı), O(n·m) yeterli
+  if(a === b) return 0;
+  if(!a.length) return b.length; if(!b.length) return a.length;
+  let onceki = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for(let i = 1; i <= a.length; i++){
+    const simdiki = [i];
+    for(let j = 1; j <= b.length; j++)
+      simdiki[j] = Math.min(onceki[j] + 1, simdiki[j - 1] + 1, onceki[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    onceki = simdiki;
+  }
+  return onceki[b.length];
+}
+function yazarBenzer(a, b){
+  const ka = yazarKokler(a), kb = yazarKokler(b);
+  if(!ka.length || !kb.length) return false;
+  const ja = ka.join(''), jb = kb.join('');
+  const oran = 1 - esMesafe(ja, jb) / Math.max(ja.length, jb.length);
+  const soyadAyni = ka[ka.length - 1] === kb[kb.length - 1];
+  const altKume = ka.every(t => kb.includes(t)) || kb.every(t => ka.includes(t));
+  return (soyadAyni && oran >= 0.6) || oran >= 0.85 || (soyadAyni && altKume);
+}
+window.__eslesme = { anahtar: esAnahtar, kokler: yazarKokler, mesafe: esMesafe, yazarBenzer };
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escAttr(s){ return esc(s); }
@@ -3853,9 +4411,15 @@ function formKaydet(){
      yoldan kaydediyor — iki boşluk tek yerde kapanıyor.
      ikizGec: "Yine de ekle" dendiğinde ikinci turda kapı atlanır. */
   if(!durum.formDuzenId && !durum.ikizGec){
-    /* YALNIZ ad+yazar: ISBN ikizi yukarıdaki ikizUyari ile zaten söyleniyor
-       ve o davranış KORUNUYOR (uyar ama kaydet). */
-    const varOlan = adYazarVar(ortak.ad, ortak.yazar, null);
+    /* Sprint Q (Q4b): ISBN kolu da ONAY KARTINA düşer. v116 bu kolu "uyar ama
+       kaydet"te bırakmıştı (gerekçe: künye düzeltmesi akışı) — ama kapı
+       YALNIZ yeni kayıtta çalışıyor, düzeltme Düzenle'den geçer; yeni kayıtta
+       aynı ISBN = aynı fiziksel baskı, kullanıcı görmeden ikinci kayıt
+       oluşmamalı. Kart sebebi söyler (ikizSor ISBN kolunu ayırt eder),
+       "Yine de ekle" yolu açık — engel değil onay. Ad+yazar kolu önce
+       (barkodsuz kitapların üçte biri). */
+    const varOlan = adYazarVar(ortak.ad, ortak.yazar, null)
+      || (isbn ? zatenVar(ortak.ad, ortak.yazar, isbn, null) : null);
     if(varOlan){ ikizSor(varOlan, isbn); return; }
   }
   durum.ikizGec = false;
@@ -3918,11 +4482,65 @@ function formKaydet(){
    maxlength 10000 (240×10.000 uçta kota %56 ölçümü) M2'den aynen taşındı.
    Üst-düzey fonksiyon (detayAc'a gömülü değil): ms-sekme geçişi tam detayAc
    çizimi yapmadan YALNIZ bu bloğu tazeler — sheet scroll'u oynamaz. */
+/* ---------- ÇAKIŞAN SÜRÜM UYARISI (ck-, Sprint Q / Q2b) ----------
+   c alanında bu ALANA (m: özet, o: ontoloji) ait sürüm varsa panelin ÜSTÜNDE
+   küçük uyarı: "başka bir cihazdan gelen bir sürümü var" + Bunu tut / Diğerini
+   tut / Yan yana oku. Birden çok sürüm varsa ilki ele alınır (sayısı yazılır);
+   biri çözülünce sıradaki gelir — tek karar, tek dokunuş. Yan yana: aynı
+   panelde iki sütun (dar ekranda alt alta), düzenleme açıkken çizilmez. */
+function ckHtml(k, alan){
+  const c = window.__ozet.cakismalar(k.id, alan);   // özdeş kopyalar (ayni) uyarı saymaz
+  if(!c.length) return '';
+  const ilk = c[0], ad = alan === 'm' ? 'özetin' : 'ontolojinin';
+  const acik = durum.ckYanYana === k.id + '|' + alan;
+  const tarih = ilk.e.g ? new Date(ilk.e.g).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  return `<div class="ck-uyari" id="ckUyari-${alan}" role="status">
+    <div class="ck-metin">Bu ${ad} başka bir cihazdan gelen bir sürümü var${c.length > 1 ? ' (' + c.length + ' sürüm — ilki gösteriliyor)' : ''}${tarih ? ' · ' + esc(tarih) : ''}.</div>
+    <div class="ck-eylem">
+      <button class="btn btn-cerceve btn-kucuk" data-act="ck-bunu" data-alan="${alan}" data-sira="${ilk.i}">Bunu tut</button>
+      <button class="btn btn-cerceve btn-kucuk" data-act="ck-digeri" data-alan="${alan}" data-sira="${ilk.i}">Diğerini tut</button>
+      <button class="ck-sessiz" data-act="ck-yanyana" data-alan="${alan}">${acik ? 'Yan yanayı kapat' : 'Yan yana oku'}</button>
+    </div>
+  </div>`;
+}
+/* Yan yana görünüm açıksa iki sütun döner, değilse null (çağıran tek paneli çizer). */
+function ckYanYanaHtml(k, alan, buMetin){
+  if(durum.ckYanYana !== k.id + '|' + alan) return null;
+  const c = window.__ozet.cakismalar(k.id, alan);
+  if(!c.length) return null;
+  const sinif = alan === 'm' ? 'oz-metin' : 'onto-metin';
+  return `<div class="ck-yanyana">
+    <div class="ck-sutun"><div class="ck-baslik">Bu cihazdaki</div><div class="${sinif}">${mdMini(buMetin)}</div></div>
+    <div class="ck-sutun"><div class="ck-baslik">Diğer cihazdan</div><div class="${sinif} ck-diger">${mdMini(c[0].e[alan])}</div></div>
+  </div>`;
+}
+/* ---------- KAYNAK / DOĞRULAMA SATIRI (kdg-, Sprint Q / Q3b) ----------
+   k/s/d içe aktarım dosyasından gelir; HİÇBİRİ yoksa satır çizilmez. 'bulamadim'
+   açıkça ve uyarı renginde söylenir; tarih GG.AA.YYYY. */
+function kdgTarih(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+  return m ? m[3] + '.' + m[2] + '.' + m[1] : '';
+}
+function kdgHtml(k){
+  const { k: kay, s, d } = window.__ozet.okuKaynak(k.id);
+  if(!kay && !s && !d) return '';
+  const p = [];
+  if(kay) p.push('Kaynak: ' + esc(kay));
+  if(s === 'bulamadim') p.push('<b class="kdg-uyari">Kaynak bulunamadı — doğrulanamadı</b>');
+  else if(s === 'duzeltildi') p.push('düzeltilerek doğrulandı');
+  else if(s === 'dogru') p.push('doğrulandı');
+  const t = kdgTarih(d);
+  if(t) p.push((s === 'bulamadim' ? 'Bakıldı: ' : 'Doğrulama: ') + t);
+  return `<div class="kdg-satir">${p.join(' · ')}</div>`;
+}
 function metinBolumHtml(k){
   // v80: metin bellek dizininden; k.ozet yalnız göç-öncesi mirasta dolu olabilir
   const ozM = window.__ozet.oku(k.id) || String(k.ozet || '');
   const onM = window.__ozet.okuOnto(k.id);
   const ozDuzen = durum.ozetDuzenle === k.id, onDuzen = durum.ontoDuzenle === k.id;
+  /* Sprint Q: ontoloji boş ama başka cihazdan gelen ontoloji sürümü varsa
+     şerit çizilir ki uyarı görünsün (şeritsiz hâl onu gizlerdi) */
+  const onCk = window.__ozet.cakismalar(k.id, 'o').length > 0;
   const ozYukleniyor = k.ozetVar && !ozM && !window.__ozet.hazir && !ozDuzen;
   const ozEditor = () => `<textarea id="ozMetin" rows="7" maxlength="10000" style="min-height:140px"
         placeholder="Bu kitap sana ne bıraktı? Ana fikri, kendi değerlendirmen…">${esc(ozM)}</textarea>
@@ -3939,8 +4557,10 @@ function metinBolumHtml(k){
       </div>
       ${onM ? '<div class="mini-not">Metni boşaltıp kaydedersen ontoloji silinir.</div>' : ''}`;
 
+  /* Sprint Q: özet paneli = [çakışma uyarısı] + (yan yana | metin) + [kaynak satırı] */
+  const ozPanel = () => ckHtml(k, 'm') + (ckYanYanaHtml(k, 'm', ozM) || `<div class="oz-metin">${mdMini(ozM)}</div>`) + kdgHtml(k);
   /* ŞERİTSİZ hâller: ontoloji yok ve düzenlenmiyor — v81 markup'ı aynen */
-  if(!onM && !onDuzen){
+  if(!onM && !onDuzen && !onCk){
     if(ozDuzen)
       return `<div class="detay-satir" id="dOzetBlok">
         <div class="d-bolum-bas"><span class="kicker">Özetin</span></div>
@@ -3951,12 +4571,15 @@ function metinBolumHtml(k){
         <div class="d-bolum-bas"><span class="kicker">Özetin</span></div>
         <div class="oz-metin" style="color:var(--muted)">Özet yükleniyor…</div>
       </div>`;
-    if(!ozM)
-      return `<div class="detay-satir oz-bos"><button class="oz-ghost" data-act="oz-ac">+ Özetini yaz</button></div>`;
+    if(!ozM){
+      const ck = ckHtml(k, 'm');   // Sprint Q: özet boş ama başka cihazdan sürüm var → uyarı ghost'un üstünde
+      return (ck ? `<div class="detay-satir" id="dOzetBlok"><div class="d-bolum-bas"><span class="kicker">Özetin</span></div>${ck}</div>` : '') +
+        `<div class="detay-satir oz-bos"><button class="oz-ghost" data-act="oz-ac">+ Özetini yaz</button></div>`;
+    }
     return `<div class="detay-satir" id="dOzetBlok">
       <div class="d-bolum-bas"><span class="kicker">Özetin</span>
         <button class="oz-ghost" data-act="oz-ac">Düzenle</button></div>
-      <div class="oz-metin">${mdMini(ozM)}</div>
+      ${ozPanel()}
     </div>
     <div class="detay-satir onto-bos"><button class="onto-ghost" data-act="onto-ac">+ Ontoloji yaz</button></div>`;
   }
@@ -3974,12 +4597,16 @@ function metinBolumHtml(k){
   if(sekme === 'ozet'){
     panel = ozDuzen ? ozEditor()
       : ozYukleniyor ? '<div class="oz-metin" style="color:var(--muted)">Özet yükleniyor…</div>'
-      : ozM ? `<div class="oz-metin">${mdMini(ozM)}</div>`
-      : '<button class="oz-ghost" data-act="oz-ac">+ Özetini yaz</button>';
+      : ozM ? ozPanel()
+      : ckHtml(k, 'm') + '<button class="oz-ghost" data-act="oz-ac">+ Özetini yaz</button>';
     if(!ozDuzen && ozM) duzenle = '<button class="oz-ghost" data-act="oz-ac">Düzenle</button>';
   }else{
-    panel = onDuzen ? onEditor() : `<div class="onto-metin">${mdMini(onM)}</div>`;
-    if(!onDuzen) duzenle = '<button class="onto-ghost" data-act="onto-ac">Düzenle</button>';
+    /* Sprint Q: ontoloji boşken de (yalnız çakışma sürümü varken) uyarı + ghost */
+    panel = onDuzen ? onEditor()
+      : ckHtml(k, 'o') + (onM
+          ? (ckYanYanaHtml(k, 'o', onM) || `<div class="onto-metin">${mdMini(onM)}</div>`) + kdgHtml(k)
+          : '<button class="onto-ghost" data-act="onto-ac">+ Ontoloji yaz</button>');
+    if(!onDuzen && onM) duzenle = '<button class="onto-ghost" data-act="onto-ac">Düzenle</button>';
   }
   return `<div class="detay-satir" id="dMetinBlok">
     <div class="d-bolum-bas">
@@ -4355,8 +4982,12 @@ function alBolumTemizle(){
    · adTr BİLEREK DIŞARIDA: "An Actor Prepares" ile "Bir Aktör Hazırlanıyor"
      AYRI fiziksel kitaplardır. adTr yalnız UYARI kolunda yaşar (yakinKayit,
      v96) — engele girseydi çeviri baskısı eklenemezdi. */
+/* Sprint Q: katla → esAnahtar (aksan + tire/nokta/kesme/boşluk düşer). Üst
+   kümedir: katla'nın eşlediği her çift burada da eşleşir; ek olarak
+   "Jean Paul" = "Jean-Paul", "Puškin" = "Puskin". Kopya tespitinde kaçırmak
+   yanlış eşlemekten pahalı (v24 ilkesi); 8 Eylül verisinde çakışma 0. */
 function kopyaAnahtar(ad, yazar){
-  return katla(String(ad || '')) + '|' + katla(String(yazar || ''));
+  return esAnahtar(String(ad || '')) + '|' + esAnahtar(String(yazar || ''));
 }
 /* haric: düzenlenen kaydın kendisi (form güncellemede kendini bulmasın). */
 function zatenVar(ad, yazar, isbn, haric){
@@ -4682,7 +5313,7 @@ async function sdGeriBaslat(){
   depoKaydet();
   for(const [id, oz] of Object.entries(kopya.ozetler || {})){
     if(window.__ozet && window.__ozet.kaydetHam){
-      try{ await window.__ozet.kaydetHam(id, oz.m, oz.g || t, oz.o); }catch(e){}
+      try{ await window.__ozet.kaydetHam(id, oz.m, oz.g || t, oz.o, { c: oz.c, k: oz.k, s: oz.s, d: oz.d, cx: oz.cx }); }catch(e){}
     }
   }
   for(const [id, blob] of Object.entries(kopya.kapaklar || {})){
@@ -5584,9 +6215,10 @@ function iceAktar(dosya){
           .map(([id, o]) => [idHarita.get(id) || id, o])
           .filter(([id, o]) => (parseInt(o.g) || 0) > window.__ozet.damga(id))
         : [];
+      /* Sprint Q: yedekteki c/k/s/d da döner (alan yoksa undefined → mevcut korunur) */
       const ozetSoz = girisler.length
         ? Promise.all(girisler.map(([id, o]) =>
-            window.__ozet.kaydetHam(id, o.m, o.g, o.o)))
+            window.__ozet.kaydetHam(id, o.m, o.g, o.o, { c: o.c, k: o.k, s: o.s, d: o.d, cx: o.cx })))
           .then(() => { depoKaydet(); if(typeof listeCiz === 'function') listeCiz(); })
         : Promise.resolve();
       /* KAPAKLAR (v94, yalnız taşıma yedeğinde): base64 → Blob → IDB. Özetle
@@ -6476,7 +7108,15 @@ document.addEventListener('click', e => {
 
   switch(act){
     case 'sekme': sekmeGec(v, true); break;
-    case 'ayar-ac': ayarAc(); ozDepoBilgiTazele(); tsDurumTazele(); sdGeriKartTazele(); break;
+    case 'ayar-ac': ayarAc(); ozDepoBilgiTazele(); tsDurumTazele(); sdGeriKartTazele(); szTazele(); cksTazele(); break;
+    /* Sprint Q — sahipsiz özetler (sz-). Sayım yerel + uzak; silme onay kartından. */
+    case 'sz-ac': szKartAc(); break;
+    case 'sz-vazgec': szKartKapat(); break;
+    case 'sz-sil': szSil(); break;
+    /* Sprint Q tamamlama — çakışan sürümleri toplu çöz (cks-) */
+    case 'cks-ac': cksKartAc(); break;
+    case 'cks-vazgec': cksKartKapat(); break;
+    case 'cks-coz': cksCoz(); break;
     case 'ayar-kapat': ayarKapat(); break;
     /* Ana sayfa köprüleri — hepsi mevcut yollara bağlanır, yeni mantık yok.
        (ana-okunuyor v47'de emekli: "Tümü" düğmesi kalktı, devam bölümü
@@ -6780,6 +7420,28 @@ document.addEventListener('click', e => {
       if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
       break; }
     case 'oz-vazgec': durum.ozetDuzenle = null; detayAc(durum.detayId); break;
+    /* Sprint Q — çakışan sürüm (ck-). Çözüm __ozet.cakismaCoz'da: seçim taze
+       damgayla yazılır, senkron öbür cihaza taşır, orada da uyarı söner. */
+    case 'ck-bunu': case 'ck-digeri': {
+      const k = kitapBul(durum.detayId);
+      if(!k) break;
+      const alan = el.dataset.alan === 'o' ? 'o' : 'm', sira = parseInt(el.dataset.sira) || 0;
+      window.__ozet.cakismaCoz(k.id, alan, sira, act === 'ck-digeri' ? 'digeri' : 'bunu').then(tamam => {
+        if(!tamam){ toast('Seçim kaydedilemedi — cihaz depolama alanını kontrol et'); return; }
+        durum.ckYanYana = null;
+        listeCiz();
+        if(durum.detayId === k.id) detayAc(k.id);
+        toast(act === 'ck-digeri' ? 'Diğer cihazın sürümü alındı' : 'Bu cihazdaki sürüm tutuldu');
+      });
+      break; }
+    case 'ck-yanyana': {
+      const anah = durum.detayId + '|' + (el.dataset.alan === 'o' ? 'o' : 'm');
+      durum.ckYanYana = durum.ckYanYana === anah ? null : anah;
+      const k = kitapBul(durum.detayId);
+      const blok = document.getElementById('dMetinBlok') || document.getElementById('dOzetBlok');
+      if(k && blok){ const kap = document.getElementById('detayIcerik'); const kayma = kap ? kap.scrollTop : 0;
+        blok.outerHTML = metinBolumHtml(k); if(kap) kap.scrollTop = kayma; }
+      break; }
     case 'oz-kaydet': {
       const k = kitapBul(durum.detayId);
       const ta = document.getElementById('ozMetin');

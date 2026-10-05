@@ -11,7 +11,8 @@
      taşır; kitapParmak ozet* alanlarını dışlar.
    - Metin birleşimi kitap çiftinden çıktı → ozetBirlesim saf fonksiyonu
      (v79 çakışma-eki/silme/damgasız kuralları AYNEN, g79'da düğüm testleri).
-   - ANLIK_SURUM 12, SEMA_SURUM 5 (v81: özet düğümü kaydına o/ontoloji eklendi).
+   - ANLIK_SURUM 13, SEMA_SURUM 6 (v81: özet düğümü kaydına o/ontoloji eklendi → 5;
+     Sprint Q v131: c/k/s/d eklendi, çakışma metne yazılmıyor → 6).
    (Mutasyon: ozet işaretleri normalize'dan çıkar → kalıcılık vakaları
     kırmızı; md'den özet bloğu çıkar → markdown vakası kırmızı.) */
 const { test, expect, tohumla, sahteKitap, bugunISO, rafAc, rafaGec, ayarlarAc } = require('./yardim');
@@ -86,7 +87,9 @@ test.describe('G78 özet — veri modeli + senkron', () => {
     expect(sonuc.surum).toBe(13);
     // v81: özet düğümü kaydına o (ontoloji) eklendi — eski istemcinin PATCH'i
     // o'yu sildiği için SEMA 4→5 (elle yazılan metin = veri-kaybı sınıfı)
-    expect(sonuc.sema).toBe(5);
+    // Sprint Q (v131): kayda c/k/s/d eklendi + çakışma metne yazılmıyor; eski
+    // istemci alanları siler ve göçle ayrılan kaydı yeniden şişirir → SEMA 5→6
+    expect(sonuc.sema).toBe(6);
   });
 
   test('(c) SENKRON İŞARETİ: kitap-LWW kazananı özetsiz olsa da yeni ozetG\'nin işareti kazanır', async ({ page }) => {
@@ -100,18 +103,22 @@ test.describe('G78 özet — veri modeli + senkron', () => {
     expect(k.ozetG).toBe(150);
   });
 
-  test('(d) ÇAKIŞMA EKİ (ozetBirlesim): iki FARKLI metin → ikisi de birleşikte, kayıp YOK, ikinci tur idempotent', async ({ page }) => {
+  /* Sprint Q (v131): çakışma artık metnin İÇİNE yazılmaz — yeni damgalı metin m'de
+     TEK başına, eski damgalı metin c dizisinde ({m, g}). Kayıp yine YOK; ikinci
+     tur yine idempotent (c büyümez, damga tazelenmez). */
+  test('(d) ÇAKIŞMA c ALANINDA (ozetBirlesim): iki FARKLI metin → yeni m\'de, eski c\'de, kayıp YOK, ikinci tur idempotent', async ({ page }) => {
     await rafAc(page);
     const b = await page.evaluate(() => window.__senkron.ozetBirlesim(
       { m: 'Yeni cihazın özeti', g: 300 }, { m: 'Eski cihazın özeti', g: 250 }));
-    expect(b.m).toContain('Yeni cihazın özeti');
-    expect(b.m).toContain('Eski cihazın özeti');
-    expect(b.m.indexOf('Yeni cihazın özeti'), 'yeni damgalı önde').toBeLessThan(
-      b.m.indexOf('Eski cihazın özeti'));
-    expect(b.g, 'ek üretilince taze damga (yakınsama)').toBeGreaterThan(300);
-    const b2 = await page.evaluate(x => window.__senkron.ozetBirlesim(
-      { m: x.m, g: x.g }, { m: 'Eski cihazın özeti', g: 250 }), b);
-    expect(b2.m, 'ikinci tur ek üretmez').toBe(b.m);
+    expect(b.m, 'm TEK sürüm: yeni damgalı').toBe('Yeni cihazın özeti');
+    expect(b.m, 'eski metin m\'ye EKLENMEZ').not.toContain('Eski cihazın özeti');
+    expect(b.c.map(e => e.m), 'eski metin c\'de (kayıp yok)').toEqual(['Eski cihazın özeti']);
+    expect(b.c[0].g, 'kaybedenin damgası taşınır').toBe(250);
+    expect(b.g, 'çakışma girince taze damga (öbür cihaz indirsin)').toBeGreaterThan(300);
+    const b2 = await page.evaluate(x => window.__senkron.ozetBirlesim(x, { m: 'Eski cihazın özeti', g: 250 }), b);
+    expect(b2.m, 'ikinci tur m değişmez').toBe(b.m);
+    expect(b2.c, 'ikinci tur c büyümez').toEqual(b.c);
+    expect(b2.g, 'ikinci tur damga tazelemez (ping-pong yok)').toBe(b.g);
   });
 
   test('(e) KASITLI SİLME kazanır; damgasız dış-yedek metni taşınır; eşit damga deterministik', async ({ page }) => {

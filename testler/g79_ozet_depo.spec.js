@@ -164,7 +164,9 @@ test.describe('G79 özet deposu — senkron düğümü', () => {
     expect(oda.ozetPatchler.length, 'değişmeyen özet yeniden GÖNDERİLMEZ').toBe(1);
   });
 
-  test('(E) indirme + çakışma eki düğümde: iki cihazın metni de korunur, birleşik geri yazılır', async ({ page }) => {
+  /* Sprint Q (v131): çakışma eki yerine c alanı — yerel metin kaybolmaz ama m'ye
+     EKLENMEZ; uzağa yazılan paket c'yi taşır. */
+  test('(E) indirme + çakışma düğümde: yeni metin m\'de, yerel metin c\'de korunur, c uzağa da yazılır', async ({ page }) => {
     await tohumla(page, [bitmis({ id: 'cakisan1', ad: 'Çakışan Kitap', ozet: 'Yerel metin', ozetG: 800 })]);
     const oda = await sahteOda(page,
       { cakisan1: 900 }, { cakisan1: { m: 'Uzak metin', g: 900 } });
@@ -172,14 +174,14 @@ test.describe('G79 özet deposu — senkron düğümü', () => {
     await ozetHazir(page);
     await senkronBaslat(page);
     await expect.poll(() => page.evaluate(() => window.__ozet.oku('cakisan1')),
-      { timeout: 10000 }).toContain('Uzak metin');
-    const yerel = await page.evaluate(() => window.__ozet.oku('cakisan1'));
-    expect(yerel, 'yerel metin kaybolmadı (çakışma eki)').toContain('Yerel metin');
-    expect(yerel.indexOf('Uzak metin'), 'yeni damgalı önde').toBeLessThan(yerel.indexOf('Yerel metin'));
+      { timeout: 10000 }).toBe('Uzak metin');
+    const c = await page.evaluate(() => window.__ozet.okuCakisma('cakisan1'));
+    expect(c.map(e => e.m), 'yerel metin kaybolmadı — c alanında').toEqual(['Yerel metin']);
     await expect.poll(() => oda.ozetPatchler.length, { timeout: 10000 }).toBeGreaterThan(0);
     const son = oda.ozetPatchler[oda.ozetPatchler.length - 1];
     const kAnah = Object.keys(son).find(x => x.startsWith('k/'));
-    expect(son[kAnah].m, 'birleşik metin uzağa da yazıldı').toContain('Yerel metin');
+    expect(son[kAnah].m, 'm uzağa TEK sürüm yazıldı').toBe('Uzak metin');
+    expect(son[kAnah].c.map(e => e.m), 'c uzağa da yazıldı').toEqual(['Yerel metin']);
   });
 
   test('(F) kasıtlı silme düğümde kazanır: boş + taze damga uzak eski metni diriltmez', async ({ page }) => {

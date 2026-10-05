@@ -332,15 +332,18 @@ test.describe('G80 ontoloji — senkron', () => {
     });
     expect(s.lww.o, 'yeni damgalı ontoloji kazanır').toBe('yeni onto');
     expect(s.lww.m).toBe('aynı');
-    expect(s.ek.o).toContain('A ontolojisi');
-    expect(s.ek.o).toContain('B ontolojisi');
-    expect(s.ek.o.indexOf('A ontolojisi'), 'yeni damgalı önde').toBeLessThan(s.ek.o.indexOf('B ontolojisi'));
-    expect(s.ek.g, 'ek üretilince taze damga').toBeGreaterThan(300);
+    /* Sprint Q (v131): çakışan ontoloji o'ya EKLENMEZ, c'de {o, g} olarak durur */
+    expect(s.ek.o, 'o TEK sürüm: yeni damgalı').toBe('A ontolojisi');
+    expect(s.ek.c.map(e => e.o), 'eski ontoloji c\'de (kayıp yok)').toEqual(['B ontolojisi']);
+    expect(s.ek.g, 'çakışma girince taze damga').toBeGreaterThan(300);
     expect(s.ek.m, 'özet metni etkilenmez').toBe('aynı');
-    expect(s.ek2.o, 'ikinci tur ek üretmez (idempotent)').toBe(s.ek.o);
+    expect(s.ek2.o, 'ikinci tur o değişmez (idempotent)').toBe(s.ek.o);
+    expect(s.ek2.c, 'ikinci tur c büyümez').toEqual(s.ek.c);
     expect(s.silme.o, 'kasıtlı silme (boş + taze damga) kazanır').toBe('');
     expect(s.yedek.o, 'damgasız dış yedekten ontoloji taşınır').toBe('yedekten onto');
-    expect(s.sema, 'SEMA 5: eski istemci o alanını sildiği için donar').toBe(5);
+    /* niyet: o alanı şema 5'ten beri düğümde (sonraki artışlar — Sprint Q 6 —
+       bu iddiayı bozmaz; sabit sayı kilidi g78'de) */
+    expect(s.sema, 'SEMA ≥5: eski istemci o alanını sildiği için donar').toBeGreaterThanOrEqual(5);
   });
 
   test('(I) düğüm: dolu o PATCH gövdesinde, boş o HİÇ yazılmaz; uzak o yerele iner', async ({ page }) => {

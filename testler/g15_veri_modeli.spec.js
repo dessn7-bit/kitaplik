@@ -98,7 +98,9 @@ test.describe('G15 M2 — elle ISBN', () => {
     expect(await page.evaluate(() => veri.kitaplar[0].isbn)).toBe(ISBN);
   });
 
-  test('aynı ISBN ikinci kez girilince uyarı çıkar ama kayıt ENGELLENMEZ', async ({ page }) => {
+  /* Sprint Q (v131): ISBN ikizi artık ONAY KARTINA düşer (Q4b) — "Yine de ekle"
+     yolu açık, kayıt yine ENGELLENMEZ; uyarı toast'ı korunur. */
+  test('aynı ISBN ikinci kez girilince onay kartı çıkar; "Yine de ekle" ile kayıt ENGELLENMEZ, uyarı sürer', async ({ page }) => {
     await tohumla(page, [sahteKitap({ ad: 'İlk Baskı', isbn: ISBN })]);
     await rafAc(page);
     await page.click('.fab[data-act="yeni"]');
@@ -106,6 +108,10 @@ test.describe('G15 M2 — elle ISBN', () => {
     await page.fill('#f-ad', 'İkinci Baskı');
     await page.fill('#f-isbn', ISBN);
     await page.click('[data-act="form-kaydet"]');
+    await expect(page.locator('#ortuIkiz')).toHaveClass(/acik/);
+    await expect(page.locator('#ikNot')).toContainText('Aynı ISBN');
+    expect(await page.evaluate(() => veri.kitaplar.length), 'karttan önce kayıt yok').toBe(1);
+    await page.click('#ortuIkiz [data-act="ik-yine"]');
     await expect(page.locator('#toast')).toContainText('aynı ISBN ile zaten kayıtlı');
     expect(await page.evaluate(() => veri.kitaplar.length)).toBe(2);   // engellenmedi
   });

@@ -27,7 +27,8 @@
     Mutasyon 2: katla() düşer → (b) kırmızı.
     Mutasyon 3: "Yine de ekle" ikinci turda yine sorar → (d) kırmızı.
     Mutasyon 4: Keşfet ekleme anı kapısı kalkar → (g) kırmızı.
-    Mutasyon 5: onay kartı ISBN kolunda da açılır → (f) kırmızı.) */
+    Mutasyon 5 (v116): onay kartı ISBN kolunda da açılır → (f) kırmızı — Sprint Q
+    bu sözleşmeyi TERS çevirdi: ISBN kolu artık kart açar; (f) yeni sözleşmeyi kilitler.) */
 
 const { test, expect, tohumla, sahteKitap, rafAc, ayrintilarAc } = require('./yardim');
 
@@ -105,7 +106,10 @@ test.describe('G109b elle form kapısı', () => {
     expect(await sayi(page)).toBe(1);
   });
 
-  test('(f) ISBN aynı ama ad farklı: UYARI + KAYDET (mevcut davranış korundu)',
+  /* Sprint Q (v131, Q4b): v116 bu kolu "uyar ama kaydet"te bırakmıştı; brief
+     "aynı ISBN → onay kartı" dedi. Niyet korunur: ENGEL değil ONAY — kart sebebi
+     ISBN olarak söyler, "Yine de ekle" ikinci turda kaydeder, uyarı toast'ı sürer. */
+  test('(f) ISBN aynı ama ad farklı: ONAY KARTI (sebep: ISBN) → "Yine de ekle" ile kaydedilir',
     async ({ page }) => {
       await tohumla(page, [sahteKitap({ ad: 'İlk Baskı', yazar: 'Y', isbn: ISBN })]);
       await formAc(page);
@@ -113,8 +117,10 @@ test.describe('G109b elle form kapısı', () => {
       await page.fill('#f-yazar', 'Y');
       await page.fill('#f-isbn', ISBN);
       await page.click('[data-act="form-kaydet"]');
-      /* Onay kartı ISBN kolunda AÇILMAZ — ad+yazar farklı. */
-      await expect(kart(page), 'ISBN kolu kart açmaz').toBeHidden();
+      await expect(kart(page), 'ISBN kolu da kart açar').toBeVisible();
+      await expect(kart(page).locator('#ikNot')).toContainText('Aynı ISBN');
+      expect(await sayi(page), 'karttan önce kayıt yok').toBe(1);
+      await kart(page).locator('[data-act="ik-yine"]').click();
       await expect(page.locator('#toast')).toContainText('aynı ISBN ile zaten kayıtlı');
       expect(await sayi(page), 'engellenmedi').toBe(2);
     });

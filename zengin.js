@@ -1445,6 +1445,11 @@
        ontoloji sayılarını AYRI gösterir. Alanı olmayan kayıt o kitabın mevcut
        ontolojisine DOKUNMAZ. tur/adTr cfg'lerinde bayrak yok — boru birebir. */
     ontoAnahtar: 'ontoloji',
+    /* Sprint Q: esnek eşleştirme (id → normalize anahtar → aday) ve kayıt
+       başına isteğe bağlı kaynak/durum/dogrulama alanları (k/s/d). tur/adTr
+       cfg'lerinde bayrak yok → boru bayt bayt eski. */
+    esnekEsleme: true,
+    kaynakAlanlari: true,
     hazirla(){ return window.__ozet.hazirBekle(); },
     oku: k => window.__ozet.oku(k.id),
     sonTazele(){ durumTazele(); },
@@ -1517,6 +1522,7 @@
   }
   const ICE_NOT = {
     anahtar: 'notlar', kaynakAnahtar: 'not',
+    esnekEsleme: true,   // Sprint Q: özet borusuyla aynı üç kademeli eşleşme
     ortuId: 'zgNotIceOrtu', ortuBaslik: 'Not dosyası yükle',
     sonTazele(){ durumTazele(); },
     act: { uygula: 'zg-not-uygula', vazgec: 'zg-not-vazgec' },
@@ -1545,6 +1551,109 @@
   };
   const NOT_TIPLERI = { not: 'not', alinti: 'alinti' };
   let icePlan = null;   // tekil: uygula/vazgec daima SON okunan plana işler
+
+  /* ========== Sprint Q (v131) — ESNEK EŞLEŞTİRME (özet + not boruları) ==========
+     SIRA: (1) kayıtta "id" varsa ve kütüphanede o id yaşıyorsa → kitap id'si;
+     (2) normalize anahtar esAnahtar(ad)|esAnahtar(yazar) (çekirdek: TR
+     küçültme + aksan düşürme + tire/nokta/kesme/boşluk atma) → birebir;
+     (3) ADAY: esAnahtar(ad) kütüphanede TEK kitapla eşleşiyor VE yazar
+     translitere-toleranslı benzer (yazarBenzer: "Alexander Pushkin" ≈
+     "Alexandr Puškin") ya da dosyada yazar boş → aday. Aday OTOMATİK
+     UYGULANMAZ: önizlemede onay kutusu, varsayılan İŞARETSİZ ("onay bekliyor"
+     sözleşmesi); Uygula yalnız işaretlileri yazar. Aynı adı taşıyan birden çok
+     kitap → aday YOK (yanlış-pozitif kapısı: hangisi olduğu bilinemez).
+     tur/adTr boruları cfg.esnekEsleme taşımadığı için eski katla eşlemesinde
+     kalır (g56/g59 kilitleri). ÖLÇÜM (23 Eylül 2026 özet içe aktarımı): 16
+     kayıt eşleşmedi ve kullanıcıya hiçbir şey söylenmedi — 15 Puşkin (yazar
+     yazımı: sh/š) + 1 Sartre (tire). Yeni eşlemeyle 1'i birebir (tire),
+     15'i aday. */
+  function kitapDizini(esnek){
+    const anah = esnek ? esAnahtar : katla;
+    const d = { esnek, anah, idler: new Map(), tam: new Map(), ad: new Map() };
+    (veri.kitaplar || []).forEach(k => {
+      if(!k) return;
+      d.idler.set(String(k.id), k);
+      const t = anah(k.ad) + '|' + anah(k.yazar || '');
+      if(!d.tam.has(t)) d.tam.set(t, []);
+      d.tam.get(t).push(k);
+      if(esnek){
+        const a = anah(k.ad);
+        if(!d.ad.has(a)) d.ad.set(a, []);
+        d.ad.get(a).push(k);
+      }
+    });
+    return d;
+  }
+  /* Dönüş: { kitaplar: [k…] | null, tur: 'id' | 'tam' | 'aday' | null } */
+  function kitapEslestir(r, d){
+    if(!r) return { kitaplar: null, tur: null };
+    if(d.esnek && r.id !== undefined && r.id !== null && String(r.id) !== '' && d.idler.has(String(r.id)))
+      return { kitaplar: [d.idler.get(String(r.id))], tur: 'id' };
+    const tam = d.tam.get(d.anah(r.ad) + '|' + d.anah(r.yazar || ''));
+    if(tam) return { kitaplar: tam, tur: 'tam' };
+    if(!d.esnek) return { kitaplar: null, tur: null };
+    const adlar = d.ad.get(d.anah(r.ad));
+    if(adlar && adlar.length === 1){
+      const yazar = String(r.yazar || '').trim();
+      if(!yazar || yazarBenzer(yazar, adlar[0].yazar || '')) return { kitaplar: adlar, tur: 'aday' };
+    }
+    return { kitaplar: null, tur: null };
+  }
+  /* Q3a — kayıt başına isteğe bağlı kaynak / durum / dogrulama. Alan YOKSA
+     undefined (mevcut korunur); VARSA doğrulanıp yazılır: durum yalnız
+     dogru | duzeltildi | bulamadim (katla ile, "doğru" da geçer), dogrulama
+     YYYY-AA-GG (ISO'nun ilk 10 karakteri, gerçek tarih). Tanınmayan değer
+     sessizce yazılmaz, sayılır (plan.kaynakBozuk). */
+  function kaynakAlanlariOku(r, plan){
+    const ek = {};
+    let var_ = false;
+    if(typeof r.kaynak === 'string'){ ek.k = r.kaynak.trim().slice(0, 200); var_ = true; }
+    if(r.durum !== undefined && r.durum !== null){
+      const s = katla(r.durum).replace(/[^a-z]/g, '');
+      if(window.__ozet.DURUMLAR.indexOf(s) >= 0){ ek.s = s; var_ = true; }
+      else if(plan) plan.kaynakBozuk++;
+    }
+    if(r.dogrulama !== undefined && r.dogrulama !== null){
+      const t = String(r.dogrulama).trim().slice(0, 10);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(t) && !isNaN(Date.parse(t))){ ek.d = t; var_ = true; }
+      else if(plan) plan.kaynakBozuk++;
+    }
+    return var_ ? ek : null;
+  }
+  function kaynakDegisir(id, ek){
+    if(!ek) return false;
+    const m = window.__ozet.okuKaynak(id);
+    return (ek.k !== undefined && ek.k !== m.k) || (ek.s !== undefined && ek.s !== m.s)
+      || (ek.d !== undefined && ek.d !== m.d);
+  }
+  /* Aday satırı — iki boruda ortak çizim. i = plan.adaylar dizini. */
+  function adayHtml(a, i){
+    return '<label class="zg-onizle-satir zg-aday-satir">' +
+      '<input type="checkbox" class="zg-aday-kutu" data-act="zg-aday" data-i="' + i + '"' + (a.onay ? ' checked' : '') + '>' +
+      '<div class="zg-onizle-ic"><span class="zg-onizle-ad">' + esc(a.ad) + ' <span class="zg-aday-yazar">— ' + esc(a.yazar || 'yazarsız') + '</span></span>' +
+      '<span class="zg-onizle-alan">raftaki: ' + esc(a.kitap.ad) + ' — ' + esc(a.kitap.yazar || 'yazarsız') +
+      (a.satir ? ' · ' + a.satir + ' satır' : '') + '</span></div></label>';
+  }
+  function adayBlokHtml(plan){
+    const adaylar = plan.adaylar || [];
+    if(!adaylar.length) return '';
+    const onayli = adaylar.filter(a => a.onay).length;
+    return '<details class="zg-katla" open><summary>Onay bekleyen adaylar (' + adaylar.length + ')' +
+      (onayli ? ' — ' + onayli + ' onaylandı' : '') + '</summary>' +
+      '<div class="zg-onizle-liste">' +
+      '<p class="zg-not zg-aday-not">Ad birebir tutuyor, yazar yazımı farklı (ör. "Pushkin" / "Puškin"). ' +
+        'İşaretlemediğin aday YAZILMAZ. <button class="zg-aday-tum" data-act="zg-aday-tum">' +
+        (onayli === adaylar.length ? 'Tümünün onayını kaldır' : 'Tümünü onayla') + '</button></p>' +
+      adaylar.map(adayHtml).join('') + '</div></details>';
+  }
+  function adayDegistir(i, deger){
+    const plan = icePlan;
+    if(!plan || !plan.adaylar) return;
+    if(i === 'tum'){ const hepsi = plan.adaylar.every(a => a.onay); plan.adaylar.forEach(a => { a.onay = !hepsi; }); }
+    else if(plan.adaylar[i]) plan.adaylar[i].onay = !!deger;
+    if(plan.cfg === ICE_NOT){ iceNotPlanla(plan); iceNotOnizleCiz(); }
+    else { iceOzetPlanla(plan); iceOnizleCiz(); }
+  }
   /* v80 kancalar: varsayılanlar eski davranışla BİREBİR (tur/adTr değişmez) */
   function iceDegerOku(cfg, k){
     return cfg.oku ? cfg.oku(k) : k[cfg.anahtar];
@@ -1579,14 +1688,13 @@
        dolmadan oku '' verir — mevcut özet "dolacak" sanılır, DEĞİŞECEK uyarısı
        kaçardı. Hata yutulur: dizin yoksa yazım da zaten başarısız sayılacak. */
     if(cfg.hazirla){ try{ await cfg.hazirla(); }catch(e){} }
-    const harita = {};
-    (veri.kitaplar || []).forEach(k => {
-      const anah = katla(k.ad) + '|' + katla(k.yazar || '');
-      (harita[anah] = harita[anah] || []).push(k);
-    });
-    const plan = { cfg, dolacak: [], degisecek: [], onto: [], ayni: 0, gecersiz: 0,
-      eslesmeyen: [], taksonomiDisi: [] };
-    const planli = new Set();   // dosyada çift kayıt: İLK kayıt kazanır
+    /* Sprint Q: eşleştirme (kitapDizini/kitapEslestir) ile planlama
+       (iceOzetPlanla) AYRILDI — aday onayı değişince plan dosya yeniden
+       okunmadan kurulur. tur/adTr: esnekEsleme yok → katla anahtarı, aday yok,
+       davranış eski. */
+    const dizin = kitapDizini(!!cfg.esnekEsleme);
+    const plan = { cfg, girdiler: [], adaylar: [], dolacak: [], degisecek: [], onto: [], kaynak: [],
+      ayni: 0, gecersiz: 0, eslesmeyen: [], taksonomiDisi: [], eslesen: 0, idIle: 0, kaynakBozuk: 0 };
     for(const r of kayitlar){
       /* v81 ontoloji (yalnız cfg.ontoAnahtar'lı boruda): kayıttaki isteğe
          bağlı ikinci alan. null = alan yok/boş → o kitabın ontolojisine
@@ -1595,7 +1703,10 @@
       const ontoHam = (cfg.ontoAnahtar && r && typeof r[cfg.ontoAnahtar] === 'string'
         && r[cfg.ontoAnahtar].trim()) ? r[cfg.ontoAnahtar].trim() : null;
       const anaVar = !!(r && String(r[cfg.kaynakAnahtar] || '').trim());
-      if(!r || !String(r.ad || '').trim() || (!anaVar && !ontoHam)){ plan.gecersiz++; continue; }
+      /* Q3a: yalnız kaynak bilgisi taşıyan kayıt da geçerlidir (metin aynı,
+         kaynak/doğrulama güncellenir) */
+      const kaynakEk = (cfg.kaynakAlanlari && r) ? kaynakAlanlariOku(r, plan) : null;
+      if(!r || !String(r.ad || '').trim() || (!anaVar && !ontoHam && !kaynakEk)){ plan.gecersiz++; continue; }
       let yeniDeger = '';
       if(anaVar){
         if(cfg.taksonomiKapisi){
@@ -1607,26 +1718,18 @@
           yeniDeger = String(r[cfg.kaynakAnahtar]).trim();   // serbest metin alanı
         }
       }
-      const kitaplar = harita[katla(r.ad) + '|' + katla(r.yazar || '')];
-      if(!kitaplar){ plan.eslesmeyen.push(r); continue; }
-      for(const k of kitaplar){
-        if(planli.has(k.id)) continue;
-        planli.add(k.id);
-        /* v80: mevcut değer cfg.oku kancasından — varsayılan k[cfg.anahtar],
-           boşluk sınaması alanBos'un metin dalıyla BİREBİR aynı */
-        const mevcut = iceDegerOku(cfg, k);
-        let ontoSatir = null;
-        if(ontoHam !== null){
-          const mevcutO = window.__ozet.okuOnto(k.id);
-          if(mevcutO !== ontoHam) ontoSatir = { id: k.id, ad: k.ad, eski: mevcutO, yeni: ontoHam };
-        }
-        const anaYaz = anaVar && mevcut !== yeniDeger;
-        if(!anaYaz && !ontoSatir){ plan.ayni++; continue; }
-        if(ontoSatir) plan.onto.push(ontoSatir);
-        if(anaYaz) ((mevcut && String(mevcut).trim()) ? plan.degisecek : plan.dolacak)
-          .push({ id: k.id, ad: k.ad, eski: mevcut, yeni: yeniDeger });
+      const es = kitapEslestir(r, dizin);
+      if(!es.kitaplar){ plan.eslesmeyen.push(r); continue; }
+      const girdi = { r, kitaplar: es.kitaplar, tur: es.tur, anaVar, yeniDeger, ontoHam, kaynakEk };
+      if(es.tur === 'aday'){
+        plan.adaylar.push({ ad: r.ad, yazar: r.yazar || '', kitap: es.kitaplar[0], onay: false, girdi });
+        continue;
       }
+      plan.eslesen++;
+      if(es.tur === 'id') plan.idIle++;
+      plan.girdiler.push(girdi);
     }
+    iceOzetPlanla(plan);
     // başka akışın önizlemesi açıksa kapat: paylaşılan tekil plan yanlış
     // pencereden yazılamasın
     if(icePlan && icePlan.cfg !== cfg) kapat(icePlan.cfg.ortuId);
@@ -1634,6 +1737,36 @@
     ortuKur(cfg.ortuId, cfg.ortuBaslik);
     iceOnizleCiz();
     ac(cfg.ortuId);
+  }
+  /* PLAN KURUCU (Sprint Q'da iceOku'dan ayrıldı; gövde iceOku'nun eski döngüsü):
+     birebir/id eşleşen girdiler + ONAYLI adaylar → dolacak / degisecek / onto /
+     kaynak / ayni. Hiçbir şey yazmaz; her çağrıda sıfırdan kurulur. */
+  function iceOzetPlanla(plan){
+    const cfg = plan.cfg;
+    plan.dolacak = []; plan.degisecek = []; plan.onto = []; plan.kaynak = []; plan.ayni = 0;
+    const planli = new Set();   // dosyada çift kayıt: İLK kayıt kazanır
+    const girdiler = plan.girdiler.concat(plan.adaylar.filter(a => a.onay).map(a => a.girdi));
+    for(const gi of girdiler){
+      for(const k of gi.kitaplar){
+        if(planli.has(k.id)) continue;
+        planli.add(k.id);
+        /* v80: mevcut değer cfg.oku kancasından — varsayılan k[cfg.anahtar],
+           boşluk sınaması alanBos'un metin dalıyla BİREBİR aynı */
+        const mevcut = iceDegerOku(cfg, k);
+        let ontoSatir = null;
+        if(gi.ontoHam !== null){
+          const mevcutO = window.__ozet.okuOnto(k.id);
+          if(mevcutO !== gi.ontoHam) ontoSatir = { id: k.id, ad: k.ad, eski: mevcutO, yeni: gi.ontoHam };
+        }
+        const anaYaz = gi.anaVar && mevcut !== gi.yeniDeger;
+        const kaynakYaz = kaynakDegisir(k.id, gi.kaynakEk);
+        if(!anaYaz && !ontoSatir && !kaynakYaz){ plan.ayni++; continue; }
+        if(ontoSatir) plan.onto.push(ontoSatir);
+        if(kaynakYaz) plan.kaynak.push({ id: k.id, ad: k.ad, ek: gi.kaynakEk });
+        if(anaYaz) ((mevcut && String(mevcut).trim()) ? plan.degisecek : plan.dolacak)
+          .push({ id: k.id, ad: k.ad, eski: mevcut, yeni: gi.yeniDeger });
+      }
+    }
   }
   function iceOnizleCiz(){
     const plan = icePlan;
@@ -1645,15 +1778,25 @@
        değişse tek sayılır. tur/adTr'de plan.onto yok → eski toplamla birebir. */
     const yazIdler = new Set(plan.dolacak.concat(plan.degisecek).map(y => y.id));
     (plan.onto || []).forEach(y => yazIdler.add(y.id));
+    (plan.kaynak || []).forEach(y => yazIdler.add(y.id));
     const yazilacak = yazIdler.size;
     const ozet = [];
+    /* Sprint Q RAPOR KARTI (Q1b) — yalnız esnek borularda: eşleşen (id ile N) ·
+       değişecek / zaten aynı · aday (onay bekleyen) · eşleşmeyen. Hiçbir şey
+       yazılmadan önce; Uygula'ya kadar IDB'ye ve senkrona tek bayt gitmez. */
+    const adaylar = plan.adaylar || [];
+    if(cfg.esnekEsleme) ozet.push('<b>' + plan.eslesen + '</b> kayıt eşleşti' + (plan.idIle ? ' (' + plan.idIle + ' id ile)' : ''));
     if(plan.dolacak.length) ozet.push('<b>' + plan.dolacak.length + '</b>' + cfg.metin.dolacak);
     if(plan.degisecek.length) ozet.push('<b>' + plan.degisecek.length + '</b>' + cfg.metin.degisecek);
     if((plan.onto || []).length) ozet.push('<b>' + plan.onto.length + '</b> kitapta ontoloji yazılacak');
+    if((plan.kaynak || []).length) ozet.push('<b>' + plan.kaynak.length + '</b> kitapta kaynak/doğrulama bilgisi yazılacak');
     if(plan.ayni) ozet.push(plan.ayni + ' kitap zaten aynı');
+    if(adaylar.length) ozet.push('<b>' + adaylar.filter(a => !a.onay).length + '</b> aday onay bekliyor' +
+      (adaylar.some(a => a.onay) ? ' (' + adaylar.filter(a => a.onay).length + ' onaylandı)' : ''));
     if(plan.eslesmeyen.length) ozet.push(plan.eslesmeyen.length + ' kayıt kütüphanede bulunamadı');
     if(plan.taksonomiDisi.length) ozet.push(plan.taksonomiDisi.length + ' kayıt taksonomi dışı (atlanacak)');
     if(plan.gecersiz) ozet.push(plan.gecersiz + ' kayıt eksik alanlı (atlanacak)');
+    if(plan.kaynakBozuk) ozet.push(plan.kaynakBozuk + ' kaynak alanı tanınmadı (yazılmayacak)');
     const katla_ = (baslik, satirlar) => satirlar.length
       ? '<details class="zg-katla"><summary>' + baslik + ' (' + satirlar.length + ')</summary>' +
         '<div class="zg-onizle-liste">' + satirlar.join('') + '</div></details>'
@@ -1674,6 +1817,7 @@
         '<div class="zg-onizle-satir"><div class="zg-onizle-ic">' +
         '<span class="zg-onizle-ad">' + esc(y.ad) + '</span>' +
         '<span class="zg-onizle-alan">' + esc(kirp(y.eski)) + ' → ' + esc(kirp(y.yeni)) + '</span></div></div>')) +
+      adayBlokHtml(plan) +
       katla_('Kütüphanede bulunamayanlar', plan.eslesmeyen.map(r =>
         '<div class="zg-onizle-satir"><div class="zg-onizle-ic">' +
         '<span class="zg-onizle-ad">' + esc(r.ad) + '</span>' +
@@ -1728,17 +1872,23 @@
     /* v81: kitap başına TEK yazım — özet ve ontoloji AYNI kayda gider (damga
        tek, ikisini kapsar). m: null = özet değişmiyor (mevcut korunur);
        o: undefined = ontoloji değişmiyor (kaydetHam korur). */
-    const isler = new Map();   // id -> { m: yeniÖzet | null, o: yeniOntoloji | undefined }
+    const isler = new Map();   // id -> { m: yeniÖzet | null, o: yeniOntoloji | undefined, ek: {k,s,d} | undefined }
     for(const y of plan.dolacak.concat(plan.degisecek)) isler.set(y.id, { m: y.yeni });
     for(const y of (plan.onto || [])){
       const v = isler.get(y.id) || { m: null };
       v.o = y.yeni; isler.set(y.id, v);
     }
+    /* Q3a: kaynak/durum/doğrulama — kaydetHam'ın 5. parametresi; verilmeyen
+       alan korunur. Yalnız kaynağı değişen kitap da yazılır (m: null → mevcut). */
+    for(const y of (plan.kaynak || [])){
+      const v = isler.get(y.id) || { m: null };
+      v.ek = y.ek; isler.set(y.id, v);
+    }
     const hepsi = Array.from(isler.entries());
     const g = document.getElementById(cfg.ortuId + 'Govde');
     if(g) g.innerHTML = '<div class="zg-ozet" id="zgOzetIceIlerleme">0 / ' +
       hepsi.length + ' yazıldı…</div>';
-    let nOzet = 0, nOnto = 0, olmadi = 0, islenen = 0;
+    let nOzet = 0, nOnto = 0, nKaynak = 0, olmadi = 0, islenen = 0;
     for(let i = 0; i < hepsi.length; i += 25){
       for(const [id, y] of hepsi.slice(i, i + 25)){
         islenen++;
@@ -1746,9 +1896,11 @@
         if(!k){ olmadi++; continue; }
         const m = (y.m === null) ? window.__ozet.oku(k.id) : y.m;   // özet değişmiyorsa mevcut korunur
         let tamam = false;
-        try{ tamam = await window.__ozet.kaydetHam(k.id, m, Date.now(), y.o); }
+        /* ustune: dosya eski metni BİLEREK değiştiriyor → eski metnin izi (öbür
+           cihazın değişmemiş kopyası sahte çakışma doğurmasın) */
+        try{ tamam = await window.__ozet.kaydetHam(k.id, m, Date.now(), y.o, { ...(y.ek || {}), ustune: true }); }
         catch(e){ window._iz && window._iz('zenginKaydetHam', e); }
-        if(tamam){ if(y.m !== null) nOzet++; if(y.o !== undefined) nOnto++; }
+        if(tamam){ if(y.m !== null) nOzet++; if(y.o !== undefined) nOnto++; if(y.ek) nKaynak++; }
         else olmadi++;
       }
       const il = document.getElementById('zgOzetIceIlerleme');
@@ -1761,6 +1913,7 @@
     const par = [];
     if(nOzet) par.push(nOzet + ' kitabın özeti');
     if(nOnto) par.push(nOnto + ' kitabın ontolojisi');
+    if(nKaynak) par.push(nKaynak + ' kitabın kaynak bilgisi');
     bildir((par.length ? par.join(' ve ') + ' dosyadan yazıldı' : 'Hiçbir kayıt yazılamadı')
       + (olmadi ? ' — ' + olmadi + ' kayıt yazılamadı' : ''));
     if(typeof hepsiniCiz === 'function') hepsiniCiz();
@@ -1800,17 +1953,53 @@
     /* boş "not" dizisi = işlenecek kayıt yok → dürüst mesaj, hiçbir kitap
        "dosyada geçen" sayılmaz, HİÇBİR ŞEY silinmez */
     if(!kayitlar || !kayitlar.length){ bildir(cfg.metin.bicimYok); return; }
-    /* eşleme haritası özet borusuyla BİREBİR: katla(ad)|katla(yazar) */
-    const harita = {};
-    (veri.kitaplar || []).forEach(k => {
-      const anah = katla(k.ad) + '|' + katla(k.yazar || '');
-      (harita[anah] = harita[anah] || []).push(k);
-    });
-    /* plan.kitaplar: dosyada GEÇEN kitaplar (≥1 geçerli eşleşen satır). Her giriş
-       id listeleri taşır (nesne değil — senkron diziyi değiştirebilir):
-       yazilacak [{tip,metin}] · guncellenecek [{id,tip,metin,eski}] · silinecek [id]
-       · ayni [id] · korunacak (sayı, işaretsiz). */
-    const plan = { cfg, kitaplar: new Map(), zatenVardi: 0, tipBozuk: 0, gecersiz: 0, eslesmeyen: [] };
+    /* Sprint Q: eşleme özet borusuyla AYNI üç kademe (id → esAnahtar → aday);
+       satırlar bir kez ayrıştırılıp eşleştirilir (plan.satirlar), kitap bazlı
+       plan iceNotPlanla'da kurulur — aday onayı değişince dosya yeniden
+       okunmadan yeniden kurulur. Aday = dosyadaki (ad|yazar) → raftaki kitap
+       çifti; o çiftin TÜM satırları birlikte onaylanır (satır satır onay
+       anlamsız: hepsi aynı kitaba gider). */
+    const dizin = kitapDizini(!!cfg.esnekEsleme);
+    const plan = { cfg, kitaplar: new Map(), satirlar: [], adaylar: [], zatenVardi: 0, tipBozuk: 0,
+      gecersiz: 0, eslesmeyen: [], eslesen: 0, idIle: 0 };
+    const adayAnah = new Map();   // esAnahtar(ad)|esAnahtar(yazar) → plan.adaylar dizini
+    for(const r of kayitlar){
+      const metin = r ? String(r.metin == null ? '' : r.metin).trim() : '';
+      if(!r || !String(r.ad || '').trim() || !metin){ plan.gecersiz++; continue; }
+      const tip = NOT_TIPLERI[katla(r.tip)];
+      if(!tip){ plan.tipBozuk++; continue; }
+      const es = kitapEslestir(r, dizin);
+      if(!es.kitaplar){ plan.eslesmeyen.push(r); continue; }
+      const satir = { tip, metin, kitaplar: es.kitaplar, tur: es.tur, aday: -1 };
+      if(es.tur === 'aday'){
+        const a = dizin.anah(r.ad) + '|' + dizin.anah(r.yazar || '');
+        if(!adayAnah.has(a)){
+          adayAnah.set(a, plan.adaylar.length);
+          plan.adaylar.push({ ad: r.ad, yazar: r.yazar || '', kitap: es.kitaplar[0], onay: false, satir: 0 });
+        }
+        satir.aday = adayAnah.get(a);
+        plan.adaylar[satir.aday].satir++;
+      }else{
+        plan.eslesen++;
+        if(es.tur === 'id') plan.idIle++;
+      }
+      plan.satirlar.push(satir);
+    }
+    iceNotPlanla(plan);
+    if(icePlan && icePlan.cfg !== cfg) kapat(icePlan.cfg.ortuId);
+    icePlan = plan;
+    ortuKur(cfg.ortuId, cfg.ortuBaslik);
+    iceNotOnizleCiz();
+    ac(cfg.ortuId);
+  }
+  /* KİTAP BAZLI PLAN (v129 içerikle eşleşme gövdesi, Sprint Q'da ayrı fonksiyon):
+     plan.kitaplar: dosyada GEÇEN kitaplar (≥1 geçerli eşleşen satır). Her giriş
+     id listeleri taşır (nesne değil — senkron diziyi değiştirebilir):
+     yazilacak [{tip,metin}] · guncellenecek [{id,tip,metin,eski}] · silinecek [id]
+     · ayni [id] · korunacak (sayı, işaretsiz). Onaysız aday satırları plana
+     GİRMEZ — o kitap "dosyada geçen" sayılmaz, hiçbir notu silinmez. */
+  function iceNotPlanla(plan){
+    plan.kitaplar = new Map(); plan.zatenVardi = 0;
     const girdi = k => {
       let e = plan.kitaplar.get(k.id);
       if(!e){
@@ -1833,14 +2022,10 @@
       }
       return e;
     };
-    for(const r of kayitlar){
-      const metin = r ? String(r.metin == null ? '' : r.metin).trim() : '';
-      if(!r || !String(r.ad || '').trim() || !metin){ plan.gecersiz++; continue; }
-      const tip = NOT_TIPLERI[katla(r.tip)];
-      if(!tip){ plan.tipBozuk++; continue; }
-      const kitaplar = harita[katla(r.ad) + '|' + katla(r.yazar || '')];
-      if(!kitaplar){ plan.eslesmeyen.push(r); continue; }
-      for(const k of kitaplar){
+    for(const s of plan.satirlar){
+      if(s.aday >= 0 && !(plan.adaylar[s.aday] && plan.adaylar[s.aday].onay)) continue;   // onaysız aday: plana girmez
+      const tip = s.tip, metin = s.metin;
+      for(const k of s.kitaplar){
         const e = girdi(k), anah = katla(metin);
         if(e.gorulen.has(anah)){ plan.zatenVardi++; continue; }
         e.gorulen.add(anah);
@@ -1866,11 +2051,6 @@
         e.silinecek = cikan.map(n => n.id);
       }
     }
-    if(icePlan && icePlan.cfg !== cfg) kapat(icePlan.cfg.ortuId);
-    icePlan = plan;
-    ortuKur(cfg.ortuId, cfg.ortuBaslik);
-    iceNotOnizleCiz();
-    ac(cfg.ortuId);
   }
   function iceNotToplam(plan){
     let yaz = 0, guncelle = 0, sil = 0, ayni = 0, koru = 0;
@@ -1896,6 +2076,10 @@
       ozet.push('<b>' + t.koru + '</b> elle girilmiş not korunacak');
     }
     if(plan.zatenVardi) ozet.push(plan.zatenVardi + ' satır zaten vardı');
+    /* Sprint Q rapor kartı: eşleşen satır / aday (onay bekleyen) */
+    ozet.push('<b>' + plan.eslesen + '</b> satır eşleşti' + (plan.idIle ? ' (' + plan.idIle + ' id ile)' : ''));
+    if((plan.adaylar || []).length) ozet.push('<b>' + plan.adaylar.filter(a => !a.onay).length + '</b> aday onay bekliyor' +
+      (plan.adaylar.some(a => a.onay) ? ' (' + plan.adaylar.filter(a => a.onay).length + ' onaylandı)' : ''));
     if(plan.eslesmeyen.length) ozet.push(plan.eslesmeyen.length + ' satır eşleşmedi');
     if(plan.tipBozuk) ozet.push(plan.tipBozuk + ' satır tip alanı bozuk (atlanacak)');
     if(plan.gecersiz) ozet.push(plan.gecersiz + ' satır eksik alanlı (atlanacak)');
@@ -1927,6 +2111,7 @@
         e.silinecek.length + ' kaldırılacak · ' + e.ayni.length + ' aynı · ' + e.korunacak + ' korunacak'))) +
       katla_('Yazılacak satırlar', yazSatirlari) +
       katla_('Yerinde güncellenecek', guncelleSatirlari) +
+      adayBlokHtml(plan) +
       katla_('Eşleşmeyen satırlar', plan.eslesmeyen.map(r => satir(r.ad, esc(r.yazar || '')))) +
       '<div class="form-alt">' +
         '<button class="btn btn-cerceve" data-act="' + cfg.act.vazgec + '" style="flex:1">Vazgeç</button>' +
@@ -2373,7 +2558,8 @@
       const sonuclar = await Promise.all(ozetGirisler.map(([id, o, zor]) => {
         const g = zor ? Math.max(parseInt(o.g) || 0, Date.now()) : o.g;
         const onto = (o.o === undefined || o.o === null) ? (zor ? '' : undefined) : o.o;
-        return Promise.resolve(window.__ozet.kaydetHam(id, o.m, g, onto)).catch(() => false);
+        /* Sprint Q: dosyadaki c/k/s/d da yazılır (alan yoksa undefined → korunur) */
+        return Promise.resolve(window.__ozet.kaydetHam(id, o.m, g, onto, { c: o.c, k: o.k, s: o.s, d: o.d, cx: o.cx })).catch(() => false);
       }));
       ozetYazildi = sonuclar.filter(Boolean).length;
       if(ozetYazildi){
@@ -3412,6 +3598,12 @@
     '.zg-onizle-ic{flex:1;min-width:0}',
     '.zg-onizle-ad{display:block;font-family:var(--serif);font-weight:600;font-size:.9rem}',
     '.zg-onizle-alan{display:block;font-size:.75rem;color:var(--muted);margin-top:2px}',
+    /* Sprint Q aday satırı: onay kutusu + dosya/raf çifti; "tümünü onayla" sessiz bağlantı */
+    '.zg-aday-satir{cursor:pointer;align-items:center}',
+    '.zg-aday-kutu{flex:0 0 auto;width:18px;height:18px;margin:0;accent-color:var(--brass)}',
+    '.zg-aday-yazar{font-weight:400;font-size:.8rem;color:var(--muted)}',
+    '.zg-aday-not{margin:8px 0 4px}',
+    '.zg-aday-tum{background:none;border:none;font-size:.8rem;color:var(--brass);padding:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}',
     '.zg-cikar{flex:0 0 auto;color:var(--muted2);font-size:.9rem;padding:2px 6px;background:transparent;border:none;position:relative}',
     '.zg-cikar::after{content:"";position:absolute;inset:-8px}',
     '.zg-sayac{font-size:.75rem;letter-spacing:.06em;color:var(--muted2);margin:8px 0;font-variant-numeric:tabular-nums}',
@@ -3560,6 +3752,10 @@
         case 'zg-ozet-vazgec': iceVazgec(); break;
         case 'zg-not-uygula': iceUygula(); break;   // iceUygula not planında iceNotUygula dalını seçer
         case 'zg-not-vazgec': iceVazgec(); break;
+        /* Sprint Q: aday onayı — plan yeniden kurulur, önizleme yeniden çizilir;
+           hiçbir şey yazılmaz (yazım yalnız uygula'da) */
+        case 'zg-aday': adayDegistir(parseInt(el.dataset.i), el.checked); break;
+        case 'zg-aday-tum': adayDegistir('tum'); break;
         case 'ky-uygula': kyUygula(); break;
         case 'ky-vazgec': kyVazgec(); break;
         case 'ky-geri': kyGeriBaslat(); break;
@@ -3739,6 +3935,14 @@
     OTO_ATANAN_ANAHTAR, OLU_KAPAK_ANAHTAR };
   /* v109: dosyadan yükle — algılama test kancası (hiçbiri yazmaz) */
   window.__dy = { tani: dyTani, TANIM: DY_TANIM };
+  /* Sprint Q: eşleştirme test kancaları (hiçbiri yazmaz) + açık plan okuyucu */
+  window.__ice = { kitapDizini, kitapEslestir, kaynakAlanlariOku,
+    plan: () => icePlan ? { cfg: icePlan.cfg.kaynakAnahtar, eslesen: icePlan.eslesen, idIle: icePlan.idIle,
+      adaylar: (icePlan.adaylar || []).map(a => ({ ad: a.ad, yazar: a.yazar, kitapId: a.kitap.id, onay: a.onay, satir: a.satir || 0 })),
+      eslesmeyen: icePlan.eslesmeyen.map(r => ({ ad: r.ad, yazar: r.yazar })),
+      dolacak: (icePlan.dolacak || []).length, degisecek: (icePlan.degisecek || []).length,
+      onto: (icePlan.onto || []).length, kaynak: (icePlan.kaynak || []).length, ayni: icePlan.ayni,
+      gecersiz: icePlan.gecersiz, kaynakBozuk: icePlan.kaynakBozuk || 0 } : null };
   /* v100: kütüphane dosyası (tam değiştirme) test kancaları — hiçbiri yazmaz */
   window.__ky = { dogrula: kyDogrula, planKur: kyPlanKur, iz: kyIz, anlikOku: kyAnlikOku,
     ozetGirisleri: kyOzetGirisleri, DB_AD: KY_DB_AD, MAGAZA: KY_MAGAZA, ANAHTAR: KY_ANAHTAR };

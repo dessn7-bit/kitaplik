@@ -36,7 +36,13 @@
      yerelden BÜYÜKSE bu istemci eskidir: birleştirme + yazma tümüyle durur.
      "Salt-okur birleşme" bile güvensizdi — eski normalize bilmediği alanları
      budar, budanmış yerel kopya eşit damgada sonraki turda odayı ezerdi. */
-  const SEMA_SURUM = 5;   // 5: ozet düğümüne o (ontoloji) eklendi (v13) · 4: ayrı düğüm · 3: ozet · 2: gsG
+  /* 6 (Sprint Q, v131): özet düğümü kaydına c/k/s/d eklendi ve çakışma artık
+     metne yazılmıyor. Eski istemci (≤v130) iki yoldan zarar verirdi: PATCH'i
+     k/<id>'yi bütün değiştirdiği için c/k/s/d'yi SİLER; eski ozetBirlesim'i
+     çakışmayı ekle metne yazıp göçle ayrılmış kaydı yeniden ŞİŞİRİR (1 Ekim
+     yedeğindeki 2,9 M karakterlik çöpün mekanizması). v81'in o-alanı kararıyla
+     aynı sınıf: odada 6 gören eski cihaz güncellenene dek durur. */
+  const SEMA_SURUM = 6;   // 6: ozet düğümüne c/k/s/d (Sprint Q) · 5: o (ontoloji, v13) · 4: ayrı düğüm · 3: ozet · 2: gsG
   /* v1'de her kitabın TAM JSON'u parmak izi olarak saklanıyordu: kütüphanenin
      ikinci bir kopyası kadar yer tutuyor, localStorage kotasını iki katına
      yakın hızda dolduruyordu. v2 kısa çift-hash tutar (~20 karakter/kitap).
@@ -407,26 +413,72 @@
      turda uzağı indirir, ÇAKIŞMA EKİ metni korur, yakınsar (kayıp penceresi
      yok, yalnız bir tur gecikme); (3) 242 kayıt için ayrı ETag defteri
      karmaşıklık/kazanç oranıyla savunulamaz. */
+  /* Sprint Q (v131) — ÇAKIŞMA METNE YAZILMAZ. Eski kural çakışan metni
+     " — · — Çakışan özet (diğer cihazdan):" ekiyle m'nin SONUNA ekliyordu ve
+     "yeni metin eskiyi kapsamıyorsa ekle" (indexOf) kapısı tek yönlü
+     yakınsıyordu: yeni taraf kısa metinse (aynı metin taze damgayla yeniden
+     yüklenince) birleşik eski metin yeniden ekleniyordu → iç içe tekrar.
+     8 Eylül 2026 yedeği: 303 kaydın 237'si ekli, 150'si 3-4 parçalı, 115'inde
+     ikinci parça birincinin AYNISI; metin 0,96 MB → 2,89 MB (3,01 kat).
+     YENİ KURAL: alan-LWW (yeni damga kazanır; eşit damgada leksikografik küçük,
+     determinizm) — kaybeden tarafın FARKLI ve dolu metni c dizisine girer
+     ({m?, o?, g}); m ve o TEK sürüm. AYNI metin çakışma değildir (Q2d).
+     c kümesi birleşim-değişmez: iki tarafın c'si + kaybeden; ozCTemizle (çekirdek,
+     tek otorite) kopyaları, kazananla aynı parçaları düşürür, sırayı
+     deterministik kurar. YENİ çakışma girdiyse taze damga (öbür cihaz indirsin),
+     girmediyse max damga (ping-pong yok). Kasıtlı silme (boş + damga) ve damgasız
+     dış yedek kuralları v79'dan aynen. k/s/d (kaynak/durum/doğrulama) kazananla
+     taşınır. Girdiler normalize edilir: eski ekli metin (uzak düğüm, eski
+     istemci) burada ayrılır — kendini onaran birleşim. */
+  function ozNormal(x){
+    const h = x || {};
+    const oz = window.__ozet;
+    const ay = (oz && oz.cakismaAyir) ? oz.cakismaAyir(h.m, h.o, h.c)
+      : { m: String(h.m || ''), o: String(h.o || ''), c: Array.isArray(h.c) ? h.c : [] };
+    return { m: ay.m, o: ay.o, c: ay.c, g: parseInt(h.g) || 0,
+      k: String(h.k || ''), s: String(h.s || ''), d: String(h.d || ''),
+      cx: Array.isArray(h.cx) ? h.cx.filter(x => typeof x === 'string') : [] };
+  }
   function ozetBirlesim(a, b){
-    const aG = parseInt(a && a.g) || 0, bG = parseInt(b && b.g) || 0;
-    let mY = String(((aG >= bG) ? a && a.m : b && b.m) || '');
-    let mE = String(((aG >= bG) ? b && b.m : a && a.m) || '');
-    /* o = ONTOLOJİ (v13): aynı kayıtta ikinci metin alanı — tek damga (g)
-       ikisini birden kapsar; m kuralları o'ya SİMETRİK uygulanır (çakışma
-       eki, kasıtlı silme, damgasız yedek). Ayrı kanal AÇILMADI (karar). */
-    let oY = String(((aG >= bG) ? a && a.o : b && b.o) || '');
-    let oE = String(((aG >= bG) ? b && b.o : a && a.o) || '');
-    /* eşit damga + farklı metin: sıra LEKSİKOGRAFİK — iki cihaz simetrik
-       birleştirse de aynı birleşiği üretir (yakınsama) */
-    if(aG === bG && mY && mE && mY !== mE){ const s = [mY, mE].sort(); mY = s[0]; mE = s[1]; }
-    if(aG === bG && oY && oE && oY !== oE){ const s = [oY, oE].sort(); oY = s[0]; oE = s[1]; }
-    const mEk = !!(mY && mE && mY.indexOf(mE) < 0);
-    const oEk = !!(oY && oE && oY.indexOf(oE) < 0);
-    const m = mEk ? mY + '\n\n— · —\nÇakışan özet (diğer cihazdan):\n\n' + mE : mY;
-    const o = oEk ? oY + '\n\n— · —\nÇakışan ontoloji (diğer cihazdan):\n\n' + oE : oY;
-    if(mEk || oEk) return { m, g: Date.now(), o };   // ek üretildi → taze damga (yakınsama)
-    if(Math.max(aG, bG) === 0) return { m: mY || mE, g: 0, o: oY || oE };   // dış yedek: damgasız metin taşınır
-    return { m, g: Math.max(aG, bG), o };   // yeni metin YA DA kasıtlı silme (boş + damga) kazanır
+    const A = ozNormal(a), B = ozNormal(b);
+    const temizle = (window.__ozet && window.__ozet.cTemizle) ? window.__ozet.cTemizle : ((m, o, c) => c || []);
+    /* cx (çözülmüş sürüm izleri): iki tarafın birleşimi — bir cihazda atılan
+       sürüm öbür cihazın c'sinden de, kaybeden metninden de geri GİRMEZ */
+    const cxB = (window.__ozet && window.__ozet.cxBirlestir) ? window.__ozet.cxBirlestir
+      : ((...l) => [].concat(...l));
+    const cx = cxB(A.cx, B.cx);
+    if(Math.max(A.g, B.g) === 0){   // dış yedek: damgasız metin taşınır (v79)
+      const m = A.m || B.m, o = A.o || B.o;
+      return { m, o, g: 0, c: temizle(m, o, (A.c || []).concat(B.c || []), cx), k: A.k || B.k, s: A.s || B.s, d: A.d || B.d, cx };
+    }
+    let K = A, Y = B;   // kazanan / kaybeden
+    if(B.g > A.g || (B.g === A.g && (B.m !== A.m ? B.m < A.m : B.o < A.o))){ K = B; Y = A; }
+    const m = K.m, o = K.o;
+    /* c birleşimi: kazananın tümü + kaybedenin GERÇEK çakışmaları. Kaybedenin
+       özdeş kopyaları (ayni) taşınmaz — temizlenmiş kazanan onları geri
+       getirmesin (temizlik tek cihazdan tüm odaya yayılır). */
+    const cBirlesik = (K.c || []).concat((Y.c || []).filter(e => e && !e.ayni));
+    const giris = { g: Y.g };
+    if(m && Y.m && Y.m !== m) giris.m = Y.m;   // kazanan boşsa KASITLI SİLME: eski metin dirilmez (v79)
+    if(o && Y.o && Y.o !== o) giris.o = Y.o;
+    const once = temizle(m, o, cBirlesik, cx);
+    const c = (giris.m || giris.o) ? temizle(m, o, cBirlesik.concat([giris]), cx) : once;
+    const yeniCakisma = JSON.stringify(c) !== JSON.stringify(once);
+    /* BAYAT KAZANAN: kazananın kendi c'sinde öbür tarafın ÇÖZDÜĞÜ sürüm varsa
+       (çözüm yapılmamış cihaz sonradan metni düzenleyip yazdı) kazananı tutan
+       cihaz temiz sonucu indirmeli → taze damga. Bir sonraki turda iki taraf
+       aynı izlere sahip, fark kalmaz (ping-pong yok). */
+    const bayat = JSON.stringify(temizle(m, o, K.c, cx)) !== JSON.stringify(temizle(m, o, K.c, K.cx));
+    const gMax = Math.max(A.g, B.g);
+    const cxSon = (window.__ozet && window.__ozet.cxSade) ? window.__ozet.cxSade(cx, m, o) : cx;   // taze damga eldekilerin hepsinden büyük (saat kayması)
+    return { m, o, g: (yeniCakisma || bayat) ? Math.max(Date.now(), gMax + 1) : gMax, c, k: K.k, s: K.s, d: K.d, cx: cxSon };
+  }
+  function ozAyni(x, y){
+    return String(x.m || '') === String(y.m || '') && (parseInt(x.g) || 0) === (parseInt(y.g) || 0)
+      && String(x.o || '') === String(y.o || '') && JSON.stringify(x.c || []) === JSON.stringify(y.c || [])
+      && String(x.k || '') === String(y.k || '') && String(x.s || '') === String(y.s || '')
+      && String(x.d || '') === String(y.d || '')
+      && JSON.stringify(x.cx || []) === JSON.stringify(y.cx || []);
   }
   let ozCalisiyor = false;
   async function ozetSenkronEt(){
@@ -440,7 +492,13 @@
       const r = await fetch(kok + '/izler.json?auth=' + tok);
       if(!r.ok) throw new Error('özet izleri ' + r.status);
       const uzakIzler = (await r.json()) || {};
-      const idler = new Set(Object.keys(uzakIzler));
+      /* Sprint Q CANLI KAPISI: yalnız kütüphanede YAŞAYAN kitabın özeti çekilir
+         ve itilir. Eskiden fihristteki her id çekiliyordu → kitabı silinmiş
+         (sahipsiz) kayıt açılış süpürücüsünün sildiği yere her turda geri
+         iniyor, yedeğe giriyordu (Q4a kökü). Kitabı henüz gelmemiş özet bir
+         tur bekler (fihrist durur, sonraki turda damga farkı yine görülür). */
+      const canli = new Set((veri.kitaplar || []).map(k => String(k && k.id)));
+      const idler = new Set(Object.keys(uzakIzler).filter(id => canli.has(String(id))));
       for(const k of (veri.kitaplar || []))
         if(k && k.id && (parseInt(k.ozetG) || window.__ozet.damga(k.id))) idler.add(String(k.id));
       const gonder = [];
@@ -452,23 +510,24 @@
           const rr = await fetch(kok + '/k/' + encodeURIComponent(id) + '.json?auth=' + tok);
           if(!rr.ok) continue;   // fihristte var ama kayıt okunamadı: bu turu atla, gelecek tur dener
           const uzak = (await rr.json()) || {};
-          const b = ozetBirlesim({ m: uzak.m, g: uzak.g, o: uzak.o },
-            { m: window.__ozet.oku(id), g: yerelG, o: window.__ozet.okuOnto(id) });
-          await window.__ozet.kaydetHam(id, b.m, b.g, b.o);
+          const yerel = window.__ozet.okuHam(id) || { m: '', g: 0, o: '', c: [], k: '', s: '', d: '' };
+          const b = ozetBirlesim(uzak, { ...yerel, g: yerelG });
+          await window.__ozet.kaydetHam(id, b.m, b.g, b.o, { c: b.c, k: b.k, s: b.s, d: b.d, cx: b.cx });
           indirilen++;
-          // birleşim uzaktan farklıysa (çakışma eki üretti) uzağa da yazılmalı
-          if(b.m !== String(uzak.m || '') || b.g !== (parseInt(uzak.g) || 0)
-            || String(b.o || '') !== String(uzak.o || '')) gonder.push(id);
+          // birleşim uzaktan farklıysa (çakışma girdi, eski ek ayrıldı, c/k/s/d
+          // değişti) uzağa da yazılmalı
+          if(!ozAyni(b, uzak)) gonder.push(id);
         }else if(yerelG > uzakG) gonder.push(id);
       }
       for(const id of gonder){
-        const m = window.__ozet.oku(id), g = window.__ozet.damga(id);
-        const o = window.__ozet.okuOnto(id);
-        // o boşsa alan HİÇ yazılmaz (düğüm şişmesin); PATCH k/<id>'yi bütün
-        // değiştirdiği için boş o alanı zaten kayıttan düşer
+        const kayit = window.__ozet.okuHam(id);
+        if(!kayit) continue;
+        // boş o/c/k/s/d alanı HİÇ yazılmaz (düğüm şişmesin); PATCH k/<id>'yi
+        // bütün değiştirdiği için boş alan zaten kayıttan düşer
+        const paket = window.__ozet.paket(kayit);
         const y = await fetch(kok + '/.json?auth=' + tok, { method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ['k/' + id]: (o ? { m, g, o } : { m, g }), ['izler/' + id]: g }) });
+          body: JSON.stringify({ ['k/' + id]: paket, ['izler/' + id]: kayit.g }) });
         if(!y.ok) throw new Error('özet yazma ' + y.status);
       }
       if(indirilen){
@@ -478,6 +537,45 @@
       return true;
     }catch(e){ return false; }
     finally{ ozCalisiyor = false; }
+  }
+  /* ---------- Sprint Q (Q4a): UZAK SAHİPSİZ ÖZETLER ----------
+     Fihristte olup canlı kitabı olmayan id'ler; her kaydı okunur — mezar
+     (boş m/o) sayılmaz. Hiçbir şey yazmaz. null = senkron kurulu değil. */
+  function ozetKok(){ return SENKRON_URL.replace(/\/+$/, '') + '/odalar/' + encodeURIComponent(ayar.oda + '--ozet'); }
+  async function ozetSahipsizUzak(){
+    if(!ayar || !ayar.oda || !kurulu() || eskiSurum || !window.__ozet) return null;
+    try{
+      const tok = await kimlikAl(), kok = ozetKok();
+      const r = await fetch(kok + '/izler.json?auth=' + tok);
+      if(!r.ok) return { liste: [], hata: 'izler ' + r.status };
+      const izler = (await r.json()) || {};
+      const canli = new Set((veri.kitaplar || []).map(k => String(k && k.id)));
+      const liste = [];
+      for(const id of Object.keys(izler)){
+        if(canli.has(String(id))) continue;
+        const rr = await fetch(kok + '/k/' + encodeURIComponent(id) + '.json?auth=' + tok);
+        if(!rr.ok) continue;
+        const u = ozNormal((await rr.json()) || {});
+        if(u.m || u.o || (u.c && u.c.length)) liste.push({ id: String(id), m: u.m, o: u.o, g: u.g });
+      }
+      return { liste, hata: '' };
+    }catch(e){ return { liste: [], hata: String((e && e.message) || e) }; }
+  }
+  /* Silme = MEZAR (boş + taze damga, v79 "kasıtlı silme" sözleşmesi), düz null
+     DEĞİL: null'lanan düğümü eski bir istemcinin yerel kopyası geri ittirirdi
+     (yerelG > uzakG=0 → PATCH); mezar damgası her yerel damgayı geçer. Yeni
+     istemci sahipsizi zaten ne çeker ne iter; mezar sayımda görünmez. */
+  async function ozetSahipsizUzakSil(idler){
+    if(!ayar || !ayar.oda || !kurulu() || eskiSurum) return 0;
+    const liste = (idler || []).map(String).filter(Boolean);
+    if(!liste.length) return 0;
+    const tok = await kimlikAl(), kok = ozetKok(), g = Date.now();
+    const govde = {};
+    for(const id of liste){ govde['k/' + id] = { m: '', g }; govde['izler/' + id] = g; }
+    const y = await fetch(kok + '/.json?auth=' + tok, { method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(govde) });
+    if(!y.ok) throw new Error('sahipsiz silme ' + y.status);
+    return liste.length;
   }
 
   function birlestir(yerel, uzak){
@@ -826,5 +924,6 @@
     };
   }
   window.__senkron = { birlestir, damgala, senkronEt, durumCiz, ayarKaydet, kurulu,
-    ozetBirlesim, ozetSenkronEt, durumOzet, ANLIK_SURUM, SEMA_SURUM };
+    ozetBirlesim, ozetSenkronEt, ozetSahipsizUzak, ozetSahipsizUzakSil,   // Sprint Q
+    durumOzet, ANLIK_SURUM, SEMA_SURUM };
 })();
