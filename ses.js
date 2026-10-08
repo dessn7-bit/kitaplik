@@ -206,6 +206,54 @@
     }
   }
 
+  /* ---------- ekran uyanık tutma (v135, Screen Wake Lock) ----------
+     Okuma sürerken ekran kendiliğinden kararmasın: "oynuyor" + sayfa görünür
+     iken kilit istenir; duraklat/durdur/bitiş ve sayfa gizlenince bırakılır,
+     görünür olup okuma sürüyorsa yeniden istenir. Tarayıcı kilidi gizlenmede
+     KENDİSİ de bırakır (release olayı) — ikisi de günlüğe girer. Destek yoksa
+     (eski tarayıcı, güvensiz bağlam) okuma aynen sürer; yalnız günlüğe yazılır,
+     oturum başına bir kez. İstek asenkron: yanıt geldiğinde koşul bozulmuşsa
+     (duraklatıldı, gizlendi) kilit hemen geri verilir — sızıntı olmaz. */
+  let kilit = null, kilitIstekte = false;
+  function kilitUygun(){
+    return !!ot && ot.durum === 'oynuyor' && document.visibilityState === 'visible';
+  }
+  function kilitAl(){
+    if(!kilitUygun() || kilit || kilitIstekte) return;
+    const wl = navigator.wakeLock;
+    if(!wl || typeof wl.request !== 'function'){
+      if(!ot.kilitYok){ ot.kilitYok = true; kaydet('ekran kilidi: destek yok'); }
+      return;
+    }
+    kilitIstekte = true;
+    let p;
+    try{ p = wl.request('screen'); }catch(e){ p = Promise.reject(e); }
+    Promise.resolve(p).then(l => {
+      kilitIstekte = false;
+      if(!l) return;
+      if(!kilitUygun()){ try{ l.release(); }catch(e){} return; }
+      kilit = l;
+      try{
+        l.addEventListener('release', () => {
+          if(kilit !== l) return;          // bizim bıraktığımız: zaten yazıldı
+          kilit = null;
+          if(ot) kaydet('ekran kilidi: tarayıcı bıraktı');
+        });
+      }catch(e){}
+      kaydet('ekran uyanık');
+    }, e => {
+      kilitIstekte = false;
+      if(ot) kaydet('ekran kilidi: reddedildi', (e && (e.name || e.message)) || 'hata');
+    });
+  }
+  function kilitBirak(sebep){
+    if(!kilit) return;
+    const l = kilit;
+    kilit = null;
+    try{ const r = l.release(); if(r && r.catch) r.catch(() => {}); }catch(e){}
+    kaydet('ekran kilidi bırakıldı', sebep);
+  }
+
   function konus(){
     const s = motor();
     if(!ot || !s) return;
@@ -258,6 +306,7 @@
       i: Math.max(0, Math.min(t.birimler.length - 1, parseInt(sira) || 0)), j: 0, durum: 'oynuyor', sonOlay: Date.now() };
     kaydet('oturum', KAYNAK_AD[kaynak] + ' · ' + ot.birimler.length + ' paragraf · hız ' + hizOku());
     konus();
+    kilitAl();
     cubuklariCiz();
     return true;
   }
@@ -267,6 +316,7 @@
     aktifJeton = ++jetonSayac;   // çalan konuşmanın geç onend'i ilerletmesin
     try{ motor() && motor().cancel(); }catch(e){}
     kaydet('duraklat', (ot.i + 1) + '.' + (ot.j + 1));
+    kilitBirak('duraklat');
     cubuklariCiz();
   }
   function devam(){
@@ -274,6 +324,7 @@
     ot.durum = 'oynuyor';
     kaydet('devam', (ot.i + 1) + '.' + (ot.j + 1));
     konus();
+    kilitAl();
     cubuklariCiz();
   }
   function atla(sira){
@@ -282,11 +333,13 @@
     ot.durum = 'oynuyor';
     kaydet('atla', String(ot.i + 1));
     konus();
+    kilitAl();
     cubuklariCiz();
   }
   function bitir(sebep){
     if(!ot) return;
     kaydet(sebep === 'bitti' ? 'sona erdi' : 'durdu', sebep);
+    kilitBirak(sebep);
     ot = null;
     aktifJeton = ++jetonSayac;
     vurgula();
@@ -473,7 +526,8 @@
     const yasam = olay => () => {
       if(!ot) return;
       kaydet(olay, ot.durum);
-      if(olay === 'görünür') setTimeout(bekci, 600);
+      if(olay === 'arka plan') kilitBirak('gizlendi');
+      if(olay === 'görünür'){ kilitAl(); setTimeout(bekci, 600); }
     };
     document.addEventListener('visibilitychange', () => (document.visibilityState === 'visible' ? yasam('görünür') : yasam('arka plan'))());
     window.addEventListener('pagehide', yasam('pagehide'));
@@ -503,6 +557,7 @@
     durum: () => ot ? { kaynak: ot.kaynak, kitapId: ot.kitapId, i: ot.i, j: ot.j, durum: ot.durum,
       paragraf: ot.birimler.length, metinler: ot.birimler.map(b => b.metin) } : null,
     sesDurumu, baslat, duraklat, devam, durdur, atla, bekci,
+    kilitVar: () => !!kilit,
     gunluk: () => gunluk.slice(), gunlukMetni,
     sesleriYenile: () => { sesleriOku(); seslerBilinir = true; cubuklariCiz(); }
   };
