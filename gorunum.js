@@ -494,7 +494,8 @@
       '<input type="date" id="topluBitTarih" max="' + (typeof bugun === 'function' ? bugun() : '') + '"' +
         ' value="' + (typeof bugun === 'function' ? bugun() : '') + '">' +
       '<div class="mini-not">Zaten bitmiş kitaplara dokunulmaz. Alanı boşaltırsan tarih ' +
-        'yazılmaz — kitaplar yıl sayımlarına girmez, ama yanlış tarih de almazlar.</div>',
+        'yazılmaz (yarım kitabın bırakma tarihi de silinir) — kitaplar yıl sayımlarına ' +
+        'girmez, ama yanlış tarih de almazlar.</div>',
       'toplu-durum-uygula');
   }
 
@@ -707,10 +708,12 @@
           k.durum = d;
           if(d === 'bitti'){
             /* v133: GEÇİŞ = seçilen tarih (varsayılan bugün) — yarım kitabın
-               bırakma tarihi de ezilir, yeni bitiş o gündür. Alan boşaltıldıysa
-               tarih yazılmaz (varsa eski tarih durur). */
+               bırakma tarihi de ezilir, yeni bitiş o gündür. v134 (Kaan kararı):
+               alan boşaltıldıysa bitiş BOŞ kalır — yarım kitabın bırakma tarihi
+               de silinir; bırakma tarihi bitiş tarihi değildir, boş alan
+               "tarih yok" demektir. */
             if(yazilacak){ k.bitisTarihi = yazilacak; damgalanan++; }
-            else if(!k.bitisTarihi) tarihsizKalan++;
+            else { k.bitisTarihi = null; tarihsizKalan++; }
             if(k.sayfa) k.guncelSayfa = k.sayfa;
           }
           if(d === 'okunuyor' && !k.baslamaTarihi) k.baslamaTarihi = bgn;

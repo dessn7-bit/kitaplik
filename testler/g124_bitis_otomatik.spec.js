@@ -19,6 +19,7 @@
  *   M2  f-durum'da "zaten bitti" kapısı kalksın         → F3, F4 kırmızı
  *   M3  toplu'da zatenBitti atlaması kalksın            → T1 kırmızı
  *   M4  bitir'de durum kapısı kalksın                   → D3 kırmızı
+ *   M5  v134: boş alanda bırakma tarihi silinmesin       → Y1 kırmızı
  */
 const { test, expect, tohumla, sahteKitap, rafAc, rafYenile, ayarlarAc,
   ayrintilarAc, dosyadanYukle, jsonDosya, bugunISO } = require('./yardim');
@@ -178,6 +179,56 @@ test.describe('G124 toplu yol', () => {
     expect([t1.bitisTarihi, t1.guncelSayfa, t1.g]).toEqual([null, 50, 777]);
     const t2 = await kitap(page, 'TarihliBitmiş');
     expect([t2.bitisTarihi, t2.g]).toEqual(['2018-08-08', 888]);
+  });
+});
+
+test.describe('G124 toplu: yarım kitap + tarih alanı (v134, Kaan kararı)', () => {
+  /* Bırakma tarihi bitiş tarihi DEĞİLDİR: geçişte ya seçilen tarih yazılır
+     ya da (alan boşsa) bitiş BOŞ kalır. Zaten bitmiş kitap her iki durumda
+     değişmez. */
+  async function topluBittiTarih(page, tarih) {
+    await page.click('#secimBtn');
+    await page.click('[data-act="toplu-tumu"]');
+    await page.click('[data-act="toplu-durum"]');
+    await page.selectOption('#topluDurumSec', 'bitti');
+    await page.fill('#topluBitTarih', tarih);
+    await page.click('[data-act="toplu-durum-uygula"]');
+  }
+  const tohum = () => [
+    sahteKitap({ ad: 'YarımK', durum: 'yarim', sayfa: 100, guncelSayfa: 30,
+      baslamaTarihi: '2025-11-01', bitisTarihi: '2026-01-05' }),
+    sahteKitap({ ad: 'BitmişTarihsiz', durum: 'bitti', sayfa: 200, guncelSayfa: 50, bitisTarihi: null, g: 777 }),
+    sahteKitap({ ad: 'BitmişTarihli', durum: 'bitti', sayfa: 200, guncelSayfa: 200, bitisTarihi: '2018-08-08', g: 888 })
+  ];
+  async function bitmislerDegismedi(page) {
+    const a = await kitap(page, 'BitmişTarihsiz');
+    expect([a.durum, a.bitisTarihi, a.guncelSayfa, a.g]).toEqual(['bitti', null, 50, 777]);
+    const b = await kitap(page, 'BitmişTarihli');
+    expect([b.durum, b.bitisTarihi, b.guncelSayfa, b.g]).toEqual(['bitti', '2018-08-08', 200, 888]);
+  }
+
+  test('Y1) yarım + BOŞ tarih → bitisTarihi boş (bırakma tarihi silinir); bitmişler değişmez', async ({ page }) => {
+    await tohumla(page, tohum());
+    await rafAc(page);
+    await topluBittiTarih(page, '');
+    await expect(page.locator('#toast')).toContainText('1 kitabın durumu değişti');
+    await expect(page.locator('#toast')).toContainText('1 kitap tarihsiz bırakıldı');
+    await expect(page.locator('#toast')).toContainText('2 kitap zaten bitmişti, dokunulmadı');
+    const y = await kitap(page, 'YarımK');
+    expect([y.durum, y.bitisTarihi]).toEqual(['bitti', null]);
+    await bitmislerDegismedi(page);
+    await rafYenile(page);
+    expect((await kitap(page, 'YarımK')).bitisTarihi).toBe(null);
+  });
+
+  test('Y2) yarım + SEÇİLİ tarih → seçilen tarih; bitmişler değişmez', async ({ page }) => {
+    await tohumla(page, tohum());
+    await rafAc(page);
+    await topluBittiTarih(page, '2026-02-20');
+    await expect(page.locator('#toast')).toContainText('1 kitaba bitiş tarihi 20 Şub 2026 yazıldı');
+    const y = await kitap(page, 'YarımK');
+    expect([y.durum, y.bitisTarihi]).toEqual(['bitti', '2026-02-20']);
+    await bitmislerDegismedi(page);
   });
 });
 
