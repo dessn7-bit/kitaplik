@@ -3607,7 +3607,20 @@ window.ikon = ikon;
 /* basHarf v47'de, sirtRenk/SIRT_RENK v50'de kaldırıldı: son tüketiciler
    sırt-renkli kapak yedekleriydi; her yüzey ortak levha üreticisine geçti. */
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+/* v133: "bugün" CİHAZIN saat dilimine değil Europe/Istanbul'a göre kurulur.
+   Bitiş tarihi bir takvim günüdür ve Kaan'ın günü İstanbul günüdür; yurt
+   dışında/yanlış ayarlı cihazda 00:30'da bitirilen kitap DÜNE yazılmasın.
+   Tek kaynak: bitiş damgası, tarih seçicilerin max'ı ve "(bugün)" etiketi
+   aynı günü görür (biri yerel biri İstanbul olsaydı 00:30'da bugünün tarihi
+   "gelecekte" diye reddedilebilirdi). Intl yoksa yerel güne düşer. */
+const YEREL_TZ = 'Europe/Istanbul';
 function bugun(){
+  try {
+    const p = {};
+    new Intl.DateTimeFormat('en-US', { timeZone: YEREL_TZ, year:'numeric', month:'2-digit', day:'2-digit' })
+      .formatToParts(new Date()).forEach(x => { p[x.type] = x.value; });
+    if(p.year && p.month && p.day) return `${p.year}-${p.month}-${p.day}`;
+  } catch(e) {}
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
@@ -3620,9 +3633,11 @@ function trTarih(iso){
 /* v127: gün kaydırmalı ISO tarih — "dün" düğmesi ve gelecek kapısı buradan
    okur; ay/yıl sınırını Date kendisi çözsün diye elle aritmetik YAPILMAZ. */
 function isoGun(kayma){
-  const d = new Date();
-  if(kayma) d.setDate(d.getDate() + kayma);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  /* v133: İstanbul gününden kaydırılır (bugun ile aynı otorite); öğlen UTC
+     çapası ay/yıl sınırını Date'e bıraktırır, yaz saati kaydırması olmaz. */
+  const d = new Date(bugun() + 'T12:00:00Z');
+  if(kayma) d.setUTCDate(d.getUTCDate() + kayma);
+  return d.toISOString().slice(0, 10);
 }
 function gunFarki(a, b){ return Math.round((new Date(b) - new Date(a)) / 86400000); }
 function kitapBul(id){ return veri.kitaplar.find(k => k.id === id); }
@@ -7178,9 +7193,17 @@ document.addEventListener('click', e => {
          ve değiştirebiliyor; boşaltırsa bu bir CEVAPTIR (tarihsiz kalır).
          Yalnız kullanıcı bu formda "bitti"ye BASINCA dolar — formu açmak
          eski bir kaydın tarihini kendiliğinden bugüne çekmez. */
+      /* v133: kural "başka durumdan bitti'ye GEÇİŞ = bugün". Düzenlenen kayıt
+         zaten bittiyse alana HİÇ dokunulmaz (tarihsiz eski bitmişler bilerek
+         boş — "Bitti"ye yeniden basmak onlara bugün yazmamalı). Geçişte alan
+         dolu olsa bile (yarım kitabın bırakma tarihi) bugünle değişir; alan
+         görünür, kullanıcı kaydetmeden önce elle değiştirebilir. */
       if(v === 'bitti'){
         const bitEl = document.getElementById('f-bit');
-        if(bitEl && !bitEl.value) bitEl.value = bugun();
+        const eski = durum.formDuzenId ? kitapBul(durum.formDuzenId) : null;
+        if(bitEl && !(eski && eski.durum === 'bitti')){
+          if(eski || !bitEl.value) bitEl.value = bugun();
+        }
       }
       formDurumCiz(); puanCiz(); break; }
     case 'f-puan': durum.formPuan = parseInt(v); puanCiz(); break;
@@ -7331,7 +7354,8 @@ document.addEventListener('click', e => {
       break; }
     case 'bitir': {
       const k = kitapBul(durum.detayId);
-      if(k){
+      // v133: zaten bitmiş kitapta (bayat düğme) hiçbir şey değişmez
+      if(k && k.durum !== 'bitti'){
         if(k.sayfa){ seansEkle(k, k.guncelSayfa || 0, k.sayfa);
           if(k.guncelSayfa !== k.sayfa){ k.guncelSayfa = k.sayfa; k.gsG = Date.now(); } }
         k.durum = 'bitti'; k.bitisTarihi = bugun();

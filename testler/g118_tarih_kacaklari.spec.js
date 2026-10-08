@@ -166,7 +166,10 @@ test.describe('G118 tarih kaçakları (v126)', () => {
     await page.click('[data-act="toplu-durum"]');
     await page.selectOption('#topluDurumSec', 'bitti');
     await page.click('[data-act="toplu-durum-uygula"]');
-    await expect(page.locator('#toast')).toContainText('2 kitabın durumu değişti');
+    /* v133: zaten bitmiş kitap "bitti"ye alınınca HİÇ dokunulmaz ve
+       değişenlerden sayılmaz (g124-T1) — eskiden "2 kitabın" diyordu. */
+    await expect(page.locator('#toast')).toContainText('1 kitabın durumu değişti');
+    await expect(page.locator('#toast')).toContainText('1 kitap zaten bitmişti, dokunulmadı');
     // v127: cümle artık YAZILAN tarihi taşıyor (varsayılan bugün) — g119-J
     await expect(page.locator('#toast')).toContainText('1 kitaba bitiş tarihi');
     await expect(page.locator('#toast')).toContainText('yazıldı');

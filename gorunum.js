@@ -493,7 +493,7 @@
       '<label for="topluBitTarih" style="margin-top:10px">Bitiş tarihi (yalnız "Bitti" için)</label>' +
       '<input type="date" id="topluBitTarih" max="' + (typeof bugun === 'function' ? bugun() : '') + '"' +
         ' value="' + (typeof bugun === 'function' ? bugun() : '') + '">' +
-      '<div class="mini-not">Zaten tarihi olan kitaplar değişmez. Alanı boşaltırsan tarih ' +
+      '<div class="mini-not">Zaten bitmiş kitaplara dokunulmaz. Alanı boşaltırsan tarih ' +
         'yazılmaz — kitaplar yıl sayımlarına girmez, ama yanlış tarih de almazlar.</div>',
       'toplu-durum-uygula');
   }
@@ -698,14 +698,19 @@
         const yazilacak = secTarih || null;
         let damgalanan = 0;      // kaç kitaba tarih yazıldı
         let tarihsizKalan = 0;   // kaç kitap bilerek tarihsiz bırakıldı
+        let zatenBitti = 0;      // v133: zaten bitmiş, hiç dokunulmayan
         ks.forEach(k => {
+          /* v133: zaten bitmiş kitap "bitti"ye alınınca HİÇBİR ŞEY değişmez —
+             ne tarih, ne sayfa, ne damga (tarihsiz eski bitmişler bilerek boş). */
+          if(d === 'bitti' && k.durum === 'bitti'){ zatenBitti++; return; }
           const eskiGS = k.guncelSayfa;
           k.durum = d;
           if(d === 'bitti'){
-            if(!k.bitisTarihi){
-              if(yazilacak){ k.bitisTarihi = yazilacak; damgalanan++; }
-              else tarihsizKalan++;
-            }
+            /* v133: GEÇİŞ = seçilen tarih (varsayılan bugün) — yarım kitabın
+               bırakma tarihi de ezilir, yeni bitiş o gündür. Alan boşaltıldıysa
+               tarih yazılmaz (varsa eski tarih durur). */
+            if(yazilacak){ k.bitisTarihi = yazilacak; damgalanan++; }
+            else if(!k.bitisTarihi) tarihsizKalan++;
             if(k.sayfa) k.guncelSayfa = k.sayfa;
           }
           if(d === 'okunuyor' && !k.baslamaTarihi) k.baslamaTarihi = bgn;
@@ -720,7 +725,8 @@
         const ek = damgalanan
           ? ' · ' + damgalanan + ' kitaba bitiş tarihi ' + trT + ' yazıldı'
           : (tarihsizKalan ? ' · ' + tarihsizKalan + ' kitap tarihsiz bırakıldı (yıl sayımlarına girmez)' : '');
-        kaydetVeTazele(ks.length + ' kitabın durumu değişti' + ek);
+        const ek2 = zatenBitti ? ' · ' + zatenBitti + ' kitap zaten bitmişti, dokunulmadı' : '';
+        kaydetVeTazele((ks.length - zatenBitti) + ' kitabın durumu değişti' + ek + ek2);
         return;
       }
     });
