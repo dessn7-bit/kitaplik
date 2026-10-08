@@ -272,6 +272,7 @@
     u.onend = () => {
       if(jeton !== aktifJeton || !ot || ot.durum !== 'oynuyor') return;
       ot.sonOlay = Date.now();
+      ot.hataSay = 0;
       kaydet('bitti', (ot.i + 1) + '.' + (ot.j + 1));
       ilerle();
     };
@@ -279,10 +280,24 @@
       const hata = (e && e.error) || 'hata';
       if(jeton !== aktifJeton || !ot) return;   // iptal edilmiş konuşmanın geç olayı
       kaydet('hata', hata);
-      if(hata === 'interrupted' || hata === 'canceled') return;   // bilinçli iptal — ilerletme
       if(ot.durum !== 'oynuyor') return;
       ot.sonOlay = Date.now();
-      ilerle();   // tek parça okunamadıysa takılma, sonrakine geç
+      /* v136 (Android 10 / Chrome 154 PWA ölçümü): ekran kilidinde sistem
+         konuşmayı 'interrupted' ile kesti, bekçi gizliyken yeniden konuştu,
+         motor her parçayı anında 'synthesis-failed' ile reddetti; eski kural
+         ("okunamayan parçayı atla") 21 parçayı 0 sn'de "okundu" sayıp oturumu
+         bitirdi, yer kayboldu. Yeni kural: HATA ASLA İLERLETMEZ.
+           · gizliyken herhangi bir hata/kesinti → duraklat, yer korunur;
+             dönüşte Devam aynı parçadan sürer
+           · görünürken 'interrupted'/'canceled' (bizim iptalimiz değil, jeton
+             güncel) → dokunma; bekçi aynı parçayı yeniden konuşur
+           · görünürken başka hata → aynı parçayı BİR kez yeniden dene;
+             ardışık ikinci hata → duraklat (oturum bitmez) */
+      if(document.visibilityState === 'hidden'){ sistemDuraklat('arka planda ' + hata); return; }
+      if(hata === 'interrupted' || hata === 'canceled') return;
+      ot.hataSay = (ot.hataSay || 0) + 1;
+      if(ot.hataSay >= 2){ sistemDuraklat('motor okuyamadı: ' + hata); return; }
+      setTimeout(() => { if(jeton === aktifJeton && ot && ot.durum === 'oynuyor') konus(); }, 800);
     };
     ot.sonOlay = Date.now();
     vurgula();
@@ -319,9 +334,21 @@
     kilitBirak('duraklat');
     cubuklariCiz();
   }
+  /* v136: kullanıcı dışı duraklatma (arka plan kesintisi, motor hatası) —
+     duraklat() ile aynı durum, ayrı günlük satırı; konum (i.j) DEĞİŞMEZ. */
+  function sistemDuraklat(neden){
+    if(!ot || ot.durum !== 'oynuyor') return;
+    ot.durum = 'duraklatildi';
+    aktifJeton = ++jetonSayac;
+    try{ motor() && motor().cancel(); }catch(e){}
+    kaydet('duraklatıldı', neden + ' · yer ' + (ot.i + 1) + '.' + (ot.j + 1));
+    kilitBirak('duraklatıldı');
+    cubuklariCiz();
+  }
   function devam(){
     if(!ot || ot.durum !== 'duraklatildi') return;
     ot.durum = 'oynuyor';
+    ot.hataSay = 0;
     kaydet('devam', (ot.i + 1) + '.' + (ot.j + 1));
     konus();
     kilitAl();
@@ -543,6 +570,9 @@
   function bekci(){
     const s = motor();
     if(!ot || ot.durum !== 'oynuyor' || !s) return;
+    /* v136: gizliyken ASLA konuşma başlatma — Android arka planda motor her
+       parçayı anında reddediyordu (synthesis-failed çağlayanı). */
+    if(document.visibilityState === 'hidden') return;
     if(s.speaking || s.pending) return;
     if(Date.now() - (ot.sonOlay || 0) < 3000) return;
     kaydet('bekçi: sessiz motor, yeniden', (ot.i + 1) + '.' + (ot.j + 1));
